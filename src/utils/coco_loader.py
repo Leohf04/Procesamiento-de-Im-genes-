@@ -34,6 +34,22 @@ def decode_segmentation_mask(segmentation, height: int, width: int) -> np.ndarra
         if decoded.ndim == 3:
             decoded = np.max(decoded, axis=2)
         return (decoded > 0).astype(np.uint8)
+    if isinstance(segmentation, dict) and isinstance(segmentation.get("counts"), list):
+        # COCO uncompressed RLE is column-major (Fortran order).
+        counts = segmentation["counts"]
+        flat = np.zeros(height * width, dtype=np.uint8)
+        offset, value = 0, 0
+        for run in counts:
+            run = int(run)
+            if run < 0 or offset + run > flat.size:
+                raise ValueError("RLE COCO sin comprimir inválido.")
+            if value:
+                flat[offset:offset + run] = 1
+            offset += run
+            value = 1 - value
+        if offset != flat.size:
+            raise ValueError("La longitud RLE no coincide con las dimensiones de la máscara.")
+        return flat.reshape((height, width), order="F")
     if isinstance(segmentation, list):
         for poly in segmentation:
             if len(poly) >= 6:
