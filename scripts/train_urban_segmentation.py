@@ -25,7 +25,7 @@ def atomic_save(payload, destination):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", choices=["cityscapes", "bdd100k-semantic", "lanes"], default="cityscapes")
+    parser.add_argument("--task", choices=["cityscapes", "bdd100k-semantic", "lanes"], default="bdd100k-semantic")
     parser.add_argument("--data-root", help="Cityscapes root for cityscapes task")
     parser.add_argument("--images-dir", help="BDD100K images directory for lanes task")
     parser.add_argument("--masks-dir", help="Rasterized BDD100K masks directory for lanes task")
@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--width", type=int, default=1024)
-    parser.add_argument("--output", default="data/processed/deeplabv3plus_urban.pt",
+    parser.add_argument("--output", default="data/processed/deeplabv3plus_bdd100k_semantic.pt",
                         help="Best checkpoint; resumable state is saved beside it as .last.pt")
     parser.add_argument("--resume", nargs="?", const="auto", default=None,
                         help="Resume from --output.last.pt, or provide a checkpoint path")
@@ -49,6 +49,9 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     size = (args.height, args.width)
+
+    if args.task == "lanes":
+        parser.error("El entrenamiento binario de carriles está obsoleto; usa scripts/train_bdd100k_lanes.py con las máscaras oficiales.")
 
     if args.task == "cityscapes":
         if not args.data_root:
