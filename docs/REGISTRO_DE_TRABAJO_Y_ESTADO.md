@@ -96,6 +96,13 @@ Hugging Face puede servir como alojamiento/distribución de datasets y modelos, 
   - conservación de resultados, modelos, métricas y documentación.
 - La siguiente tarea es comparar alternativas concretas, priorizando gratuitas y explicando límites, verificación, cuotas, persistencia, disponibilidad de GPU, coste y compatibilidad con Android.
 
+
+### 2026-11-21 — Creación del registro de continuidad
+
+- El usuario solicitó un documento dentro del repositorio que conserve el objetivo, las decisiones, las acciones y el punto de continuidad, y que se actualice en cada mensaje relacionado con el proyecto.
+- Se creó este archivo como fuente principal de contexto y se enlazó desde el README.
+- Compromiso operativo: consultar y actualizar este registro al trabajar en futuras intervenciones del proyecto; informar con transparencia si alguna actualización no puede guardarse.
+
 ## 5. Estado de implementación existente en el repositorio
 
 La rama `urban-models-and-benchmark` ya contiene scripts y documentación para varias tareas. Esto no significa que los entrenamientos se hayan ejecutado:
