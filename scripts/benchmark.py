@@ -10,6 +10,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 import torch
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.pipeline import UrbanPerceptionPipeline
 from src.utils.config_utils import load_config, resolve_backend, set_global_seed
 
