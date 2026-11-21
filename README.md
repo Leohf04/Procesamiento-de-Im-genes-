@@ -161,5 +161,7 @@ tests/                   Pruebas unitarias y de integridad
 
 ## Documentación
 
+- [Registro de trabajo, decisiones y estado actual (documento de continuidad)](docs/REGISTRO_DE_TRABAJO_Y_ESTADO.md)
+
 - [Auditoría técnica](docs/AUDITORIA_Y_DOCUMENTACION.md)
 - [Protocolo experimental reproducible](docs/PROTOCOLO_EXPERIMENTAL.md)
