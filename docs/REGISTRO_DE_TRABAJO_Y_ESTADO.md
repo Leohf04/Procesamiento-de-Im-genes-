@@ -858,3 +858,18 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - Este resultado valida de forma provisional el acceso y el loader **semántico** con la redistribución Hugging Face `dronefreak/BDD100K-Semantic-Segmentation`; no certifica independientemente la procedencia y no valida instancias, detección ni carriles.
 - La CI general del HEAD documental `fca1309e3b573e0fa113e8ae5d6a74165775b230` se encontraba aún en ejecución en la instalación de PyTorch CPU al registrar esta actualización. Runs: `44949848684` (push) y `44949851302` (pull_request). Se debe comprobar su conclusión antes de cerrar la fase.
 - No se descargó el dataset completo, no se inició entrenamiento, no se generaron checkpoints y `RUN_TRAINING=False` sigue vigente. PR #3 permanece abierta, en borrador y sin fusionar.
+
+
+## Investigación de fuente para validar instancias BDD100K — 2026-11-21
+
+- Se revisó la documentación oficial de descarga y formato de BDD100K:
+  - El paquete oficial de etiquetas de instance segmentation se denomina **Instance Segmentation**, contiene bitmasks, colormaps, polígonos y RLEs, pesa **111 MB** y publica MD5 `651b41f229d7327d8c4af97772de4390`.
+  - Las máscaras bitmask se guardan como PNG RGBA: R = categoría (1..8), G = atributos (bit 0 ignore, bit 1 crowd, bit 2 occluded, bit 3 truncated), y B:A = annotation ID de 16 bits para instance segmentation. El código oficial serializa el ID como `(B << 8) | A`.
+  - La segmentación de instancias utiliza el subconjunto de imágenes 10K, no el paquete 100K de detección/carriles.
+- Se buscaron redistribuciones públicas Hugging Face de las máscaras de instancias. Los repositorios BDD100K identificados cubren semántica y detección; no se encontró una fuente pública verificable con el árbol `labels/ins_seg/bitmasks/{train,val}` y PNG RGBA. No se utilizará una copia no verificada ni se asumirá que las máscaras semánticas o de color equivalen a máscaras de instancias.
+- El servidor oficial ETHZ publica la ruta de descarga y el checksum, pero en esta investigación no se pudo confirmar mediante una petición HTTP real que admita extracción parcial con Range ni inspeccionar el archivo ZIP. Por tanto, no se descargó el paquete de 111 MB ni se afirma que sea posible obtener una muestra sin descargarlo completo.
+- Se inspeccionó el loader actual `BDD100KInstanceDataset`: espera pares de JPG y PNG RGBA con el mismo nombre base, decodifica los 16 bits de annotation ID, excluye crowd/ignore y produce cajas, labels y máscaras para Mask R-CNN. El código ya existe, pero todavía no ha sido validado con bitmasks reales.
+- **Bloqueo concreto:** falta una fuente accesible y verificable de muestras RGBA, o confirmar que el archivo oficial permite lectura parcial del ZIP. El siguiente intento técnico debe comprobar soporte HTTP Range del archivo oficial en un runner remoto; si no lo soporta, se necesitará autorización/acceso oficial para descargar el paquete de etiquetas completo en infraestructura remota (111 MB), extraer unas pocas máscaras y eliminar el archivo temporal. Esto no requiere que el usuario descargue nada en el teléfono.
+- CI general del HEAD `9fc543b9451c5c34641b044147da78ebd8547bf0`: run `44949913773`, job `136985347857`, conclusión **success**. Logs: `32 passed in 10.34s`, smoke tests CLI correctos y `RESULT: BDD100K semantic sample validation PASSED`.
+- PR #3 se verificó como `open`, `draft=true`, `merged=false`. No se inició entrenamiento, no se generaron checkpoints y `RUN_TRAINING=False` permanece sin cambios.
+- No se modificó código de loaders en esta intervención; se registró la investigación y el bloqueo para no presentar una validación sintética como validación real.
