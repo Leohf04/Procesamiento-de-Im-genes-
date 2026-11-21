@@ -47,7 +47,7 @@ Antes de cualquier entrenamiento, el notebook ejecuta:
 python scripts/validate_bdd100k_semantic_sample.py --samples-per-split 2
 ```
 
-El script recupera dos pares imagen/máscara de train y dos de validación desde el mirror público `liqijia/BDD100K-Semantic-Segmentation` en Hugging Face, usando la API de archivos para descargar solo los archivos de esas muestras. Comprueba que las imágenes sean RGB, que las máscaras sean monocanal, que coincidan sus dimensiones, que los IDs sean 0–18/255 y que `BDD100KSemanticDataset` produzca tensores válidos. La descarga se limita a unas pocas muestras temporales en la VM y se elimina al terminar.
+El script recupera dos pares imagen/máscara de train y dos de validación desde `dronefreak/BDD100K-Semantic-Segmentation` en Hugging Face. La versión actual del repositorio conserva los árboles originales separados: `data/images_10k/10k/{train,val}/...` y `data/seg_maps/labels/{train,val}/...`; las máscaras se emparejan por identificador (`<id>_train_id.png`), no mediante `metadata.jsonl`. La API de archivos descarga solo los archivos de las muestras seleccionadas. Comprueba RGB, máscara monocanal, dimensiones coincidentes, IDs 0–18/255 y ejecución de `BDD100KSemanticDataset`. Los archivos temporales se eliminan al terminar.
 
 **Alcance y cautela:** el mirror es una redistribución de terceros cuya tarjeta declara que los píxeles y máscaras de IDs se conservan sin modificar respecto a la publicación oficial y reproduce la licencia BDD100K. Esta prueba es una validación técnica provisional del cargador semántico, no una auditoría independiente de procedencia ni una validación de los loaders de instancias, detección o carriles. Esas tareas siguen pendientes de muestras oficiales correspondientes.
 
