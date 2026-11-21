@@ -4,7 +4,7 @@
 
 El workflow `.github/workflows/prepare-datasets.yml` se ejecuta manualmente desde **Actions → Prepare urban datasets (Google Drive) → Run workflow**. Descarga temporalmente una carpeta de Drive en el runner, valida su estructura, genera los derivados permitidos y sube únicamente los resultados preparados y el manifiesto a Drive. Los archivos fuente no se copian al repositorio ni a los artifacts de GitHub.
 
-El runner es efímero: su copia local se elimina al terminar el trabajo. Este workflow prepara datos; **no entrena modelos** y no requiere GPU.
+El runner es efímero: su copia local se elimina al terminar el trabajo. El flujo descarga únicamente el JSON del split y las imágenes del lote solicitado, no todo BDD100K. Este workflow prepara datos; **no entrena modelos** y no requiere GPU.
 
 ## Configurar Google Drive (OAuth de tu cuenta)
 
@@ -28,7 +28,7 @@ Usa preferiblemente una cuenta de Google dedicada al proyecto o una cuenta cuya 
 
 ## Estructura esperada en Google Drive
 
-Para BDD100K, sube manualmente los archivos que hayas obtenido conforme a sus términos:
+Para BDD100K, sube manualmente los archivos que hayas obtenido conforme a sus términos. El workflow procesa lotes de hasta 4.000 imágenes por ejecución para no llenar el disco efímero de un runner estándar:
 
 ```text
 bdd100k/
@@ -59,21 +59,24 @@ cityscapes/
 1. Abre la pestaña **Actions** del repositorio.
 2. Selecciona **Prepare urban datasets (Google Drive)**.
 3. Pulsa **Run workflow**.
-4. Para BDD100K, selecciona `bdd100k`, deja `drive_source_path=bdd100k` si usaste esa carpeta y conserva `lane_thickness=8`.
-5. Inicia la ejecución y revisa el log.
+4. Para BDD100K, selecciona `bdd100k`, indica la carpeta de Drive (por defecto `bdd100k`), el split (`train` o `val`), el índice inicial (`offset`) y el tamaño del lote (máximo 4.000).
+5. Deja `lane_thickness=8`, inicia la ejecución y revisa el manifiesto.
+6. Para continuar con el siguiente lote, usa el valor `next_offset` del `selection_manifest.json` como nuevo `offset`. Repite hasta que `complete=true`. Después cambia al otro split y comienza en offset 0.
 
 La salida se guarda en:
 
 ```text
 <raíz-de-Drive>/
 └── prepared/
-    └── bdd100k/
-        └── <run_id>-<run_attempt>/
-            ├── dataset_manifest.json
-            └── lane_masks/{train,val}/*.png
+    └── {train,val}/
+        └── offset-<offset>/
+            └── run-<run_id>-<run_attempt>/
+                ├── selection_manifest.json
+                ├── dataset_manifest.json
+                └── lane_masks/*.png
 ```
 
-El manifiesto registra el dataset, los conteos por split y el estado de validación. Si faltan imágenes, están corruptas, no existe el JSON o no coincide el número de máscaras, el job falla y no publica una preparación incompleta.
+Los manifiestos registran el tamaño total del split, offset, número de imágenes procesadas, siguiente offset y estado de completitud. Si faltan imágenes, están corruptas o no coincide el número de máscaras, el job falla y no publica una preparación incompleta. Cada ejecución procesa como máximo 4.000 imágenes para limitar el espacio temporal requerido.
 
 ## Límites y seguridad
 
