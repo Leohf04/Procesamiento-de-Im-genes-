@@ -58,3 +58,15 @@ def test_box_average_precision_remains_available():
         predictions, ground_truth, ["car"], iou_threshold=0.5
     )
     assert result["car"] == 1.0
+
+
+def test_mask_average_precision_accepts_compact_bitpacked_masks():
+    gt_mask = np.zeros((5, 7), dtype=np.uint8)
+    gt_mask[1:4, 2:6] = 1
+    packed = (np.packbits(gt_mask.reshape(-1)), gt_mask.shape)
+    predictions = [{"masks": [packed], "class_names": ["car"], "scores": [0.8]}]
+    ground_truth = [{"masks": [packed], "class_names": ["car"]}]
+    result = compute_mask_average_precision_per_image(
+        predictions, ground_truth, ["car"], iou_threshold=0.5
+    )
+    assert result["car"] == 1.0
