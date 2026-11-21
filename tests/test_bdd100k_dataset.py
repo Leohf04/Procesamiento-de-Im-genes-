@@ -37,19 +37,22 @@ def test_instance_loader_decodes_rgba_instance_ids_and_flags(tmp_path):
     # Instance 1: category 1, valid. Instance 2: category 3, ignore flag.
     rgba = np.zeros((4, 4, 4), dtype=np.uint8)
     rgba[0:2, 0:2, 0] = 1
-    rgba[0:2, 0:2, 2] = 1
+    rgba[0:2, 0:2, 3] = 1  # ann_id=1: low byte in A
     rgba[2:4, 2:4, 0] = 3
-    rgba[2:4, 2:4, 1] = 1
-    rgba[2:4, 2:4, 2] = 2
+    rgba[2:4, 2:4, 1] = 1  # ignored annotation flag
+    rgba[2:4, 2:4, 3] = 2  # ann_id=2
+    rgba[0, 2, 0] = 2
+    rgba[0, 2, 2] = 1  # ann_id=257: high byte in B
+    rgba[0, 2, 3] = 1  # low byte in A
     Image.fromarray(rgba, mode="RGBA").save(masks / "frame.png")
 
     image, target = BDD100KInstanceDataset(images, masks, size=(4, 4))[0]
 
     assert tuple(image.shape) == (3, 4, 4)
-    assert target["labels"].tolist() == [1]
-    assert target["boxes"].tolist() == [[0.0, 0.0, 2.0, 2.0]]
-    assert tuple(target["masks"].shape) == (1, 4, 4)
-    assert int(target["masks"].sum()) == 4
+    assert target["labels"].tolist() == [1, 2]
+    assert target["boxes"].tolist() == [[0.0, 0.0, 2.0, 2.0], [2.0, 0.0, 3.0, 1.0]]
+    assert tuple(target["masks"].shape) == (2, 4, 4)
+    assert int(target["masks"].sum()) == 5
 
 
 def test_loader_fails_when_a_mask_is_missing(tmp_path):
