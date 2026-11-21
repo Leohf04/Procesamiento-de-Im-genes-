@@ -46,7 +46,7 @@ def build_model(pretrained, num_classes=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", choices=["cityscapes", "bdd100k"], default="cityscapes")
+    parser.add_argument("--dataset", choices=["cityscapes", "bdd100k"], default="bdd100k")
     parser.add_argument("--data-root", help="Cityscapes root")
     parser.add_argument("--images-dir", help="BDD100K 10K images split")
     parser.add_argument("--bitmasks-dir", help="BDD100K RGBA instance bitmasks split")
@@ -56,7 +56,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--lr", type=float, default=0.002)
-    parser.add_argument("--output", default="data/processed/maskrcnn_cityscapes.pt")
+    parser.add_argument("--output", default="data/processed/maskrcnn_bdd100k.pt")
     parser.add_argument("--resume", nargs="?", const="auto", default=None,
                         help="Resume from --output.last.pt, or provide a checkpoint path")
     parser.add_argument("--seed", type=int, default=42)
