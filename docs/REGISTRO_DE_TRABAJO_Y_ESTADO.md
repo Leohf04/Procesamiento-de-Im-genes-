@@ -747,3 +747,22 @@ El usuario autorizó corregir los problemas detectados en la auditoría. Los cam
 3. Contrastar decoder de instancias, mapeos de clases y decoder lane bitfield con los paquetes oficiales y evaluadores oficiales.
 4. Añadir reanudación al entrenador semántico/Mask R-CNN si se detecta que no cubre los casos de interrupción del usuario.
 5. Solo tras validación real de los loaders, activar descarga remota mínima y luego entrenamiento.
+
+
+### Corrección crítica adicional: layout RGBA de instancias BDD100K
+
+La revisión directa del convertidor oficial `bdd100k/label/to_mask.py` detectó un error en la descripción/decodificación anterior del canal de instancia:
+
+- R: category ID.
+- G: flags; bit 0 = ignored, bit 1 = crowd, bit 2 = occluded, bit 3 = truncated.
+- B: byte alto del annotation ID.
+- A: byte bajo del annotation ID.
+
+El loader anterior leía solo B como ID y asumía que A estaba reservado para tracking. Eso era incorrecto para las máscaras oficiales de instance segmentation. Se corrigió a `ann_id = (B << 8) | A` y se añadió un fixture con IDs 1 y 257 para verificar ambos bytes. La exclusión de crowd/ignore usa los bits bajos 0 y 1 de G.
+
+Fuente oficial contrastada: https://github.com/bdd100k/bdd100k/blob/master/bdd100k/label/to_mask.py (función `set_instance_color`, que serializa `ann_id >> 8` en B y `ann_id & 255` en A).
+
+### Resultado de pruebas intermedio
+
+- GitHub Actions run `44946190235`, commit `f1d16010249ce8907631b84bcdf3f996da3162d0`: instalación, compileall, smoke tests CLI y `pytest -q` finalizaron correctamente; **32 pruebas aprobadas**.
+- Ese commit es anterior a la corrección RGBA de 16 bits. La CI de los commits posteriores que contienen esa corrección debe finalizar antes de considerar validado el HEAD actual.
