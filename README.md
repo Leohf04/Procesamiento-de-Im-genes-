@@ -36,7 +36,57 @@ python scripts/verify_setup.py
 pytest -q
 ```
 
-## Datasets
+## BDD100K (dataset urbano principal)
+
+BDD100K sustituye a Cityscapes como dataset objetivo del flujo remoto. El proyecto ya incluye cargadores para las máscaras semánticas oficiales de 19 clases y las máscaras RGBA oficiales de instancias (8 clases), además de entrenamiento/evaluación semántica y fine-tuning de Mask R-CNN. Las etiquetas deben proceder de los paquetes oficiales y conservar su estructura.
+
+Estructura esperada dentro de `/content/datasets/bdd100k`:
+
+```text
+images/10k/{train,val}/*.jpg
+labels/sem_seg/masks/{train,val}/*.png
+labels/ins_seg/bitmasks/{train,val}/*.png
+```
+
+Las máscaras semánticas son PNG monocanal con IDs 0–18 y 255 para ignorar. Las máscaras de instancias son PNG RGBA: R=category ID (1–8), G=atributos, B=ann_id; el loader descarta instancias con flags crowd/ignore. No convertir los bitmasks RGBA a RGB ni a escala de grises.
+
+Entrenar DeepLabV3+ semántico:
+
+```bash
+python scripts/train_urban_segmentation.py --task bdd100k-semantic \
+  --images-dir data/bdd100k/images/10k/train \
+  --masks-dir data/bdd100k/labels/sem_seg/masks/train \
+  --val-images-dir data/bdd100k/images/10k/val \
+  --val-masks-dir data/bdd100k/labels/sem_seg/masks/val \
+  --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_bdd100k_semantic.pt
+```
+
+Entrenar Mask R-CNN con bitmasks de instancias:
+
+```bash
+python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k \
+  --images-dir data/bdd100k/images/10k/train \
+  --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/train \
+  --val-images-dir data/bdd100k/images/10k/val \
+  --val-bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val \
+  --epochs 20 --batch-size 2 --output data/processed/maskrcnn_bdd100k.pt
+```
+
+Evaluar mIoU semántico:
+
+```bash
+python scripts/evaluate_cityscapes.py --task bdd100k-semantic \
+  --images-dir data/bdd100k/images/10k/val \
+  --masks-dir data/bdd100k/labels/sem_seg/masks/val \
+  --checkpoint data/processed/deeplabv3plus_bdd100k_semantic.pt
+```
+
+El orden de clases sigue el formato oficial BDD100K. Detección 2D (10 clases), carriles (categoría/dirección/estilo) y evaluación AP de máscaras aún requieren completar sus adaptadores específicos; no deben confundirse con los loaders semántico/de instancias descritos aquí. Los datos se descargan directamente a la VM remota, nunca al teléfono.
+
+## Cityscapes (flujo legado)
+
+Cityscapes permanece únicamente como compatibilidad heredada; no es requisito para la ejecución BDD100K. Los comandos y loaders Cityscapes existentes siguen disponibles para reproducir experimentos anteriores.
+
 
 ### Cityscapes
 
