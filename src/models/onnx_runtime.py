@@ -39,12 +39,17 @@ class ONNXUrbanHybridModel:
     def predict(self, image_bgr):
         raw = self.semantic.predict(image_bgr)
         lane = self.lane.predict(image_bgr) if self.lane else np.zeros(raw.shape, np.uint8)
-        mapping = {2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 1: 10}
+        shared_mapping = {2: 1, 8: 2, 4: 3, 7: 4, 6: 5}
+        full_mapping = {2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 1: 10}
         semantic = np.zeros(raw.shape, np.uint8)
-        for source_id, target_id in mapping.items():
+        semantic_all11 = np.zeros(raw.shape, np.uint8)
+        for source_id, target_id in shared_mapping.items():
             semantic[raw == source_id] = target_id
+        for source_id, target_id in full_mapping.items():
+            semantic_all11[raw == source_id] = target_id
         return {"boxes": np.zeros((0, 4), np.float32), "labels": np.zeros((0,), np.int64),
                 "class_names": [], "scores": np.zeros((0,), np.float32), "instance_masks": None,
                 "raw_semantic_map": raw, "urban_semantic_mask": semantic,
+                "urban_semantic_mask_all11": semantic_all11,
                 "lane_mask": lane, "lane_model_loaded": self.lane is not None,
                 "detection_note": "Este export ONNX solo realiza segmentación semántica; no genera cajas ni instancias."}
