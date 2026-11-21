@@ -67,7 +67,7 @@ Descarga imágenes y anotaciones *lane marking* de BDD100K. Genera máscaras bin
 
 ```bash
 python scripts/prepare_bdd100k_lane_masks.py --labels data/bdd100k/labels/lane/train.json --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train
-python scripts/train_urban_segmentation.py --task lanes --data-root data/bdd100k --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_lanes.pt
+python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train --val-images-dir data/bdd100k/images/100k/val --val-masks-dir data/bdd100k/lane_masks/val --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_lanes.pt
 ```
 
 Prepara una partición de validación independiente por secuencia/video. No dividas fotogramas adyacentes aleatoriamente entre train y validation.
