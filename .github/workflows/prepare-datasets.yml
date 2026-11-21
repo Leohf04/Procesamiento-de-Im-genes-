@@ -45,10 +45,9 @@ jobs:
       - name: Check Google Drive credentials
         env:
           GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
-          : ${{ secrets. }}
         run: |
-          if [ -z "$GDRIVE_RCLONE_CONFIG" ] || [ -z "$" ]; then
-            echo "::error::Configura GDRIVE_RCLONE_CONFIG y  en Settings > Secrets and variables > Actions."
+          if [ -z "$GDRIVE_RCLONE_CONFIG" ]; then
+            echo "::error::Configura GDRIVE_RCLONE_CONFIG en Settings > Secrets and variables > Actions."
             exit 1
           fi
 
