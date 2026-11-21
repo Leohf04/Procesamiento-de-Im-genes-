@@ -47,9 +47,9 @@ jobs:
       - name: Download and validate bounded real GitHub samples
         run: |
           python scripts/validate_bdd100k_github_instance_sample.py \
-            --samples "${{ inputs.samples || '4' }}" \\
-            --height 128 \\
-            --width 256 \\
+            --samples "${{ inputs.samples || '4' }}" \
+            --height 128 \
+            --width 256 \
             --maskrcnn-smoke-test
 
 # Trigger validation after correcting the script import path.
