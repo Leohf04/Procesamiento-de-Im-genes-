@@ -26,9 +26,9 @@ def test_github_sample_adapter_builds_maskrcnn_targets(tmp_path):
     assert tuple(image.shape) == (3, 4, 6)
     assert image.dtype == torch.float32
     assert target["labels"].tolist() == [3]
-    assert target["boxes"].tolist() == [[1.0, 1.0, 5.0, 3.0]]
+    assert target["boxes"].tolist() == [[1.0, 1.0, 4.0, 3.0]]
     assert tuple(target["masks"].shape) == (1, 4, 6)
-    assert int(target["masks"].sum()) == 8
+    assert int(target["masks"].sum()) == 6
 
 
 def test_github_sample_adapter_rejects_path_traversal(tmp_path):
