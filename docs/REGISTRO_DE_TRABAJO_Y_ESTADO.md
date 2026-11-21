@@ -565,3 +565,47 @@ Aclaración operativa:
 - Para comprobar compatibilidad real de los parsers se requerirán muestras pequeñas descargadas directamente desde una fuente autorizada a `/content` en Colab. No deben pasar por el teléfono ni subirse a Drive.
 - La descarga completa se pospone hasta que las muestras validen loaders y conversiones. Los checkpoints y resultados sí se conservan en Drive.
 - No se ha descargado ningún archivo BDD100K ni se ha iniciado entrenamiento en esta intervención.
+
+
+## 10. Migración inicial de loaders y flujo Colab a BDD100K — 2026-11-21
+
+El usuario autorizó implementar la adaptación a BDD100K como dataset principal, manteniendo la ejecución remota y sin descargas al teléfono.
+
+### Decisiones de datos confirmadas con documentación oficial
+
+- BDD100K 10K images se utiliza para semántica e instancias; tiene splits train/val/test y no es necesariamente subconjunto exacto de 100K images.
+- Semantic masks: PNG monocanal de 8 bits, train IDs 0–18 y 255 para ignore.
+- Instance bitmasks: PNG RGBA; R almacena category ID (1–8), G atributos (ignore/crowd en bits menos significativos) y B el ann_id para instance segmentation. A se reserva para segmentation tracking.
+- Semantic classes (19): road, sidewalk, building, wall, fence, pole, traffic light, traffic sign, vegetation, terrain, sky, person, rider, car, truck, bus, train, motorcycle, bicycle.
+- Instance classes (8): pedestrian, rider, car, truck, bus, train, motorcycle, bicycle.
+- Fuentes oficiales consultadas:
+  - https://github.com/bdd100k/bdd100k/blob/master/doc/source/download.rst
+  - https://github.com/bdd100k/bdd100k/blob/master/doc/source/format.rst
+  - Mirror documentado: https://dl.cv.ethz.ch/bdd100k/data/
+
+### Cambios guardados en `urban-models-and-benchmark`
+
+- Añadido `src/utils/bdd100k_dataset.py`:
+  - `BDD100KSemanticDataset`: empareja imágenes y máscaras por nombre, valida IDs y conserva 255.
+  - `BDD100KInstanceDataset`: decodifica bitmasks RGBA, crea masks/boxes/labels para Mask R-CNN y descarta flags crowd/ignore.
+  - Normalización de imagen consistente con ImageNet.
+- Añadido `tests/test_bdd100k_dataset.py` con fixtures sintéticos para IDs semánticos, ignore, decodificación RGBA y máscaras faltantes.
+- Actualizado `scripts/train_urban_segmentation.py` para `--task bdd100k-semantic` (19 clases).
+- Actualizado `scripts/train_maskrcnn_cityscapes.py` con `--dataset bdd100k`, rutas de train/val y metadatos de ocho clases en checkpoints. Se conserva el nombre histórico del script por compatibilidad.
+- Actualizado `scripts/evaluate_cityscapes.py` con `--task bdd100k-semantic` y mIoU/IoU por clase. La evaluación de instancias BDD100K todavía no está implementada.
+- Actualizado README, protocolo experimental, guía Colab y notebook para usar rutas BDD100K 10K en tareas semántica e instancias. El notebook sigue con `RUN_TRAINING=False` y valida los archivos sin descargarlos automáticamente.
+- Commits principales de esta fase: `3ddaa864`, `3c5e243`, `58d6f1a`, `91d1a9a`, `a10edfc`, `a92937a`, `7e6d98f`, `4e13bf9`, `5e64482`, `cab1cb5`, `183f954`, `35f1154`, `db73e69`, `69f6297`, `2a6d312`.
+
+### Validación y límites actuales
+
+- Se añadieron pruebas unitarias, pero **no se han ejecutado** en un entorno Python ni en GitHub Actions durante esta intervención. El estado vacío de checks consultado no equivale a pruebas aprobadas.
+- No se descargó BDD100K, no se ejecutó entrenamiento y no se generaron checkpoints ni métricas.
+- No se ha implementado aún la descarga automática directa y verificable del mirror a `/content`; no se inventaron URLs de archivos.
+- Pendiente completar:
+  1. Adaptador/entrenador/evaluador de detección 2D con 100K images y Detection 2020 Labels (10 clases).
+  2. Carriles oficiales con sus tres subtareas (categoría, dirección y estilo); el parser existente de `poly2d` no se debe considerar correcto para Bezier hasta corregirlo y probarlo. Preferir las máscaras oficiales o el convertidor oficial BDD100K.
+  3. Evaluación de instancias BDD100K (box AP y mask AP) y validación de checkpoint.
+  4. Descarga remota reproducible: archivos exactos, checksum MD5, integridad de splits y espacio temporal.
+  5. Smoke tests sintéticos y pruebas en Colab T4 antes de habilitar `RUN_TRAINING`.
+- Cityscapes queda como compatibilidad heredada; no es requisito del flujo BDD100K.
+- PR #3 debe permanecer abierto y sin fusionar. No se ha solicitado ni realizado merge.
