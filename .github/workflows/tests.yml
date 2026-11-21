@@ -32,6 +32,8 @@ jobs:
         run: |
           python scripts/train_urban_segmentation.py --help
           python scripts/train_maskrcnn_cityscapes.py --help
+          python scripts/train_bdd100k_detection.py --help
+          python scripts/train_bdd100k_lanes.py --help
           python scripts/evaluate_cityscapes.py --help
           python scripts/evaluate_lanes.py --help
           python scripts/export_deeplabv3plus_onnx.py --help
