@@ -13,6 +13,7 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.utils.cityscapes_instance_dataset import CityscapesInstanceDataset
+from src.utils.bdd100k_dataset import BDD100KInstanceDataset, BDD100K_INSTANCE_CLASSES
 
 
 CLASS_NAMES = ["background", "person", "rider", "car", "truck", "bus", "motorcycle", "bicycle"]
@@ -30,12 +31,12 @@ def atomic_save(payload, destination):
     os.replace(temporary, destination)
 
 
-def build_model(pretrained):
+def build_model(pretrained, num_classes=None):
     model = maskrcnn_resnet50_fpn_v2(
         weights=MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT if pretrained else None,
         weights_backbone=None if not pretrained else None,
     )
-    num_classes = len(CLASS_NAMES)
+    num_classes = num_classes or len(CLASS_NAMES)
     box_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(box_features, num_classes)
     mask_features = model.roi_heads.mask_predictor.conv5_mask.in_channels
@@ -45,7 +46,12 @@ def build_model(pretrained):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-root", required=True)
+    parser.add_argument("--dataset", choices=["cityscapes", "bdd100k"], default="cityscapes")
+    parser.add_argument("--data-root", help="Cityscapes root")
+    parser.add_argument("--images-dir", help="BDD100K 10K images split")
+    parser.add_argument("--bitmasks-dir", help="BDD100K RGBA instance bitmasks split")
+    parser.add_argument("--val-images-dir", help="BDD100K validation images")
+    parser.add_argument("--val-bitmasks-dir", help="BDD100K validation RGBA bitmasks")
     parser.add_argument("--epochs", type=int, default=20, help="Total target epochs, not additional epochs")
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--workers", type=int, default=2)
@@ -60,8 +66,19 @@ def main():
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    train_data = CityscapesInstanceDataset(args.data_root, "train")
-    val_data = CityscapesInstanceDataset(args.data_root, "val")
+    if args.dataset == "cityscapes":
+        if not args.data_root:
+            parser.error("--data-root es obligatorio para Cityscapes")
+        train_data = CityscapesInstanceDataset(args.data_root, "train")
+        val_data = CityscapesInstanceDataset(args.data_root, "val")
+        class_names = CLASS_NAMES
+    else:
+        if not all([args.images_dir, args.bitmasks_dir, args.val_images_dir, args.val_bitmasks_dir]):
+            parser.error("BDD100K requiere --images-dir, --bitmasks-dir, --val-images-dir y --val-bitmasks-dir")
+        train_data = BDD100KInstanceDataset(args.images_dir, args.bitmasks_dir)
+        val_data = BDD100KInstanceDataset(args.val_images_dir, args.val_bitmasks_dir)
+        class_names = ["background", *BDD100K_INSTANCE_CLASSES]
+    num_classes = len(class_names)
     if len(train_data) == 0 or len(val_data) == 0:
         raise ValueError("Cityscapes debe contener imágenes de train y val.")
 
@@ -72,7 +89,7 @@ def main():
     last_path = Path(str(output) + ".last.pt")
     resume_path = last_path if args.resume == "auto" else Path(args.resume) if args.resume else None
 
-    model = build_model(pretrained=resume_path is None).to(device)
+    model = build_model(pretrained=resume_path is None, num_classes=num_classes).to(device)
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=args.lr, momentum=0.9, weight_decay=0.0005)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
@@ -82,7 +99,7 @@ def main():
         if not resume_path.is_file():
             raise FileNotFoundError(f"No existe checkpoint para reanudar: {resume_path}")
         checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
-        if checkpoint.get("num_classes") != len(CLASS_NAMES):
+        if checkpoint.get("num_classes") != num_classes:
             raise ValueError("El checkpoint no tiene las 8 clases de Mask R-CNN esperadas.")
         if "optimizer_state_dict" not in checkpoint or "scheduler_state_dict" not in checkpoint:
             raise ValueError("Checkpoint antiguo sin estado del optimizador/scheduler; no permite reanudación exacta.")
@@ -115,7 +132,7 @@ def main():
         atomic_save({"model_state_dict": model.state_dict(),
                      "optimizer_state_dict": optimizer.state_dict(),
                      "scheduler_state_dict": scheduler.state_dict(),
-                     "num_classes": len(CLASS_NAMES), "class_names": CLASS_NAMES,
+                     "num_classes": num_classes, "class_names": class_names,
                      "epoch": epoch + 1, "seed": args.seed, "history": history}, last_path)
         # Keep the public checkpoint path usable by the existing evaluation/inference scripts.
         atomic_save({"model_state_dict": model.state_dict(),
