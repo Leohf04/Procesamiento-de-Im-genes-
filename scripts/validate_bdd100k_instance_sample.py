@@ -16,6 +16,7 @@ from pathlib import Path
 
 from huggingface_hub import HfApi, hf_hub_download
 from PIL import Image
+import torch
 
 from src.utils.bdd100k_dataset import BDD100KInstanceDataset
 
@@ -150,9 +151,9 @@ def main() -> None:
         for index in range(len(dataset)):
             image, target = dataset[index]
             assert tuple(image.shape) == (3, 256, 512)
-            assert image.dtype.name == "float32" if hasattr(image.dtype, "name") else True
+            assert image.dtype == torch.float32
             assert target["boxes"].ndim == 2 and target["boxes"].shape[1] == 4
-            assert target["labels"].dtype.name == "int64" if hasattr(target["labels"].dtype, "name") else True
+            assert target["labels"].dtype == torch.int64
             assert target["masks"].ndim == 3
             assert target["masks"].shape[1:] == (256, 512)
             assert len(target["labels"]) == len(target["boxes"]) == len(target["masks"])
