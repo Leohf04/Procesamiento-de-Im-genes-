@@ -29,7 +29,8 @@ class UrbanPerceptionPipeline:
                 device=self.config.get("system", {}).get("device", "auto"),
                 confidence_threshold=cfg.get("confidence_threshold", 0.5),
                 mask_threshold=cfg.get("mask_threshold", 0.5),
-                allowed_labels=self.allowed_labels, shared_labels=set(self.shared5))
+                allowed_labels=self.allowed_labels, shared_labels=set(self.shared5),
+                checkpoint_path=cfg.get("urban_checkpoint"))
         elif self.approach == "hybrid" and self.backend in {"torch", "onnx"}:
             cfg = self.config["models"]["semantic_hybrid"]
             self.model = SemanticHybridModel(backend=self.backend,
