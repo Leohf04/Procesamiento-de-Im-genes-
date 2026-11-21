@@ -37,7 +37,7 @@ class InstanceSegmentationModel:
                 self.model.load_state_dict(checkpoint["model_state_dict"])
                 self.category_names = class_names
                 self.semantic_label_space = (
-                    "bdd100k" if "pedestrian" in class_names else "cityscapes"
+                    "bdd100k_instance" if "pedestrian" in class_names else "cityscapes"
                 )
                 self.urban_finetuned = True
             else:
