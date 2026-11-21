@@ -620,3 +620,6 @@ El usuario autorizó implementar la adaptación a BDD100K como dataset principal
 - Se ajustaron README, protocolo experimental y guía Colab para dejar claro que carriles multiatributo, detección 2D, evaluación de instancias y descarga automática reproducible siguen pendientes. Se marcó como no validado el conversor antiguo de carriles basado en vértices simples.
 - Últimos commits documentales/correctivos de esta continuación: `7976e6e`, `f64548f`, `ab208da`, `fb695bf`.
 - No se ejecutaron pruebas Python ni GitHub Actions; los tests añadidos permanecen pendientes de ejecución. No afirmar que el código está validado.
+
+
+- Último ajuste de protocolo: se retiraron los comandos antiguos de entrenamiento/evaluación binaria de carriles, porque no respetaban las tres subtareas oficiales BDD100K; commit `e03ac62`.
