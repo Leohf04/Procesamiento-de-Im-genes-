@@ -6,21 +6,27 @@ El workflow `.github/workflows/prepare-datasets.yml` se ejecuta manualmente desd
 
 El runner es efímero: su copia local se elimina al terminar el trabajo. Este workflow prepara datos; **no entrena modelos** y no requiere GPU.
 
-## Configuración de Google Drive
+## Configurar Google Drive (OAuth de tu cuenta)
 
-Se usa una cuenta de servicio de Google Cloud con acceso limitado a una carpeta específica:
+Se usa OAuth de Google Drive mediante rclone, para que las escrituras consuman el almacenamiento de tu propia cuenta y no dependan de la cuota de una cuenta de servicio.
 
-1. Crea una cuenta de servicio en un proyecto de Google Cloud y habilita Google Drive API.
-2. Genera una clave JSON para esa cuenta de servicio.
-3. Crea una carpeta raíz en Google Drive y compártela con el correo de la cuenta de servicio, con permiso de editor (el workflow lee fuentes y escribe resultados).
-4. En el repositorio abre **Settings → Secrets and variables → Actions → New repository secret** y crea:
-   - `GDRIVE_SERVICE_ACCOUNT_JSON`: contenido completo del archivo JSON de la cuenta de servicio.
-   - `GDRIVE_FOLDER_ID`: ID de la carpeta raíz compartida.
-5. No pegues claves privadas ni tokens en el código, issues o conversaciones. Si la clave se expone, revócala y genera otra.
+1. Instala [rclone](https://rclone.org/install/) en tu PC o en Termux.
+2. Ejecuta `rclone config` y crea un remote nuevo con:
+   - Nombre: `gdrive`
+   - Tipo: `drive` (Google Drive)
+   - Scope: `drive` (acceso completo necesario para leer los archivos existentes y escribir los derivados)
+   - Deja vacíos `client_id` y `client_secret` si no configuraste tu propia aplicación OAuth.
+   - Acepta la autorización OAuth en el navegador con la cuenta de Google donde guardarás los datasets.
+   - Conserva el resto de opciones por defecto, salvo que necesites una configuración particular.
+3. Comprueba la conexión local con `rclone lsd gdrive:`.
+4. Consulta `rclone config file` para localizar el archivo de configuración. Copia su contenido completo; incluye un token OAuth renovable.
+5. En GitHub abre **Settings → Secrets and variables → Actions → New repository secret** y crea:
+   - `GDRIVE_RCLONE_CONFIG`: contenido completo del archivo `rclone.conf`.
+6. No compartas el contenido de ese archivo, no lo subas al repositorio ni lo pegues en conversaciones. Si se expone, revoca el acceso de rclone desde tu cuenta de Google y genera un token nuevo.
 
-La cuenta de servicio debe tener acceso explícito a la carpeta compartida. No se necesita compartir públicamente los datasets.
+Usa preferiblemente una cuenta de Google dedicada al proyecto o una cuenta cuya unidad de Drive no contenga archivos sensibles, ya que el scope `drive` permite acceso amplio a Drive. La carpeta `bdd100k` debe existir en la raíz de ese Drive.
 
-## Estructura esperada dentro de la carpeta raíz de Drive
+## Estructura esperada en Google Drive
 
 Para BDD100K, sube manualmente los archivos que hayas obtenido conforme a sus términos:
 
@@ -59,7 +65,7 @@ cityscapes/
 La salida se guarda en:
 
 ```text
-<carpeta-raíz-drive>/
+<raíz-de-Drive>/
 └── prepared/
     └── bdd100k/
         └── <run_id>-<run_attempt>/
