@@ -136,8 +136,8 @@ def test_lane_dataset_decodes_three_packed_targets_and_background(tmp_path):
 
     assert tuple(image.shape) == (3, 2, 3)
     assert targets["category"].tolist() == [[6, 0, 255], [6, 6, 6]]
-    assert targets["style"].tolist() == [[1, 0, 1], [1, 1, 1]]
-    assert targets["direction"].tolist() == [[1, 0, 1], [1, 1, 1]]
+    assert targets["style"].tolist() == [[1, 0, 255], [1, 1, 1]]
+    assert targets["direction"].tolist() == [[1, 0, 255], [1, 1, 1]]
     # 255 has background bit 1; ignore it in all three heads.
     assert targets["category"][0, 2].item() == 255
     assert targets["style"][0, 2].item() == 255
