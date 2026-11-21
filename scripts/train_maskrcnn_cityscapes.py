@@ -56,7 +56,7 @@ def main():
             running += float(loss.detach())
         scheduler.step()
         record = {"epoch": epoch + 1, "train_loss": running / max(1, len(train_loader)),
-                  "validation_images": len(val_data), "note": "Validation set reserved for evaluate_scenarios.py; no val loss computed here."}
+                  "validation_images": len(val_data), "note": "Validation split is kept separate for scripts/evaluate_cityscapes.py; no val loss computed here."}
         history.append(record)
         print(json.dumps(record))
         output = Path(args.output)
