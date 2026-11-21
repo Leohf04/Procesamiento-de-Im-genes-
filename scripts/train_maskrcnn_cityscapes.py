@@ -7,6 +7,8 @@ from torch.utils.data import DataLoader
 from torchvision.models.detection import maskrcnn_resnet50_fpn_v2, MaskRCNN_ResNet50_FPN_V2_Weights
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.utils.cityscapes_instance_dataset import CityscapesInstanceDataset
 
 
