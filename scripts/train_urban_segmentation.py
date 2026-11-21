@@ -15,6 +15,8 @@ def main():
     parser.add_argument("--data-root", help="Cityscapes root for cityscapes task")
     parser.add_argument("--images-dir", help="BDD100K images directory for lanes task")
     parser.add_argument("--masks-dir", help="Rasterized BDD100K masks directory for lanes task")
+    parser.add_argument("--val-images-dir", help="Independent BDD100K validation images directory")
+    parser.add_argument("--val-masks-dir", help="Independent BDD100K validation masks directory")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--workers", type=int, default=4)
