@@ -100,9 +100,14 @@ def main():
             raise FileNotFoundError(f"No existe checkpoint para reanudar: {resume_path}")
         checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
         if checkpoint.get("num_classes") != num_classes:
-            raise ValueError("El checkpoint no tiene las 8 clases de Mask R-CNN esperadas.")
+            raise ValueError(
+                f"El checkpoint tiene {checkpoint.get('num_classes')} salidas; "
+                f"se esperaban {num_classes} (fondo + {num_classes - 1} clases)."
+            )
+        if checkpoint.get("class_names") and checkpoint["class_names"] != class_names:
+            raise ValueError("El orden/nombre de clases del checkpoint no coincide con el dataset seleccionado.")
         if "optimizer_state_dict" not in checkpoint or "scheduler_state_dict" not in checkpoint:
-            raise ValueError("Checkpoint antiguo sin estado del optimizador/scheduler; no permite reanudación exacta.")
+            raise ValueError("Checkpoint antiguo sin estado del optimizador/scheduler; no permite reanudar el estado de optimización.")
         model.load_state_dict(checkpoint["model_state_dict"])
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
