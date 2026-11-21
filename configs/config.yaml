@@ -6,6 +6,8 @@ system:
 dataset:
   name: "cityscapes"
   root: "data/cityscapes"
+  images_dir: "data/coco/val2017"
+  annotations_file: "data/coco/annotations/instances_val2017.json"
   coco_images_dir: "data/coco/val2017"
   coco_annotations_file: "data/coco/annotations/instances_val2017.json"
   processed_dir: "data/processed"
