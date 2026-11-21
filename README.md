@@ -79,7 +79,7 @@ Prepara una partición de validación independiente por secuencia/video. No divi
 
 La preparación puede ejecutarse con GitHub Actions y Google Drive sin almacenar datos en Git. Consulta [docs/DATASETS_GITHUB_ACTIONS.md](docs/DATASETS_GITHUB_ACTIONS.md) para configurar rclone mediante OAuth y guardar el archivo de configuración en el secreto `GDRIVE_RCLONE_CONFIG`.
 
-El workflow manual `.github/workflows/prepare-datasets.yml` valida BDD100K y genera máscaras de carriles para train/val. Los archivos fuente deben estar previamente en Drive. Cityscapes permanece bloqueado hasta completar el registro y confirmar el acceso autorizado; no se intenta descargarlo automáticamente. Esta fase prepara datos, no entrena modelos.
+El workflow manual `.github/workflows/prepare-datasets.yml` valida BDD100K por lotes (hasta 4.000 imágenes por ejecución) y genera máscaras de carriles para train/val. Los archivos fuente deben estar previamente en Drive; cada lote se reanuda con el `next_offset` del manifiesto. Cityscapes permanece bloqueado hasta completar el registro y confirmar el acceso autorizado; no se intenta descargarlo automáticamente. Esta fase prepara datos, no entrena modelos.
 
 ## Inferencia
 
