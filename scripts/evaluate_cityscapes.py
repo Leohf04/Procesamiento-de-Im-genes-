@@ -6,6 +6,8 @@ import cv2
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.models.deeplabv3plus import DeepLabV3Plus
 from src.models.instance_seg import InstanceSegmentationModel
 from src.utils.urban_dataset import CityscapesFineDataset, CITYSCAPES_CLASSES
