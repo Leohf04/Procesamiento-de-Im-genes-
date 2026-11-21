@@ -81,7 +81,8 @@ class InstanceSegmentationModel:
             semantic_all[mask > 0] = int(label)
         return {"boxes": fboxes, "labels": flabels, "class_names": names, "scores": fscores,
                 "instance_masks": masks, "urban_semantic_mask": semantic,
-                "urban_semantic_mask_all8": semantic_all, "urban_finetuned": self.urban_finetuned}
+                "urban_semantic_mask_all8": semantic_all, "urban_finetuned": self.urban_finetuned,
+                "semantic_label_space": "cityscapes" if self.urban_finetuned else "coco"}
 
     def _predict_onnx_cv2(self, image_bgr):
         h, w = image_bgr.shape[:2]
