@@ -48,7 +48,7 @@ class ScenarioEvaluator:
                 gts.append({"boxes": sample["gt_boxes"], "class_names": sample["gt_labels"]})
                 pred_mask = prediction.get("urban_semantic_mask")
                 gt_mask = sample.get("gt_semantic_mask")
-                if pred_mask is not None and gt_mask is not None:
+                if pred_mask is not None and gt_mask is not None and prediction.get("semantic_label_space") != "cityscapes":
                     miou_values.append(compute_semantic_miou(pred_mask, gt_mask))
             per_class_ap = compute_average_precision_per_image(preds, gts, classes, threshold)
             valid = [v for v in per_class_ap.values() if np.isfinite(v)]
@@ -62,7 +62,7 @@ class ScenarioEvaluator:
                 "fps": 1000.0 / mean_latency if mean_latency > 0 else 0.0,
                 "per_class_ap": per_class_ap,
                 "evaluated_images": len(samples),
-                "evaluation_note": "AP@0.5 por clase con ranking global por confianza; condiciones sintéticas si el escenario no es clear_day."
+                "evaluation_note": "AP@0.5 por clase con ranking global por confianza; condiciones sintéticas si el escenario no es clear_day. mIoU omitido cuando el espacio de etiquetas del modelo no coincide con COCO."
             }
         return report
 
