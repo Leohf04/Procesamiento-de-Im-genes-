@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.models.deeplabv3plus import DeepLabV3Plus
 from src.models.instance_seg import InstanceSegmentationModel
 from src.utils.urban_dataset import CityscapesFineDataset, CITYSCAPES_CLASSES
+from src.utils.bdd100k_dataset import BDD100KSemanticDataset, BDD100K_SEMANTIC_CLASSES
 from src.utils.cityscapes_instance_dataset import CityscapesInstanceDataset
 from src.evaluation.metrics import compute_average_precision_per_image
 
@@ -41,6 +42,38 @@ def evaluate_semantic(root, checkpoint_path, output_path):
                  for i, name in enumerate(CITYSCAPES_CLASSES)}
     valid_ious = [v for v in per_class.values() if v is not None]
     report = {"task": "cityscapes_semantic", "images": len(dataset),
+              "per_class_iou": per_class, "miou": float(np.mean(valid_ious)) if valid_ious else None,
+              "checkpoint": str(checkpoint_path), "split": "val"}
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
+
+
+def evaluate_bdd100k_semantic(images_dir, masks_dir, checkpoint_path, output_path):
+    dataset = BDD100KSemanticDataset(images_dir, masks_dir)
+    loader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=2)
+    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    if checkpoint.get("num_classes") != 19:
+        raise ValueError("El checkpoint no contiene las 19 clases semánticas BDD100K.")
+    model = DeepLabV3Plus(19, pretrained_backbone=False)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device).eval()
+    intersections = np.zeros(19, np.int64)
+    unions = np.zeros(19, np.int64)
+    with torch.inference_mode():
+        for images, masks in loader:
+            pred = model(images.to(device))["out"].argmax(1).cpu().numpy()[0]
+            gt = masks.numpy()[0]
+            valid = gt != 255
+            for class_id in range(19):
+                p, g = (pred == class_id) & valid, (gt == class_id) & valid
+                intersections[class_id] += np.logical_and(p, g).sum()
+                unions[class_id] += np.logical_or(p, g).sum()
+    per_class = {name: (float(intersections[i] / unions[i]) if unions[i] else None)
+                 for i, name in enumerate(BDD100K_SEMANTIC_CLASSES)}
+    valid_ious = [v for v in per_class.values() if v is not None]
+    report = {"task": "bdd100k_semantic", "images": len(dataset),
               "per_class_iou": per_class, "miou": float(np.mean(valid_ious)) if valid_ious else None,
               "checkpoint": str(checkpoint_path), "split": "val"}
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
@@ -80,14 +113,24 @@ def evaluate_instances(root, checkpoint_path, output_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", choices=["semantic", "instance"], required=True)
-    parser.add_argument("--data-root", required=True)
+    parser.add_argument("--task", choices=["semantic", "bdd100k-semantic", "instance"], required=True)
+    parser.add_argument("--data-root")
+    parser.add_argument("--images-dir", help="BDD100K validation images")
+    parser.add_argument("--masks-dir", help="BDD100K validation semantic masks")
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--output", default="data/outputs/cityscapes_metrics.json")
     args = parser.parse_args()
     if args.task == "semantic":
+        if not args.data_root:
+            parser.error("--data-root es obligatorio para Cityscapes semantic")
         evaluate_semantic(args.data_root, args.checkpoint, args.output)
+    elif args.task == "bdd100k-semantic":
+        if not args.images_dir or not args.masks_dir:
+            parser.error("BDD100K semantic requiere --images-dir y --masks-dir")
+        evaluate_bdd100k_semantic(args.images_dir, args.masks_dir, args.checkpoint, args.output)
     else:
+        if not args.data_root:
+            parser.error("--data-root es obligatorio para Cityscapes instance")
         evaluate_instances(args.data_root, args.checkpoint, args.output)
 
 
