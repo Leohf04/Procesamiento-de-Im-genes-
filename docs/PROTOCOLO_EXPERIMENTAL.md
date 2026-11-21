@@ -6,10 +6,15 @@ Separar tres mediciones que no deben mezclarse: (1) calidad semántica, (2) cali
 
 ## Datos y particiones
 
-- **Cityscapes Fine**: entrenamiento oficial `train` y validación oficial `val`. No mezclar imágenes entre splits. La evaluación final académica debe reservar el split `test` y usar el servidor oficial cuando se requieran etiquetas ocultas.
-- **BDD100K lane markings**: convertir los polígonos lane a máscaras con `scripts/prepare_bdd100k_lane_masks.py`. Crear directorios de entrenamiento y validación por video/sequence, nunca por frames aleatorios adyacentes. El script de entrenamiento de carriles usa la carpeta suministrada; la partición de sus archivos debe hacerse previamente y documentarse.
-- **COCO val2017**: conservarlo como benchmark auxiliar de detección COCO, no como sustituto de Cityscapes/BDD100K.
-- No usar el split de validación para ajustar umbrales y después reportarlo como test. Registrar cualquier selección de hiperparámetros.
+- **BDD100K 10K** es el dataset principal para segmentación semántica e instancias. Usar los splits oficiales train/val y emparejar imágenes y máscaras por nombre.
+- Semántica: `images/10k/{train,val}` + `labels/sem_seg/masks/{train,val}`; IDs 0–18 y 255 ignore.
+- Instancias: `images/10k/{train,val}` + `labels/ins_seg/bitmasks/{train,val}`; PNG RGBA oficial, ocho categorías. No convertir a RGB o escala de grises.
+- Detección 2D: usar 100K images + Detection 2020 Labels (10 categorías); adaptador/entrenador pendiente.
+- Carriles: las etiquetas oficiales codifican categoría, dirección y estilo; no aplanarlas a binario hasta implementar y validar las tres salidas. Parser Bezier pendiente de corrección.
+- Mantener los splits oficiales y no mezclar secuencias/frames de un mismo vídeo entre train y validation.
+- **Cityscapes** queda como flujo legado opcional; no es requisito de BDD100K.
+- **COCO val2017** puede conservarse como benchmark auxiliar, no como sustituto de BDD100K.
+- No usar validation para ajustar umbrales y luego reportarlo como test.
 
 ## Preparación reproducible desde Google Drive
 
