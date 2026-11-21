@@ -3,7 +3,8 @@ import numpy as np
 from pathlib import Path
 from src.utils.config_utils import resolve_backend
 
-CITYSCAPES_TO_PROJECT = {2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 1: 10}
+CITYSCAPES_TO_PROJECT = {2: 1, 8: 2, 4: 3, 7: 4, 6: 5}
+CITYSCAPES_TO_URBAN11 = {2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 1: 10}
 
 
 class SemanticHybridModel:
@@ -65,8 +66,11 @@ class SemanticHybridModel:
                 lane=lane_logits.argmax(0).cpu().numpy().astype(np.uint8)
         raw=cv2.resize(raw,(image.shape[1],image.shape[0]),interpolation=cv2.INTER_NEAREST)
         semantic=np.zeros(raw.shape,np.uint8)
+        semantic_all11=np.zeros(raw.shape,np.uint8)
         for source_id,target_id in CITYSCAPES_TO_PROJECT.items():
             semantic[raw==source_id]=target_id
+        for source_id,target_id in CITYSCAPES_TO_URBAN11.items():
+            semantic_all11[raw==source_id]=target_id
         scores=det["scores"].cpu().numpy(); labels=det["labels"].cpu().numpy(); boxes=det["boxes"].cpu().numpy()
         keep=[]; names=[]
         for i,(score,label) in enumerate(zip(scores,labels)):
@@ -78,7 +82,7 @@ class SemanticHybridModel:
                 "labels":labels[keep] if keep else np.zeros((0,),np.int64),"class_names":names,
                 "scores":scores[keep] if keep else np.zeros((0,),np.float32),
                 "instance_masks":None,"raw_semantic_map":raw,"urban_semantic_mask":semantic,
-                "lane_mask":lane_mask,"lane_model_loaded":self.lane_model is not None}
+                "urban_semantic_mask_all11":semantic_all11,"lane_mask":lane_mask,"lane_model_loaded":self.lane_model is not None}
 
     def predict(self,image_bgr):
         if self.backend == "torch":
