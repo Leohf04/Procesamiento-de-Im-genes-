@@ -9,8 +9,8 @@ Separar tres mediciones que no deben mezclarse: (1) calidad semántica, (2) cali
 - **BDD100K 10K** es el dataset principal para segmentación semántica e instancias. Usar los splits oficiales train/val y emparejar imágenes y máscaras por nombre.
 - Semántica: `images/10k/{train,val}` + `labels/sem_seg/masks/{train,val}`; IDs 0–18 y 255 ignore.
 - Instancias: `images/10k/{train,val}` + `labels/ins_seg/bitmasks/{train,val}`; PNG RGBA oficial, ocho categorías. No convertir a RGB o escala de grises.
-- Detección 2D: usar 100K images + Detection 2020 Labels (10 categorías); adaptador/entrenador pendiente.
-- Carriles: las etiquetas oficiales codifican categoría, dirección y estilo; no aplanarlas a binario hasta implementar y validar las tres salidas. Parser Bezier pendiente de corrección.
+- Detección 2D: usar 100K images + Detection 2020 Labels (10 categorías oficiales: bike, bus, car, motor, person, rider, traffic light, traffic sign, train, truck); loader/entrenador Faster R-CNN y validación Box AP50 implementados.
+- Carriles: usar directamente las máscaras oficiales monocanal empaquetadas; loader/entrenador multi-cabeza implementados para categoría (8 clases), dirección (2) y estilo (2), ignorando píxeles de fondo. No usar el conversor binario legado.
 - Mantener los splits oficiales y no mezclar secuencias/frames de un mismo vídeo entre train y validation.
 - **Cityscapes** queda como flujo legado opcional; no es requisito de BDD100K.
 - **COCO val2017** puede conservarse como benchmark auxiliar, no como sustituto de BDD100K.
@@ -18,7 +18,7 @@ Separar tres mediciones que no deben mezclarse: (1) calidad semántica, (2) cali
 
 ## Preparación reproducible desde Google Drive
 
-La preparación automatizada está descrita en [docs/DATASETS_GITHUB_ACTIONS.md](DATASETS_GITHUB_ACTIONS.md). El workflow manual descarga temporalmente desde Google Drive el JSON de un split y un lote acotado (hasta 4.000 imágenes), valida las imágenes y genera máscaras binarias de carriles; sube manifiestos y máscaras derivadas de vuelta a Drive. El siguiente lote se reanuda con `next_offset`. No almacena imágenes ni anotaciones en GitHub. Cityscapes permanece deshabilitado hasta que el usuario tenga registro y acceso autorizado. La preparación no sustituye el entrenamiento y no demuestra que la partición BDD100K esté libre de fuga temporal: los splits deben organizarse por secuencia/video.
+La preparación automatizada está descrita en [docs/DATASETS_GITHUB_ACTIONS.md](DATASETS_GITHUB_ACTIONS.md). El workflow manual descarga temporalmente desde Google Drive el JSON de un split y un lote acotado (hasta 4.000 imágenes), valida las imágenes y genera máscaras binarias de carriles heredadas. Ese resultado binario se conserva solo por compatibilidad y no se usa en el nuevo entrenamiento multi-tarea; el flujo nuevo requiere las máscaras oficiales empaquetadas. El siguiente lote se reanuda con `next_offset`. No almacena imágenes ni anotaciones en GitHub. Cityscapes permanece deshabilitado hasta que el usuario tenga registro y acceso autorizado. La preparación no sustituye el entrenamiento y no demuestra que la partición BDD100K esté libre de fuga temporal: los splits deben organizarse por secuencia/video.
 
 ## Entrenamiento
 
@@ -36,13 +36,17 @@ Clases de salida (19): road, sidewalk, building, wall, fence, pole, traffic ligh
 python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k --images-dir data/bdd100k/images/10k/train --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/train --val-images-dir data/bdd100k/images/10k/val --val-bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val --epochs 20 --batch-size 2 --output data/processed/maskrcnn_bdd100k.pt
 ```
 
-El checkpoint parte de pesos COCO y ajusta las cabezas de cajas y máscaras a ocho clases BDD100K: pedestrian, rider, car, truck, bus, train, motorcycle y bicycle. Es un entrenamiento real solo después de ejecutar el comando con las anotaciones oficiales.
+El checkpoint parte de pesos COCO y ajusta las cabezas de cajas y máscaras a ocho clases de instancia BDD100K. El loader entrega imágenes en [0,1], ya que Torchvision normaliza internamente. El evaluador nuevo acepta checkpoints con nueve salidas (fondo + 8 clases) y calcula Box AP y Mask AP.
 
-### Carriles BDD100K — bloqueado hasta adaptar las tres subtareas
+### Carriles BDD100K: categoría, dirección y estilo
 
-No ejecutar `scripts/prepare_bdd100k_lane_masks.py` ni el entrenamiento binario antiguo para producir resultados académicos. El formato oficial codifica categoría, dirección y estilo en una máscara monocanal y el JSON `poly2d` contiene curvas Bezier. El conversor anterior trataba vértices como líneas simples y no preservaba los tres atributos.
+Entrenar con las máscaras oficiales `labels/lane/masks/{train,val}`, no con polígonos rasterizados a una máscara binaria:
 
-La implementación debe usar las máscaras oficiales `labels/lane/masks/{train,val}` y entrenar/evaluar las tres salidas (9 categorías, 2 direcciones y 2 estilos evaluables, excluyendo background), o usar el conversor oficial BDD100K. Se requieren pruebas con máscaras reales y visualizaciones antes de habilitar el entrenamiento.
+```bash
+python scripts/train_bdd100k_lanes.py --train-images data/bdd100k/images/100k/train --train-masks data/bdd100k/labels/lane/masks/train --val-images data/bdd100k/images/100k/val --val-masks data/bdd100k/labels/lane/masks/val --epochs 20 --batch-size 2 --output data/processed/bdd100k_lanes.pt
+```
+
+El byte empaquetado se decodifica con bits 0–2 para categoría, bit 3 para fondo, bit 4 para estilo y bit 5 para dirección. El entrenamiento tiene una cabeza por subtarea y calcula mIoU de validación. El antiguo `scripts/prepare_bdd100k_lane_masks.py` queda obsoleto porque pierde atributos y no reproduce curvas Bezier. Antes de reportar métricas académicas se debe contrastar el decoder con máscaras oficiales reales y el evaluador oficial BDD100K.
 
 ## Inferencia
 
@@ -60,7 +64,13 @@ El exportador ONNX actual cubre segmentación semántica y carriles. No exporta 
 python scripts/evaluate_cityscapes.py --task bdd100k-semantic --images-dir data/bdd100k/images/10k/val --masks-dir data/bdd100k/labels/sem_seg/masks/val --checkpoint data/processed/deeplabv3plus_bdd100k_semantic.pt
 ```
 
-La evaluación de instancias BDD100K (box AP y mask AP) sigue pendiente. El evaluador Cityscapes existente no es compatible con los bitmasks BDD100K. El evaluador binario de carriles queda bloqueado hasta implementar las tres subtareas oficiales.
+Evaluar instancias BDD100K (Box AP y Mask AP):
+
+```bash
+python scripts/evaluate_cityscapes.py --task bdd100k-instance --images-dir data/bdd100k/images/10k/val --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val --checkpoint data/processed/maskrcnn_bdd100k.pt --output data/outputs/bdd100k_instance_metrics.json
+```
+
+El evaluador usa matching greedy por imagen e interpolación precision-recall; su AP50/AP75/AP50:95 es un protocolo interno y no equivale a COCOeval oficial. La validación oficial y máscaras reales aún son necesarias antes de publicar resultados.
 
 El AP de Mask R-CNN de este script corresponde a cajas, no a máscaras. No reportar mask AP hasta añadir y ejecutar una evaluación COCO-style de máscaras.
 
@@ -79,7 +89,9 @@ El informe incluye media, mediana, p95, p99, FPS derivado de latencia media, res
 
 - DeepLabV3+: reportar IoU por clase y mIoU sobre Cityscapes val, ignorando ID 255.
 - Mask R-CNN: reportar AP@0.5 por clase y mAP@0.5 con matching uno-a-uno, además de métricas de máscaras si se dispone del evaluador de instancias correspondiente.
-- Carriles: reportar IoU y F1 de la clase lane_marking sobre BDD100K val.
+- Detección 2D: reportar Box AP50 por clase y mAP50 sobre BDD100K val.
+- Instancias: reportar Box AP y Mask AP; distinguir explícitamente el protocolo interno del COCOeval oficial.
+- Carriles: reportar mIoU por categoría, dirección y estilo sobre BDD100K val, y contrastar con el F1 boundary oficial.
 - Reportar por separado métricas COCO y Cityscapes/BDD100K. Nunca promediar datasets incompatibles.
 - Publicar número de imágenes, objetos por clase, umbrales, tamaño de entrada, checkpoint SHA-256, seed y comandos exactos.
 
@@ -98,4 +110,4 @@ El informe incluye media, mediana, p95, p99, FPS derivado de latencia media, res
 - Mask R-CNN solo queda adaptado al checkpoint Cityscapes cuando se ejecute su entrenamiento; si no existe el archivo, el código sigue usando los pesos COCO originales.
 - El detector Faster R-CNN del enfoque híbrido sigue usando pesos COCO; la segmentación semántica y la segmentación de carriles sí tienen rutas de entrenamiento urbanas.
 - El script de benchmark mide inferencia del pipeline del modelo, no latencia end-to-end de captura/GUI.
-- El evaluador de mAP de detección existente usa cajas; la evaluación de máscaras de instancias requiere una métrica adicional antes de presentar mask AP.
+- Los adaptadores de detección/carriles y el evaluador Mask AP ya están implementados, pero aún requieren validación con máscaras/anotaciones oficiales reales y contraste con los evaluadores oficiales.
