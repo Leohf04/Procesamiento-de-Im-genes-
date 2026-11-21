@@ -49,7 +49,7 @@ labels/sem_seg/masks/{train,val}/*.png
 labels/ins_seg/bitmasks/{train,val}/*.png
 ```
 
-Las máscaras semánticas son PNG monocanal con IDs 0–18 y 255 para ignorar. Las máscaras de instancias son PNG RGBA: R=category ID (1–8), G=atributos, B=ann_id; el loader entrega imágenes en [0,1] para que Torchvision aplique su normalización interna. No convertir los bitmasks RGBA a RGB ni a escala de grises.
+Las máscaras semánticas son PNG monocanal con IDs 0–18 y 255 para ignorar. Las máscaras de instancias son PNG RGBA: R=category ID (1–8), G=flags, B:A=ann_id de 16 bits (B byte alto, A byte bajo); el loader entrega imágenes en [0,1] para que Torchvision aplique su normalización interna. No convertir los bitmasks RGBA a RGB ni a escala de grises.
 
 Entrenar DeepLabV3+ semántico:
 
