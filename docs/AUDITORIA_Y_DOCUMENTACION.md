@@ -394,3 +394,17 @@ Esta rama agrega una segunda fase de implementación, todavía pendiente de prue
 - Las anotaciones de carriles requieren una partición train/validation preparada por secuencia para evitar fuga entre frames.
 
 No se debe afirmar que los modelos están adaptados o entrenados hasta ejecutar los scripts sobre los datasets oficiales, guardar los checkpoints y evaluar con el split reservado.
+
+
+## 16. Verificación automatizada de la rama
+
+GitHub Actions ejecutó el workflow `Python tests` en Python 3.11 con PyTorch CPU y OpenCV 4.14:
+
+- `python -m compileall -q src scripts main.py evaluate_scenarios.py`: correcto.
+- Ayudas CLI de entrenamiento, evaluación, exportación ONNX y benchmark: correctas.
+- `python scripts/verify_setup.py`: correcto.
+- `pytest -q`: **19 passed**.
+
+Durante la primera ejecución se detectaron tres fallos; se corrigió el muestreo de polígonos COCO y se fijó OpenCV por debajo de 5. Después, una validación ampliada detectó que los scripts ejecutados desde `scripts/` no encontraban el paquete `src`; se añadió la raíz del proyecto a `sys.path`. La ejecución final completó las comprobaciones y las 19 pruebas.
+
+Este resultado valida pruebas unitarias y smoke tests de importación/CLI en CPU. **No valida** entrenamiento completo, métricas sobre Cityscapes/BDD100K reales, exportación/inferencia ONNX con checkpoints reales ni FPS de hardware objetivo. Esas fases requieren descargar datasets y entrenar los checkpoints.
