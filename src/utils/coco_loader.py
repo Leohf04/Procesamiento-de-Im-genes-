@@ -50,6 +50,8 @@ def decode_segmentation_mask(segmentation, height: int, width: int) -> np.ndarra
         if offset != flat.size:
             raise ValueError("La longitud RLE no coincide con las dimensiones de la máscara.")
         return flat.reshape((height, width), order="F")
+    if isinstance(segmentation, dict) and isinstance(segmentation.get("counts"), (str, bytes)):
+        raise RuntimeError("La máscara RLE comprimida requiere pycocotools; instálalo para decodificar esta anotación.")
     if isinstance(segmentation, list):
         for poly in segmentation:
             if len(poly) >= 6:
