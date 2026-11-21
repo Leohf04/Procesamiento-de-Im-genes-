@@ -82,7 +82,7 @@ class SemanticHybridModel:
                 "labels":labels[keep] if keep else np.zeros((0,),np.int64),"class_names":names,
                 "scores":scores[keep] if keep else np.zeros((0,),np.float32),
                 "instance_masks":None,"raw_semantic_map":raw,"urban_semantic_mask":semantic,
-                "urban_semantic_mask_all11":semantic_all11,"lane_mask":lane_mask,"lane_model_loaded":self.lane_model is not None}
+                "urban_semantic_mask_all11":semantic_all11,"semantic_label_space":"cityscapes","lane_mask":lane_mask,"lane_model_loaded":self.lane_model is not None}
 
     def predict(self,image_bgr):
         if self.backend == "torch":
