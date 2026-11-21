@@ -100,7 +100,9 @@ def test_coco_loader_builds_shared5_and_all8_masks(tmp_path):
     sample = samples[0]
     assert set(sample["gt_labels"]) == {"person", "stop sign"}
     assert int(sample["gt_semantic_mask"].sum()) == 400
-    assert int(sample["gt_semantic_mask_all8"].sum()) == 800
+    assert int(np.count_nonzero(sample["gt_semantic_mask_all8"])) == 800
+    assert int(np.count_nonzero(sample["gt_semantic_mask_all8"] == 1)) == 400
+    assert int(np.count_nonzero(sample["gt_semantic_mask_all8"] == 13)) == 400
 
 
 def test_decode_segmentation_mask_polygon_fallback():
