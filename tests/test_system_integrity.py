@@ -37,7 +37,8 @@ class MockDetectorModel:
 
 def test_config_loads_and_backend_resolves():
     config = load_config("configs/config.yaml")
-    assert config["dataset"]["name"] == "coco_val2017"
+    assert config["dataset"]["name"] == "cityscapes"
+    assert config["dataset"]["root"] == "data/cityscapes"
     assert config["evaluation"]["iou_threshold"] == 0.5
     assert resolve_backend("auto") in {"torch", "onnx_cv2"}
 
