@@ -47,3 +47,5 @@ jobs:
         run: |
           python scripts/validate_bdd100k_github_instance_sample.py \
             --samples "${{ inputs.samples || '4' }}"
+
+# Trigger validation after correcting the script import path.
