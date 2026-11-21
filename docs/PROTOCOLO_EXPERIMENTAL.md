@@ -62,7 +62,7 @@ python scripts/evaluate_cityscapes.py --task instance --data-root data/cityscape
 python scripts/evaluate_lanes.py --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val --checkpoint data/processed/deeplabv3plus_lanes.pt
 ```
 
-El AP de Mask R-CNN de este script corresponde a cajas, no a máscaras. No reportar mask AP hasta añadir/ejectuar una evaluación COCO-style de máscaras.
+El AP de Mask R-CNN de este script corresponde a cajas, no a máscaras. No reportar mask AP hasta añadir y ejecutar una evaluación COCO-style de máscaras.
 
 ## Rendimiento (FPS y latencia)
 
