@@ -955,3 +955,15 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - **Qué NO queda validado:** el loader oficial `BDD100KInstanceDataset` de RGBA, los annotation IDs/flags oficiales, las ocho clases oficiales completas, el entrenamiento de Mask R-CNN ni métricas de benchmark. Esta muestra no reemplaza el dataset oficial ni permite reportar AP de validación.
 - El workflow general de Python asociado al HEAD `8e212c417dc260c1a84e388e46002a30bed2cda9` (run `44956141257`) seguía en ejecución al actualizar esta nota; revisar su conclusión por separado antes de afirmar que CI general pasó.
 - PR #3 comprobada: `open`, `draft=true`, `merged=false`. Mantener sin fusionar.
+
+
+### Preparación de smoke test de Mask R-CNN con muestra BDD100K — 2026-11-21
+
+- Se confirmó que el CI general previo al cambio terminó correctamente: run `44956247587`, conclusión `success`, asociado al HEAD `95a3049da5438ed0e1748732bff0a6883431cfcb`.
+- Se amplió `scripts/validate_bdd100k_github_instance_sample.py` con la opción `--maskrcnn-smoke-test`. La prueba vuelve a cargar una imagen a 128×256, limita el target a un máximo de 8 instancias, crea `maskrcnn_resnet50_fpn` con pesos aleatorios y 9 salidas (fondo + 8 IDs de clase), ejecuta forward, comprueba que las pérdidas sean escalares y finitas y ejecuta `backward()`.
+- El smoke test no ejecuta `optimizer.step()`, no ajusta pesos y no guarda checkpoints. Su propósito es detectar incompatibilidades entre el adaptador de máscaras/cajas, Torchvision y el modelo.
+- Se modificó `.github/workflows/validate-bdd100k-github-instance-sample.yml` para instalar Torchvision CPU y ejecutar la validación con el smoke test en GitHub Actions, sin GPU ni datos en el teléfono. Se corrigió la continuación multilínea del comando antes de verificar el run final.
+- Runs disparados por los commits de implementación: `44956646755`, `44956655632` (validación de muestra) y varias ejecuciones de CI general. En la última consulta seguían `in_progress`; **todavía no se declara que Mask R-CNN haya pasado**. Consultar los runs posteriores al HEAD actual antes de concluir.
+- HEAD de la rama al actualizar esta entrada: `8b4d30ce04e360bba29272f93fb1aa1c41413bf9`.
+- PR #3 se mantiene abierta, en draft y sin fusionar. No se ha iniciado entrenamiento real ni se ha generado checkpoint.
+- Próximo paso: recuperar la conclusión y los logs del run de validación posterior al commit `8b4d30c`. Si el smoke test falla, corregir la incompatibilidad detectada y repetirlo; si pasa, avanzar a preparar el protocolo de entrenamiento acotado y reanudable, sin iniciar entrenamiento completo hasta validar el acceso/licencia y cobertura de los datos.
