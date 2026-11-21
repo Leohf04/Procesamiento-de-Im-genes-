@@ -7,8 +7,9 @@ Proyecto académico del Equipo 2 para detectar y segmentar objetos de escenas vi
 La rama `urban-models-and-benchmark` incorpora infraestructura para:
 - Entrenar **DeepLabV3+ ResNet-50** en las 19 clases semánticas oficiales de BDD100K.
 - Ajustar **Mask R-CNN** desde pesos COCO a las ocho clases de instancia de BDD100K, decodificando sus bitmasks RGBA.
-- Mantener cargadores Cityscapes heredados y una ruta binaria de carriles en revisión; el parser de curvas Bezier y las tres subtareas de carriles aún no están validados.
+- Mantener cargadores Cityscapes heredados y entrenar carriles BDD100K con las máscaras oficiales empaquetadas (categoría, dirección y estilo); el antiguo rasterizador binario queda obsoleto.
 - Ejecutar segmentación semántica y carriles exportados mediante **ONNX Runtime**.
+- Entrenar Faster R-CNN en las 10 clases oficiales de detección BDD100K, con Box AP50 de validación.
 - Medir latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
 
 **Pruebas automatizadas:** GitHub Actions ejecutó compileall, smoke tests de CLI y `pytest -q`: **19 pruebas aprobadas** en Python 3.11 / CPU. Esto no equivale a entrenar modelos ni a medir métricas con los datasets reales.
@@ -20,10 +21,10 @@ La rama `urban-models-and-benchmark` incorpora infraestructura para:
 | Componente | Arquitectura | Datos / estado |
 |---|---|---|
 | Segmentación semántica | DeepLabV3+ ResNet-50 | Loader/entrenador/evaluador BDD100K 19 clases; requiere datos y checkpoint |
-| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Loader RGBA + fine-tuning BDD100K 8 clases; evaluación de mask AP pendiente |
-| Carriles | DeepLabV3+ binario | Conversión de polígonos BDD100K + entrenamiento implementados; requiere checkpoint |
+| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Loader RGBA sin doble normalización; evaluador BDD100K Box AP y Mask AP (protocolo AP interpolado propio, no COCOeval) |
+| Carriles | DeepLabV3 multi-cabeza | Categoría (8), dirección (2) y estilo (2) desde bitmasks oficiales; requiere datos/checkpoint |
 | ONNX | ONNX Runtime | Inferencia semántica/carriles; no produce cajas ni instancias |
-| Detector híbrido | Faster R-CNN COCO | Sigue preentrenado COCO; no está fine-tuned en Cityscapes |
+| Detección 2D | Faster R-CNN ResNet-50 FPN | Entrenador BDD100K 10 clases, con validación Box AP50; requiere datos/checkpoint |
 | Backend `onnx_cv2` | HOG + OpenCV | Modo demostrativo; no es ONNX |
 
 ## Instalación
@@ -48,7 +49,7 @@ labels/sem_seg/masks/{train,val}/*.png
 labels/ins_seg/bitmasks/{train,val}/*.png
 ```
 
-Las máscaras semánticas son PNG monocanal con IDs 0–18 y 255 para ignorar. Las máscaras de instancias son PNG RGBA: R=category ID (1–8), G=atributos, B=ann_id; el loader descarta instancias con flags crowd/ignore. No convertir los bitmasks RGBA a RGB ni a escala de grises.
+Las máscaras semánticas son PNG monocanal con IDs 0–18 y 255 para ignorar. Las máscaras de instancias son PNG RGBA: R=category ID (1–8), G=atributos, B=ann_id; el loader entrega imágenes en [0,1] para que Torchvision aplique su normalización interna. No convertir los bitmasks RGBA a RGB ni a escala de grises.
 
 Entrenar DeepLabV3+ semántico:
 
@@ -81,7 +82,39 @@ python scripts/evaluate_cityscapes.py --task bdd100k-semantic \
   --checkpoint data/processed/deeplabv3plus_bdd100k_semantic.pt
 ```
 
-El orden de clases sigue el formato oficial BDD100K. Detección 2D (10 clases), carriles (categoría/dirección/estilo) y evaluación AP de máscaras aún requieren completar sus adaptadores específicos; no deben confundirse con los loaders semántico/de instancias descritos aquí. Los datos se descargan directamente a la VM remota, nunca al teléfono.
+El orden de clases sigue el formato oficial BDD100K. Los flujos de detección 2D y carriles usan las anotaciones oficiales correspondientes. Los datos se descargan directamente a la VM remota, nunca al teléfono.
+
+Entrenar detector 2D Faster R-CNN (las etiquetas oficiales `det_20` usan 10 categorías):
+```bash
+python scripts/train_bdd100k_detection.py \
+  --train-images data/bdd100k/images/100k/train \
+  --train-labels data/bdd100k/labels/det_20/det_train.json \
+  --val-images data/bdd100k/images/100k/val \
+  --val-labels data/bdd100k/labels/det_20/det_val.json \
+  --epochs 15 --batch-size 2 --output data/processed/bdd100k_fasterrcnn.pt
+```
+
+Entrenar las tres subtareas de carriles con las máscaras oficiales empaquetadas:
+```bash
+python scripts/train_bdd100k_lanes.py \
+  --train-images data/bdd100k/images/100k/train \
+  --train-masks data/bdd100k/labels/lane/masks/train \
+  --val-images data/bdd100k/images/100k/val \
+  --val-masks data/bdd100k/labels/lane/masks/val \
+  --epochs 20 --batch-size 2 --output data/processed/bdd100k_lanes.pt
+```
+
+Evaluar Mask R-CNN BDD100K (Box AP y Mask AP):
+```bash
+python scripts/evaluate_cityscapes.py --task bdd100k-instance \
+  --images-dir data/bdd100k/images/10k/val \
+  --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val \
+  --checkpoint data/processed/maskrcnn_bdd100k.pt \
+  --output data/outputs/bdd100k_instance_metrics.json
+```
+
+El evaluador informa AP50, AP75 y media AP50:95 con matching greedy por imagen e interpolación precision-recall. Es una implementación interna y **no debe presentarse como COCOeval oficial**. Para resultados de benchmark publicables, se debe contrastar con el evaluador oficial BDD100K/COCO.
+
 
 ## Cityscapes (flujo legado)
 
@@ -113,11 +146,11 @@ python scripts/train_maskrcnn_cityscapes.py --data-root data/cityscapes --epochs
 
 DeepLabV3+ predice 11 clases: road, sidewalk, person, rider, car, truck, bus, motorcycle, bicycle, traffic light y traffic sign. Mask R-CNN predice siete clases de instancia: person, rider, car, truck, bus, motorcycle y bicycle.
 
-## Carriles y detección 2D BDD100K — pendientes de integración
+## Formatos oficiales de carriles y detección BDD100K
 
 BDD100K publica etiquetas de carriles con tres atributos evaluables: categoría, dirección y estilo. Sus máscaras oficiales son PNG monocanal empaquetadas; no son máscaras binarias genéricas. El parser anterior que interpretaba `poly2d.vertices` como una polilínea simple no debe utilizarse para generar resultados: el formato oficial usa curvas Bezier con puntos de control.
 
-La siguiente fase debe usar las máscaras oficiales `labels/lane/masks/{train,val}` y decodificar/entrenar las tres subtareas, o invocar y verificar el convertidor oficial BDD100K. La detección 2D debe usar `images/100k` junto con `labels/det_20/det_{train,val}.json` (10 clases). Ninguno de esos dos flujos está listo para producir métricas académicas.
+El loader de carriles decodifica el byte oficial: bits 0–2 categoría, bit 3 fondo, bit 4 estilo y bit 5 dirección. El entrenador tiene tres cabezas y calcula mIoU de validación por subtarea. El rasterizador antiguo de `poly2d` a una máscara binaria está obsoleto. El detector utiliza las diez categorías oficiales `bike, bus, car, motor, person, rider, traffic light, traffic sign, train, truck` y etiquetas `box2d` de `det_20`.
 
 ## Ejecución remota en Google Colab Free
 
@@ -154,7 +187,7 @@ python scripts/evaluate_cityscapes.py --task instance --data-root data/cityscape
 python scripts/evaluate_lanes.py --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val --checkpoint data/processed/deeplabv3plus_lanes.pt
 ```
 
-El AP de Mask R-CNN implementado en esta evaluación es AP de cajas, no AP de máscaras.
+El evaluador BDD100K de instancias calcula Box AP y Mask AP con un protocolo interno descrito en su JSON; no equivale al evaluador COCO oficial.
 
 ## Exportar a ONNX
 
