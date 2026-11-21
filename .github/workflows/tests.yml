@@ -26,5 +26,14 @@ jobs:
       - name: Install project dependencies
         run: |
           pip install numpy 'opencv-python-headless<5' scikit-learn matplotlib PyYAML tqdm joblib pytest onnx onnxruntime
+      - name: Compile all Python modules
+        run: python -m compileall -q src scripts main.py evaluate_scenarios.py
+      - name: Validate training and evaluation CLIs
+        run: |
+          python scripts/train_urban_segmentation.py --help
+          python scripts/train_maskrcnn_cityscapes.py --help
+          python scripts/evaluate_cityscapes.py --help
+          python scripts/evaluate_lanes.py --help
+          python scripts/benchmark.py --help
       - name: Run test suite
         run: pytest -q
