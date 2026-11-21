@@ -67,6 +67,16 @@ def main():
             print(f"Imagen guardada en {args.save_image}")
         if args.save_video:
             raise ValueError("--save-video requiere una fuente de video o cámara; usa --save-image para imágenes.")
+        if args.save_samples:
+            output_dir = config.get("evaluation", {}).get("output_dir", "data/outputs")
+            pred_boxes = np.asarray(prediction.get("boxes", []), dtype=np.float32).reshape(-1, 4)
+            save_failure_case(
+                image,
+                np.zeros((0, 4), dtype=np.float32),
+                pred_boxes,
+                np.asarray(prediction.get("scores", [])),
+                os.path.join(output_dir, "failure_case_sample.png"),
+            )
         if not args.no_gui:
             cv2.imshow("Urban Perception", output)
             cv2.waitKey(0)
