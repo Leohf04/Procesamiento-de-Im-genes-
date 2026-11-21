@@ -46,24 +46,20 @@ Los scripts de DeepLabV3+ y Mask R-CNN guardan:
 - checkpoint `.last.pt` con estado de optimizador (y scheduler en Mask R-CNN);
 - historial JSON actualizado al final de cada época.
 
-Ejemplos:
+Ejemplo para BDD100K semántico:
 
 ```bash
 python scripts/train_urban_segmentation.py \
-  --task cityscapes --data-root /content/datasets/cityscapes \
+  --task bdd100k-semantic \
+  --images-dir /content/datasets/bdd100k/images/10k/train \
+  --masks-dir /content/datasets/bdd100k/labels/sem_seg/masks/train \
+  --val-images-dir /content/datasets/bdd100k/images/10k/val \
+  --val-masks-dir /content/datasets/bdd100k/labels/sem_seg/masks/val \
   --epochs 30 --batch-size 2 --workers 2 \
-  --output /content/drive/MyDrive/ProcesamientoImagenes/resultados/checkpoints/deeplabv3plus_cityscapes.pt
+  --output /content/drive/MyDrive/ProcesamientoImagenes/resultados/checkpoints/deeplabv3plus_bdd100k_semantic.pt
 ```
 
-Para reanudar desde `.last.pt`:
-
-```bash
-python scripts/train_urban_segmentation.py \
-  --task cityscapes --data-root /content/datasets/cityscapes \
-  --epochs 30 --batch-size 2 --workers 2 \
-  --output /content/drive/MyDrive/ProcesamientoImagenes/resultados/checkpoints/deeplabv3plus_cityscapes.pt \
-  --resume
-```
+Para reanudar desde el checkpoint `.last.pt`, añade `--resume` al mismo comando. El flujo de instancias usa `scripts/train_maskrcnn_cityscapes.py --dataset bdd100k` con las rutas `images/10k` y `labels/ins_seg/bitmasks`.
 
 `--epochs` representa el total final de épocas. Por ejemplo, si el checkpoint ya completó 8 épocas y se indica `--epochs 30`, ejecutará las 22 restantes. La reanudación ocurre entre épocas, no a mitad de un lote.
 
