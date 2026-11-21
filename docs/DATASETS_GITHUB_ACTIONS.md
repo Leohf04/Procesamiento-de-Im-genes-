@@ -67,13 +67,14 @@ La salida se guarda en:
 
 ```text
 <raíz-de-Drive>/
-└── prepared/
-    └── {train,val}/
-        └── offset-<offset>/
-            └── run-<run_id>-<run_attempt>/
-                ├── selection_manifest.json
-                ├── dataset_manifest.json
-                └── lane_masks/*.png
+└── bdd100k/
+    └── prepared/
+        └── {train,val}/
+            └── offset-<offset>/
+                └── run-<run_id>-<run_attempt>/
+                    ├── selection_manifest.json
+                    ├── dataset_manifest.json
+                    └── lane_masks/*.png
 ```
 
 Los manifiestos registran el tamaño total del split, offset, número de imágenes procesadas, siguiente offset y estado de completitud. Si faltan imágenes, están corruptas o no coincide el número de máscaras, el job falla y no publica una preparación incompleta. Cada ejecución procesa como máximo 4.000 imágenes para limitar el espacio temporal requerido.
