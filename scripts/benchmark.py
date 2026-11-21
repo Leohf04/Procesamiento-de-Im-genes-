@@ -1,5 +1,6 @@
 """Reproducible inference benchmark with warm-up, CUDA sync and latency percentiles."""
 import argparse
+import hashlib
 import json
 import platform
 import statistics
@@ -56,7 +57,17 @@ def main():
     if not latencies:
         raise RuntimeError("No se midieron frames; verifica la fuente.")
     values = np.asarray(latencies)
+    model_cfg = cfg.get("models", {}).get(args.approach if args.approach == "instance" else "semantic_hybrid", {})
+    checkpoint_paths = [model_cfg.get("urban_checkpoint")] if args.approach == "instance" else [
+        model_cfg.get("checkpoint_path"), model_cfg.get("lane_checkpoint")
+    ]
+    checkpoint_hashes = {}
+    for checkpoint_path in checkpoint_paths:
+        if checkpoint_path and Path(checkpoint_path).is_file():
+            digest = hashlib.sha256(Path(checkpoint_path).read_bytes()).hexdigest()
+            checkpoint_hashes[checkpoint_path] = digest
     report = {
+        "checkpoint_sha256": checkpoint_hashes,
         "protocol": "single-stream model pipeline; excludes decode, display and output encoding",
         "approach": args.approach, "backend": backend, "warmup_frames": args.warmup,
         "measured_frames": len(latencies), "input_shape_bgr": frame_shape,
