@@ -12,7 +12,7 @@ La rama `urban-models-and-benchmark` incorpora infraestructura para:
 - Entrenar Faster R-CNN en las 10 clases oficiales de detección BDD100K, con Box AP50 de validación.
 - Medir latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
 
-**Pruebas automatizadas:** GitHub Actions ejecutó compileall, smoke tests de CLI y `pytest -q`: **19 pruebas aprobadas** en Python 3.11 / CPU. Esto no equivale a entrenar modelos ni a medir métricas con los datasets reales.
+**Pruebas automatizadas:** GitHub Actions ejecuta compileall, smoke tests de CLI y `pytest -q` en Python 3.11 / CPU. Consulta el último check del PR para conocer el resultado vigente; una ejecución anterior no demuestra compatibilidad con anotaciones BDD100K reales ni con GPU. Esto no equivale a entrenar modelos ni a medir métricas con datasets reales.
 
 **Importante:** estos scripts no descargan automáticamente Cityscapes/BDD100K ni entrenan los modelos al instalar el repositorio. Los checkpoints deben generarse localmente con los comandos de abajo. No se han ejecutado entrenamientos ni benchmarks como parte de estos cambios.
 
@@ -22,9 +22,9 @@ La rama `urban-models-and-benchmark` incorpora infraestructura para:
 |---|---|---|
 | Segmentación semántica | DeepLabV3+ ResNet-50 | Loader/entrenador/evaluador BDD100K 19 clases; requiere datos y checkpoint |
 | Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Loader RGBA sin doble normalización; evaluador BDD100K Box AP y Mask AP (protocolo AP interpolado propio, no COCOeval) |
-| Carriles | DeepLabV3 multi-cabeza | Categoría (8), dirección (2) y estilo (2) desde bitmasks oficiales; requiere datos/checkpoint |
+| Carriles | DeepLabV3 multi-cabeza | Categoría (8), dirección (2) y estilo (2) desde bitmasks oficiales; validación mIoU por cabeza y checkpoints reanudables |
 | ONNX | ONNX Runtime | Inferencia semántica/carriles; no produce cajas ni instancias |
-| Detección 2D | Faster R-CNN ResNet-50 FPN | Entrenador BDD100K 10 clases, con validación Box AP50; requiere datos/checkpoint |
+| Detección 2D | Faster R-CNN ResNet-50 FPN | Entrenador BDD100K 10 clases, validación Box AP50 y checkpoints reanudables; requiere datos |
 | Backend `onnx_cv2` | HOG + OpenCV | Modo demostrativo; no es ONNX |
 
 ## Instalación
