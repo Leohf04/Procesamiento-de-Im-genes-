@@ -7,6 +7,7 @@ on:
     paths:
       - "scripts/probe_bdd100k_instance_range.py"
       - ".github/workflows/probe-bdd100k-instance-range.yml"
+      - "docs/REGISTRO_DE_TRABAJO_Y_ESTADO.md"
   workflow_dispatch:
 
 permissions:
