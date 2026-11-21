@@ -35,10 +35,10 @@ Descargar las anotaciones lane-marking de BDD100K y generar máscaras:
 
 ```bash
 python scripts/prepare_bdd100k_lane_masks.py --labels data/bdd100k/labels/lane/train.json --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train
-python scripts/train_urban_segmentation.py --task lanes --data-root data/bdd100k --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_lanes.pt
+python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train --val-images-dir data/bdd100k/images/100k/val --val-masks-dir data/bdd100k/lane_masks/val --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_lanes.pt
 ```
 
-Preparar y usar una partición de validación independiente por secuencia antes de considerar válido el mIoU de carriles. El checkpoint de carriles es opcional en inferencia; si falta, el sistema devuelve una máscara vacía y no simula segmentación HSV.
+El entrenamiento exige explícitamente directorios de train y validation separados. Preparar esa partición por secuencia/video antes de entrenar; no usar frames del mismo clip en ambos grupos. El checkpoint de carriles es opcional en inferencia; si falta, el sistema devuelve una máscara vacía y no simula segmentación HSV.
 
 ## Inferencia
 
