@@ -766,3 +766,14 @@ Fuente oficial contrastada: https://github.com/bdd100k/bdd100k/blob/master/bdd10
 
 - GitHub Actions run `44946190235`, commit `f1d16010249ce8907631b84bcdf3f996da3162d0`: instalación, compileall, smoke tests CLI y `pytest -q` finalizaron correctamente; **32 pruebas aprobadas**.
 - Ese commit es anterior a la corrección RGBA de 16 bits. La CI de los commits posteriores que contienen esa corrección debe finalizar antes de considerar validado el HEAD actual.
+
+
+## Validación CI del HEAD 896a69c (21-11-2026)
+
+- GitHub Actions run **44946350480** terminó con estado `completed` y conclusión **`success`** para la rama `urban-models-and-benchmark`, cuyo HEAD es `896a69c468cb24b78eacba19cf2418b51307ebaa`.
+- La ejecución corresponde al evento `pull_request` de la PR #3; GitHub ejecutó el merge ref `6a73cad568251a428d9d02b6afa259a41eff3ac4`, que integra el HEAD anterior con la rama base.
+- Pasos completados correctamente: instalación de PyTorch CPU y dependencias, `compileall`, smoke tests de CLI de entrenamiento/evaluación/preparación y `scripts/verify_setup.py`.
+- **Pytest: 32 passed en 11.17 s**, confirmado en los logs del job `136974414656`.
+- `scripts/verify_setup.py` reportó `pycocotools` como dependencia opcional ausente y dataset no descargado; no impidió la CI. No se validaron muestras reales ni se ejecutó entrenamiento.
+- PR #3 continúa **abierta**, en borrador y sin fusionar.
+- Próximo paso: iniciar validación remota acotada con muestras oficiales BDD100K en Colab, verificando estructura, loaders y decodificación antes de cualquier entrenamiento.
