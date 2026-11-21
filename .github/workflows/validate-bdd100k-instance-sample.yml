@@ -1,0 +1,27 @@
+name: Validate BDD100K instance samples (authorized archive)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BDD100K_INSTANCE_LABELS_URL: ${{ secrets.BDD100K_INSTANCE_LABELS_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: urban-models-and-benchmark
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: |
+          python -m pip install requests huggingface_hub pillow numpy
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Download authorized archive, verify checksum, and validate samples
+        run: python scripts/validate_bdd100k_instance_sample.py
