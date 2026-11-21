@@ -31,12 +31,18 @@ _MEAN = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
 _STD = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
 
 
-def _image_tensor(path, size):
+def _image_tensor(path, size, normalize=True):
+    """Load RGB as CHW float32; normalize only for semantic segmentation.
+
+    Torchvision detection models (including Mask R-CNN) normalize internally,
+    so their input must remain in [0, 1].
+    """
     image = Image.open(path).convert("RGB").resize(
         (size[1], size[0]), Image.Resampling.BILINEAR
     )
     array = np.asarray(image, dtype=np.float32) / 255.0
-    array = (array - _MEAN) / _STD
+    if normalize:
+        array = (array - _MEAN) / _STD
     return torch.from_numpy(array.transpose(2, 0, 1).copy())
 
 
@@ -155,4 +161,4 @@ class BDD100KInstanceDataset(Dataset):
             "area": torch.as_tensor([float(mask.sum()) for mask in masks_array], dtype=torch.float32),
             "iscrowd": torch.zeros((len(labels),), dtype=torch.int64),
         }
-        return _image_tensor(image_path, self.size), target
+        return _image_tensor(image_path, self.size, normalize=False), target
