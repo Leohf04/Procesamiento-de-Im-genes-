@@ -47,9 +47,13 @@ def evaluate_semantic(root, checkpoint_path, output_path):
 
 
 def evaluate_instances(root, checkpoint_path, output_path):
+    if not Path(checkpoint_path).is_file():
+        raise FileNotFoundError(f"No existe el checkpoint urbano Mask R-CNN: {checkpoint_path}")
     dataset = CityscapesInstanceDataset(root, "val")
     model = InstanceSegmentationModel(backend="torch", device="auto",
                                       confidence_threshold=0.0, checkpoint_path=checkpoint_path)
+    if not model.urban_finetuned:
+        raise RuntimeError("Se requiere un checkpoint Mask R-CNN fine-tuned en Cityscapes; no se evaluarán pesos COCO contra GT Cityscapes.")
     predictions, ground_truth = [], []
     for index in range(len(dataset)):
         image_tensor, target = dataset[index]
