@@ -1,0 +1,49 @@
+name: Validate BDD100K GitHub instance sample
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "src/utils/bdd100k_github_sample.py"
+      - "scripts/validate_bdd100k_github_instance_sample.py"
+      - "tests/test_bdd100k_github_sample.py"
+      - ".github/workflows/validate-bdd100k-github-instance-sample.yml"
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Maximum number of validation images (1–8)
+        required: true
+        default: "4"
+        type: choice
+        options:
+          - "2"
+          - "4"
+          - "6"
+          - "8"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: urban-models-and-benchmark
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy pillow pytest
+      - name: Run adapter unit tests
+        run: pytest -q tests/test_bdd100k_github_sample.py
+      - name: Download and validate bounded real GitHub samples
+        run: |
+          python scripts/validate_bdd100k_github_instance_sample.py \
+            --samples "${{ inputs.samples || '4' }}"
