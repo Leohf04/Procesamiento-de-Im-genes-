@@ -75,6 +75,10 @@ python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100
 
 Prepara una partición de validación independiente por secuencia/video. No dividas fotogramas adyacentes aleatoriamente entre train y validation.
 
+## Ejecución remota en Kaggle
+
+Consulta [docs/KAGGLE_NOTEBOOK.md](docs/KAGGLE_NOTEBOOK.md) y abre [notebooks/kaggle_environment_check.ipynb](notebooks/kaggle_environment_check.ipynb) para configurar Kaggle, clonar esta rama privada mediante un secreto y comprobar GPU/inputs sin descargar datos al dispositivo local. La integración remota está en adaptación; por ahora el soporte de entrenamiento BDD100K existente cubre carriles, no sustituye todavía las tareas semánticas e instancias de Cityscapes.
+
 ## Preparación automatizada de datasets
 
 La preparación puede ejecutarse con GitHub Actions y Google Drive sin almacenar datos en Git. Consulta [docs/DATASETS_GITHUB_ACTIONS.md](docs/DATASETS_GITHUB_ACTIONS.md) para configurar rclone mediante OAuth y guardar el archivo de configuración en el secreto `GDRIVE_RCLONE_CONFIG`.
