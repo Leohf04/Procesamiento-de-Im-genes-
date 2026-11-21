@@ -29,18 +29,23 @@ def main():
     size = (args.height, args.width)
     if args.task == "cityscapes":
         dataset = CityscapesFineDataset(args.data_root, "train", size)
+        validation_dataset = CityscapesFineDataset(args.data_root, "val", size)
         num_classes, class_names = 11, list(CITYSCAPES_CLASSES)
     else:
         if not args.images_dir or not args.masks_dir:
             parser.error("--images-dir y --masks-dir son obligatorios para --task lanes")
         dataset = LaneMaskDataset(args.images_dir, args.masks_dir, size)
+        validation_dataset = None
         num_classes, class_names = 2, ["background", "lane_marking"]
     if len(dataset) < 2:
         raise ValueError("Se requieren al menos dos imágenes para separar train/validation.")
-    val_count = max(1, round(len(dataset) * 0.15))
-    train_count = len(dataset) - val_count
-    train_set, val_set = random_split(dataset, [train_count, val_count],
-                                      generator=torch.Generator().manual_seed(args.seed))
+    if validation_dataset is None:
+        val_count = max(1, round(len(dataset) * 0.15))
+        train_count = len(dataset) - val_count
+        train_set, val_set = random_split(dataset, [train_count, val_count],
+                                          generator=torch.Generator().manual_seed(args.seed))
+    else:
+        train_set, val_set = dataset, validation_dataset
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=device.type == "cuda")
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False,
