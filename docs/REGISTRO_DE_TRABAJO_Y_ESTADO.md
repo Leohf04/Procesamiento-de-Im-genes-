@@ -833,3 +833,18 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - El nuevo run dedicado `44948056735` (commit `04cc5b9`) se encontraba en instalación de dependencias, todavía sin ejecutar la validación, al momento de registrar esta incidencia.
 - La CI general de commits recientes también estaba en curso. Se debe consultar el run de la cabeza actual y leer el diagnóstico del script antes de elegir otra ruta.
 - No se descargó ninguna imagen de muestra en el primer intento, no se inició entrenamiento y no se generaron checkpoints.
+
+
+### Corrección del layout real del mirror semántico — 2026-11-21
+
+- Los logs de los runs dedicados `44948056735` y de CI general `44948060450` confirmaron que `HfApi.list_repo_files` funciona y lista archivos, pero la prueba fallaba porque el script exigía `metadata.jsonl` bajo `data/images/{split}`. Las 32 pruebas sintéticas pasaron antes de ese paso; el loader semántico todavía no había procesado muestras reales.
+- Se inspeccionó el árbol de archivos público del repositorio `dronefreak/BDD100K-Semantic-Segmentation`. El layout real actual conserva los archivos originales separados:
+  - imágenes: `data/images_10k/10k/{train,val}/shard_*/<id>.jpg`;
+  - máscaras: `data/seg_maps/labels/{train,val}/shard_*/<id>_train_id.png`.
+- El repositorio `liqijia/...` usado inicialmente es una duplicación cuyo árbol observado no coincidía con el README ni con el layout esperado por el validador. Se cambió el origen predeterminado al repositorio `dronefreak/...`, cuya estructura de archivos se inspeccionó directamente.
+- Se reescribió `scripts/validate_bdd100k_semantic_sample.py` para listar archivos, emparejar imagen y máscara por identificador y descargar exclusivamente dos pares por split. Ya no requiere ni descarga `metadata.jsonl`. Comprueba modo RGB, máscara monocanal, dimensiones iguales, IDs 0–18/255 y ejecuta `BDD100KSemanticDataset` a 256x512.
+- Se actualizó `docs/COLAB_FREE.md` y la sección 5.2 del notebook para documentar el layout y el origen nuevos.
+- Commit de corrección del script: `564dff9350d07acbe4daf687a2328ab3551c91ad`. Los cambios de documentación y este registro se guardan en commits posteriores de la misma rama.
+- **Validación pendiente:** el cambio se debe ejecutar en GitHub Actions. Hasta que el workflow complete correctamente, no se declara validado el loader con muestras reales.
+- No se descargó el dataset completo, no se inició entrenamiento, no se generaron checkpoints y `RUN_TRAINING=False` sigue vigente.
+- PR #3 permanece abierta, en borrador y sin fusionar.
