@@ -310,3 +310,23 @@ El usuario pidió priorizar alternativas gratuitas u open source, manteniendo el
 ### Próximo paso
 
 Preparar una adaptación del repositorio para Colab Free, con descarga remota autorizada de datos directamente en la sesión cloud, validación de dataset, checkpoints/reanudación, evaluación y exportación de resultados a almacenamiento persistente. Antes de implementar, revisar los scripts y requisitos reales del repositorio; no asumir que los datasets de Cityscapes o BDD100K están disponibles sin registro/licencia.
+
+
+## 10. Preparación inicial del usuario para Google Colab Free — 2026-11-21
+
+Se indicó al usuario que, antes de adaptar el repositorio, debe preparar desde Android:
+1. Iniciar sesión en https://colab.research.google.com/ con una cuenta Google y crear un notebook vacío.
+2. En Entorno de ejecución → Cambiar tipo de entorno de ejecución, seleccionar T4 GPU si está disponible; la asignación no está garantizada.
+3. Autorizar la integración GitHub de Colab para leer el repositorio privado, utilizando la opción Include Private Repos si aparece y limitando permisos cuando la interfaz lo permita.
+4. Crear en Google Drive la carpeta `ProcesamientoImagenes/resultados`, con subcarpetas para checkpoints, métricas, gráficas e informes.
+5. Ejecutar únicamente pruebas de diagnóstico de GPU con `!nvidia-smi` y PyTorch `torch.cuda.is_available()`, sin descargar datasets ni iniciar entrenamiento.
+
+### Restricciones explicadas
+- Colab Free no garantiza GPU; sesiones de hasta 12 horas como máximo y límites dinámicos.
+- Los datasets se descargarán directamente desde fuentes autorizadas a la máquina remota cuando se adapte el flujo, no al teléfono ni necesariamente a Drive.
+- Drive se usará para persistir resultados/checkpoints, teniendo en cuenta cuota y límites de I/O.
+- No compartir contraseñas ni tokens en el chat; no instalar dependencias ni ejecutar scripts del proyecto hasta verificar la cuenta, autorización GitHub y GPU.
+- No se ha ejecutado ninguna acción de configuración en la cuenta del usuario ni entrenamiento.
+
+### Punto de continuidad
+Esperar a que el usuario complete los pasos de acceso, autorización y diagnóstico. Solicitar captura del resultado de `nvidia-smi` y del test PyTorch (ocultando correo/datos personales si aparecen). Después revisar el resultado y continuar con la adaptación específica del repositorio.
