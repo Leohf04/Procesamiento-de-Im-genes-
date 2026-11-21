@@ -50,6 +50,6 @@ class ONNXUrbanHybridModel:
         return {"boxes": np.zeros((0, 4), np.float32), "labels": np.zeros((0,), np.int64),
                 "class_names": [], "scores": np.zeros((0,), np.float32), "instance_masks": None,
                 "raw_semantic_map": raw, "urban_semantic_mask": semantic,
-                "urban_semantic_mask_all11": semantic_all11,
+                "urban_semantic_mask_all11": semantic_all11, "semantic_label_space": "cityscapes",
                 "lane_mask": lane, "lane_model_loaded": self.lane is not None,
                 "detection_note": "Este export ONNX solo realiza segmentación semántica; no genera cajas ni instancias."}
