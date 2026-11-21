@@ -1,4 +1,4 @@
-"""Fine-tune COCO-pretrained Mask R-CNN on Cityscapes with resumable checkpoints."""
+"""Fine-tune COCO-pretrained Mask R-CNN on Cityscapes or BDD100K instances."""
 import argparse
 import json
 import os
@@ -80,7 +80,7 @@ def main():
         class_names = ["background", *BDD100K_INSTANCE_CLASSES]
     num_classes = len(class_names)
     if len(train_data) == 0 or len(val_data) == 0:
-        raise ValueError("Cityscapes debe contener imágenes de train y val.")
+        raise ValueError("El dataset seleccionado debe contener imágenes y bitmasks/etiquetas en train y val.")
 
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, collate_fn=collate_fn,
