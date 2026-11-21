@@ -90,7 +90,10 @@ def test_semantic_loader_keeps_imagenet_normalization(tmp_path):
 
     image, _ = BDD100KSemanticDataset(images, masks, size=(4, 4))[0]
 
-    assert float(image.min()) < 0.0
+    expected = torch.tensor([(128 / 255.0 - 0.485) / 0.229,
+                             (128 / 255.0 - 0.456) / 0.224,
+                             (128 / 255.0 - 0.406) / 0.225])
+    assert torch.allclose(image.mean(dim=(1, 2)), expected, atol=0.01)
 
 
 def test_detection_loader_maps_categories_and_scales_boxes(tmp_path):
@@ -132,7 +135,7 @@ def test_lane_dataset_decodes_three_packed_targets_and_background(tmp_path):
     image, targets = BDD100KLaneDataset(images, masks, size=(2, 3))[0]
 
     assert tuple(image.shape) == (3, 2, 3)
-    assert targets["category"].tolist() == [[6, 0, 7], [6, 6, 6]]
+    assert targets["category"].tolist() == [[6, 0, 255], [6, 6, 6]]
     assert targets["style"].tolist() == [[1, 0, 1], [1, 1, 1]]
     assert targets["direction"].tolist() == [[1, 0, 1], [1, 1, 1]]
     # 255 has background bit 1; ignore it in all three heads.
