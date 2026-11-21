@@ -28,7 +28,7 @@ models:
     confidence_threshold: 0.50
     mask_threshold: 0.50
     urban_checkpoint: "data/processed/maskrcnn_cityscapes.pt"
-    note: "Mask R-CNN sigue preentrenado en COCO; no se afirma fine-tuning urbano."
+    note: "Carga el checkpoint Cityscapes si existe; en su ausencia usa pesos COCO preentrenados."
   semantic_hybrid:
     architecture: "DeepLabV3Plus-ResNet50"
     checkpoint_path: "data/processed/deeplabv3plus_urban.pt"
