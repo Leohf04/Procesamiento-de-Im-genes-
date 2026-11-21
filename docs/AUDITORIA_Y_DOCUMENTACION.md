@@ -353,3 +353,18 @@ El repositorio ya tiene una estructura modular y un prototipo que integra modelo
 Sin embargo, las métricas actuales y el conjunto de datos no permiten afirmar todavía que se haya completado una comparación científica de segmentación urbana multiclase y robustez real. La prioridad debe ser corregir el protocolo de evaluación, separar los datos de entrenamiento y prueba, integrar datasets urbanos apropiados y dejar claro el alcance real de cada arquitectura.
 
 **No se incluyen valores de mAP, mIoU o FPS en este documento porque no se ejecutó un experimento reproducible durante la auditoría.**
+
+
+## 12. Correcciones implementadas en la rama `fix/evaluacion-y-pipeline`
+
+Esta sección registra cambios de código pendientes de validación dinámica:
+
+- AP@0.5 ahora acumula detecciones por clase, las ordena por confianza, realiza matching uno-a-uno por imagen y calcula el área bajo la curva precisión-recall interpolada (estilo VOC).
+- El matching de TP/FP/FN exige coincidencia de clase y asigna cada predicción y GT como máximo una vez.
+- Las máscaras GT y las predicciones Mask R-CNN/DeepLab se representan mediante IDs semánticos para las cinco clases compartidas; mIoU compara las clases y no solo foreground/background.
+- El entrenamiento del SVM separa grupos por imagen mediante `GroupShuffleSplit`; la matriz de confusión se calcula sobre el subconjunto de validación. Se exige más de una imagen para impedir una evaluación sobre las mismas muestras.
+- `--save-video` se propaga al pipeline de vídeo/cámara; `--save-image` guarda resultados de imágenes.
+- El cargador incorpora decodificación de RLE COCO sin comprimir sin pycocotools y falla explícitamente ante RLE comprimido si falta esa dependencia.
+- Se añadieron pruebas de regresión para AP, matching por clase y mIoU multiclase.
+
+**Pendiente de validación:** no se han ejecutado pytest, inferencias Torch ni benchmarks. DeepLab sigue siendo DeepLabV3 (no V3+), Faster R-CNN sigue siendo detector de cajas y las escenas adversas continúan siendo sintéticas sobre COCO. No se han integrado Cityscapes/BDD100K ni entrenamiento urbano. El backend clásico conserva el nombre histórico `onnx_cv2`, aunque no ejecuta ONNX; se documenta como backend OpenCV/HOG.
