@@ -41,11 +41,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install numpy pillow pytest
+          pip install torchvision --index-url https://download.pytorch.org/whl/cpu
       - name: Run adapter unit tests
         run: pytest -q tests/test_bdd100k_github_sample.py
       - name: Download and validate bounded real GitHub samples
         run: |
           python scripts/validate_bdd100k_github_instance_sample.py \
-            --samples "${{ inputs.samples || '4' }}"
+            --samples "${{ inputs.samples || '4' }}" \\
+            --height 128 \\
+            --width 256 \\
+            --maskrcnn-smoke-test
 
 # Trigger validation after correcting the script import path.
