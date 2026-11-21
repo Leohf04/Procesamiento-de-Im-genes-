@@ -967,3 +967,20 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - HEAD de la rama al actualizar esta entrada: `8b4d30ce04e360bba29272f93fb1aa1c41413bf9`.
 - PR #3 se mantiene abierta, en draft y sin fusionar. No se ha iniciado entrenamiento real ni se ha generado checkpoint.
 - Próximo paso: recuperar la conclusión y los logs del run de validación posterior al commit `8b4d30c`. Si el smoke test falla, corregir la incompatibilidad detectada y repetirlo; si pasa, avanzar a preparar el protocolo de entrenamiento acotado y reanudable, sin iniciar entrenamiento completo hasta validar el acceso/licencia y cobertura de los datos.
+
+
+### Resultado del smoke test de Mask R-CNN — 2026-11-21
+
+- La primera ejecución del workflow ampliado, run `44956655632`, falló por una continuación de línea duplicada en el comando shell; las 2 pruebas unitarias sí pasaron. Se corrigió el workflow y se verificó la ejecución posterior.
+- Run correcto: **`44956675144`**, job `137006210434`, conclusión `success`, sobre el código del commit `8b4d30ce04e360bba29272f93fb1aa1c41413bf9`.
+- Evidencia del log:
+  - Instalación de PyTorch CPU y Torchvision CPU correcta.
+  - Pruebas del adaptador: **2 passed**.
+  - Descarga temporal y lectura de la muestra: 2 imágenes, 37 instancias, clases bus/car/motorcycle/truck.
+  - Mask R-CNN ResNet50-FPN con pesos aleatorios, 9 salidas y 8 instancias en el smoke test: forward correcto; pérdidas escalares y finitas; `backward()` completado.
+  - Pérdidas observadas: `loss_classifier=2.05140`, `loss_box_reg=0.21448`, `loss_mask=3.61923`, `loss_objectness=0.69957`, `loss_rpn_box_reg=1.87054`; total `8.45520`.
+  - Mensaje final del log: `MASKRCNN_SMOKE_TEST PASSED ... backward=ok optimizer_step=no checkpoint=no` y `RESULT: BDD100K GITHUB INSTANCE SAMPLE VALIDATION PASSED`.
+- **Interpretación:** el adaptador de muestra y el modelo Mask R-CNN son técnicamente compatibles en un forward/loss/backward acotado sobre CPU. Los pesos eran aleatorios y no se hizo `optimizer.step()`; por tanto esto **no es entrenamiento**, no valida precisión ni AP, no produce checkpoint y no demuestra generalización.
+- El CI general correspondiente a los commits de esta intervención seguía en ejecución en la última consulta; revisar sus conclusiones antes de afirmar que está aprobado.
+- PR #3 comprobada: abierta, draft y sin fusionar. No se inició entrenamiento completo ni se descargó el dataset al dispositivo del usuario.
+- Próximo paso: revisar CI general y preparar el entrenamiento real reanudable sobre datos con acceso/licencia confirmados. Antes de entrenar se debe resolver la cobertura limitada de la muestra de instancias (solo cuatro clases) y no presentarla como sustituto de las anotaciones oficiales RGBA.
