@@ -492,3 +492,47 @@ La asignación de GPU quedó resuelta en esta sesión: Colab Free entregó una T
 - Datasets: no disponibles.
 - Entrenamiento/evaluación experimental: no iniciados.
 - Costes: ninguno; no se desplegó infraestructura de pago.
+
+
+## 14. Sustitución de Cityscapes por BDD100K — 2026-11-21
+
+El usuario confirmó que no puede acceder a Cityscapes por no disponer de correo institucional y pidió adaptar el proyecto para prescindir de él, además de verificar BDD100K.
+
+### Investigación verificada sobre BDD100K
+
+- La documentación oficial del toolkit BDD100K identifica descargas oficiales para:
+  - 100K Images (5.3 GB), usadas para detección, drivable area y lane marking.
+  - 10K Images (1.1 GB), usadas para segmentación semántica, segmentación de instancias y panoptic.
+  - Etiquetas de lane marking (434 MB), semantic segmentation (419 MB), instance segmentation (111 MB), drivable area (514 MB), y Detection 2020 Labels (53 MB).
+- La documentación oficial especifica 19 clases semánticas, 10 clases de detección y las primeras 8 clases para segmentación de instancias; lane marking tiene subcategorías de tipo, dirección y estilo. Los formatos de instancias usan bitmasks RGBA; los JSON de polígonos usan curvas Bezier y no deben tratarse como polígonos COCO sin conversión.
+- Importante: el conjunto 10K no es simplemente un subconjunto exacto del conjunto 100K. Para segmentación semántica/instancias deben emparejarse las imágenes 10K con sus etiquetas correspondientes; para carriles/detección se usan las imágenes 100K.
+- La licencia de datos oficial permite uso, copia, modificación y distribución con fines educativos, de investigación y sin ánimo de lucro, siempre que se conserve el aviso completo de copyright/licencia y descargo de responsabilidad. El uso comercial queda restringido a miembros/afiliados BDD/BAIR o requiere licencia comercial de UC Berkeley. La licencia BSD-3-Clause del repositorio de código NO es la licencia de las imágenes/anotaciones.
+- Fuentes consultadas:
+  - https://github.com/bdd100k/bdd100k/blob/master/doc/source/download.rst
+  - https://github.com/bdd100k/bdd100k/blob/master/doc/source/format.rst
+  - https://github.com/bdd100k/bdd100k/blob/master/doc/source/license.rst
+  - https://github.com/bdd100k/bdd100k
+- La copia de Hugging Face https://huggingface.co/datasets/liqijia/BDD100K-Semantic-Segmentation se declara explícitamente no oficial; su tarjeta afirma que redistribuye el subset oficial de segmentación semántica de 10K, con 7,000 train y 1,000 validation (8,000 ejemplos etiquetados) y sin test con máscaras públicas. Afirma que no modifica píxeles y que conserva la licencia BDD100K. No se inspeccionaron ni descargaron todos los shards ni se verificaron checksums/contenido binario en esta intervención: por tanto, la procedencia declarada está documentada, pero la integridad real del mirror sigue pendiente de validación en Colab. No usarlo como fuente para instancias/carriles/detección.
+- La documentación oficial indica el mirror de descarga https://dl.cv.ethz.ch/bdd100k/data/ y el portal oficial https://bdd-data.berkeley.edu/. El mirror oficial puede ser la fuente preferida desde la VM cloud, tras revisar la licencia y disponibilidad.
+
+### Auditoría de compatibilidad del código existente
+
+- Se confirmó leyendo el README, notebook Colab, guía Colab, protocolo experimental y scripts que:
+  - DeepLabV3+ solo ofrece tareas `cityscapes` (11 clases) y `lanes` (binaria); no existe loader de semántica BDD100K.
+  - Mask R-CNN depende de `CityscapesInstanceDataset` y de un mapa fijo de 7 clases; no admite todavía máscaras de instancias BDD100K.
+  - El preparador de carriles `scripts/prepare_bdd100k_lane_masks.py` rasteriza polilíneas como líneas binarias, pero su docstring/implementación esperan `poly2d.vertices`; el formato oficial describe curvas Bezier, por lo que hay que contrastar el JSON real y el parser oficial antes de darlo por correcto.
+  - El notebook Colab solo declara rutas Cityscapes y BDD100K genéricas, no descarga ni valida los componentes específicos del dataset.
+  - El README y protocolo siguen describiendo Cityscapes como dataset semántico/de instancias principal.
+- No se aplicó todavía una adaptación parcial del entrenamiento: cambiar únicamente el número de clases o rutas sería incorrecto. La adaptación debe incluir loaders, mapeos de clases/ignore=255, formatos de máscaras semánticas y RGBA de instancias, evaluadores, configuración del notebook y documentación.
+- No se descargaron datos, no se ejecutaron entrenamientos y no se generaron checkpoints en esta intervención.
+
+### Decisión recomendada y siguiente fase
+
+- Retirar Cityscapes como requisito del proyecto.
+- Adoptar BDD100K como dataset principal con estas rutas de tarea:
+  1. Semantic segmentation: 10K images + semantic segmentation masks; 19 clases, ignore 255.
+  2. Instance segmentation: 10K images + instance segmentation bitmasks; 8 categorías evaluadas (primeras 8 de las 10 clases de detección).
+  3. Object detection: 100K images + Detection 2020 Labels; 10 categorías.
+  4. Lane marking: 100K images + lane marking labels; preservar categoría/dirección/estilo en vez de colapsar a una máscara binaria en la versión final.
+- La implementación debe ser por fases: validación automatizada de dataset y splits; loader semántico y DeepLabV3+ BDD; loader RGBA de instancias y Mask R-CNN; actualización de evaluación/benchmark; carriles multiatributo; notebook Colab con descarga remota oficial y comprobaciones MD5.
+- Hasta completar y probar esa migración, no afirmar que el proyecto ya es independiente de Cityscapes ni habilitar RUN_TRAINING.
