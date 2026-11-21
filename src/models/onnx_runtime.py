@@ -1,4 +1,4 @@
-"""Real ONNX Runtime semantic-segmentation inference adapter."""
+"""Real ONNX Runtime semantic and lane segmentation inference."""
 import cv2
 import numpy as np
 
@@ -26,5 +26,25 @@ class ONNXSemanticSegmenter:
         if output.ndim != 4 or output.shape[1] != self.num_classes:
             raise ValueError(f"Salida ONNX esperada [1,{self.num_classes},H,W], recibida {output.shape}")
         labels = output.argmax(axis=1)[0].astype(np.uint8)
-        labels = cv2.resize(labels, (w, h), interpolation=cv2.INTER_NEAREST)
-        return labels
+        return cv2.resize(labels, (w, h), interpolation=cv2.INTER_NEAREST)
+
+
+class ONNXUrbanHybridModel:
+    def __init__(self, semantic_path, lane_path=None, num_semantic_classes=11, input_size=(512, 1024)):
+        if not semantic_path:
+            raise ValueError("Configura models.semantic_hybrid.onnx_semantic_model")
+        self.semantic = ONNXSemanticSegmenter(semantic_path, num_semantic_classes, input_size)
+        self.lane = ONNXSemanticSegmenter(lane_path, 2, input_size) if lane_path else None
+
+    def predict(self, image_bgr):
+        raw = self.semantic.predict(image_bgr)
+        lane = self.lane.predict(image_bgr) if self.lane else np.zeros(raw.shape, np.uint8)
+        mapping = {2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8, 10: 9, 1: 10}
+        semantic = np.zeros(raw.shape, np.uint8)
+        for source_id, target_id in mapping.items():
+            semantic[raw == source_id] = target_id
+        return {"boxes": np.zeros((0, 4), np.float32), "labels": np.zeros((0,), np.int64),
+                "class_names": [], "scores": np.zeros((0,), np.float32), "instance_masks": None,
+                "raw_semantic_map": raw, "urban_semantic_mask": semantic,
+                "lane_mask": lane, "lane_model_loaded": self.lane is not None,
+                "detection_note": "Este export ONNX solo realiza segmentación semántica; no genera cajas ni instancias."}
