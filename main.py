@@ -16,7 +16,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Detección y segmentación semántica en escenas urbanas")
     parser.add_argument("--source", type=str, default="0", help="Ruta de video o índice de cámara")
     parser.add_argument("--approach", choices=["instance", "hybrid"], default="instance")
-    parser.add_argument("--backend", choices=["auto", "torch", "onnx_cv2"], default="auto")
+    parser.add_argument("--backend", choices=["auto", "torch", "onnx", "onnx_cv2"], default="auto")
     parser.add_argument("--config", type=str, default="configs/config.yaml")
     parser.add_argument("--save-video", type=str, default=None, help="Ruta del video de salida (solo fuentes de video/cámara)")
     parser.add_argument("--save-image", type=str, default=None, help="Ruta para guardar el resultado cuando la fuente es una imagen")
@@ -42,7 +42,9 @@ def main():
     backend = resolve_backend(args.backend)
     print(f"Backend activo: {backend}")
     if backend == "onnx_cv2":
-        print("Backend clásico OpenCV/HOG (no es inferencia ONNX).")
+        print("Backend clásico OpenCV/HOG (modo demo; no es ONNX).")
+    elif backend == "onnx":
+        print("ONNX Runtime: segmentación semántica; no incluye detección de instancias.")
 
     pipeline = UrbanPerceptionPipeline(approach=args.approach, config_path=args.config, backend=backend)
     source = args.source
