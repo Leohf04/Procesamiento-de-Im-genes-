@@ -113,5 +113,29 @@ def test_detection_loader_maps_categories_and_scales_boxes(tmp_path):
     image, target = BDD100KDetectionDataset(images, labels, size=(4, 8))[0]
 
     assert float(image.min()) >= 0.0 and float(image.max()) <= 1.0
-    assert target["labels"].tolist() == [3, 10]
+    assert target["labels"].tolist() == [3, 8]
     assert target["boxes"].tolist() == [[1.0, 0.5, 5.0, 3.5], [0.0, 0.0, 2.0, 2.0]]
+
+
+def test_lane_dataset_decodes_three_packed_targets_and_background(tmp_path):
+    from src.utils.bdd100k_dataset import BDD100KLaneDataset
+
+    images, masks = tmp_path / "images", tmp_path / "masks"
+    images.mkdir()
+    masks.mkdir()
+    _write_image(images / "frame.jpg", size=(2, 3))
+    # category=6, style=1, direction=1 -> 6 + (1<<4) + (1<<5) = 54
+    # background bit set on last pixel; its task targets must be ignored.
+    packed = np.array([[54, 0, 255], [54, 54, 54]], dtype=np.uint8)
+    Image.fromarray(packed).save(masks / "frame.png")
+
+    image, targets = BDD100KLaneDataset(images, masks, size=(2, 3))[0]
+
+    assert tuple(image.shape) == (3, 2, 3)
+    assert targets["category"].tolist() == [[6, 0, 7], [6, 6, 6]]
+    assert targets["style"].tolist() == [[1, 0, 1], [1, 1, 1]]
+    assert targets["direction"].tolist() == [[1, 0, 1], [1, 1, 1]]
+    # 255 has background bit 1; ignore it in all three heads.
+    assert targets["category"][0, 2].item() == 255
+    assert targets["style"][0, 2].item() == 255
+    assert targets["direction"][0, 2].item() == 255
