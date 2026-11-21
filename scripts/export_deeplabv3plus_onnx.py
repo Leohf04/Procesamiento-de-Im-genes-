@@ -2,7 +2,17 @@
 import argparse
 from pathlib import Path
 import torch
+from torch import nn
 from src.models.deeplabv3plus import DeepLabV3Plus
+
+
+class ExportWrapper(nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, image):
+        return self.model(image)["out"]
 
 
 def main():
@@ -20,7 +30,7 @@ def main():
     dummy = torch.randn(1, 3, args.height, args.width)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    torch.onnx.export(model, dummy, str(output), input_names=["image"], output_names=["logits"],
+    torch.onnx.export(ExportWrapper(model), dummy, str(output), input_names=["image"], output_names=["logits"],
                       opset_version=17, dynamic_axes={"image": {0: "batch"}, "logits": {0: "batch"}})
     print(f"ONNX exportado: {output}")
 
