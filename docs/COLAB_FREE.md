@@ -39,6 +39,20 @@ No pegues el token en una celda, no lo guardes en el notebook y no lo compartas 
 
 BDD100K es el dataset principal. Los datos deben llegar directamente a la VM desde una fuente oficial/autorizada; nunca descargues ni subas archivos desde el teléfono. La documentación oficial publica el mirror ETH Zürich y los tamaños aproximados: imágenes 10K 1.1 GB, máscaras semánticas 419 MB e instancias 111 MB. Las imágenes 10K no son necesariamente subconjunto exacto de las 100K. Para semántica/instancias no descargues vídeos 1.8 TB ni imágenes 100K si no vas a ejecutar detección/carriles. Consulta [descarga oficial BDD100K](https://github.com/bdd100k/bdd100k/blob/master/doc/source/download.rst) y [formato oficial de etiquetas](https://github.com/bdd100k/bdd100k/blob/master/doc/source/format.rst). No se configura una URL directa sin verificar primero el archivo exacto y su checksum.
 
+## Validación acotada de muestras reales
+
+Antes de cualquier entrenamiento, el notebook ejecuta:
+
+```bash
+python scripts/validate_bdd100k_semantic_sample.py --samples-per-split 2
+```
+
+El script recupera dos pares imagen/máscara de train y dos de validación desde el mirror público `liqijia/BDD100K-Semantic-Segmentation` en Hugging Face, usando la API de archivos para descargar solo los archivos de esas muestras. Comprueba que las imágenes sean RGB, que las máscaras sean monocanal, que coincidan sus dimensiones, que los IDs sean 0–18/255 y que `BDD100KSemanticDataset` produzca tensores válidos. La descarga se limita a unas pocas muestras temporales en la VM y se elimina al terminar.
+
+**Alcance y cautela:** el mirror es una redistribución de terceros cuya tarjeta declara que los píxeles y máscaras de IDs se conservan sin modificar respecto a la publicación oficial y reproduce la licencia BDD100K. Esta prueba es una validación técnica provisional del cargador semántico, no una auditoría independiente de procedencia ni una validación de los loaders de instancias, detección o carriles. Esas tareas siguen pendientes de muestras oficiales correspondientes.
+
+GitHub Actions ejecuta esta misma prueba junto con la suite automatizada. En Colab, además, permite comprobarla en el entorno real de la sesión sin descargar el paquete completo. `RUN_TRAINING` debe permanecer en `False`.
+
 ## Reanudación de entrenamientos
 
 Los scripts de DeepLabV3+ y Mask R-CNN guardan:
