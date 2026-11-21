@@ -666,3 +666,22 @@ El usuario autorizó realizar la auditoría de la rama, comprobar las implementa
 - No se modificó código de entrenamiento ni se activó `RUN_TRAINING`.
 - PR #3 debe permanecer abierto y sin fusionar.
 - Próxima acción: provocar/observar CI de esta rama y revisar los logs; corregir fallos comprobados antes de implementar detección/carriles/AP de instancias.
+
+
+### Hallazgos adicionales de compatibilidad y estado de CI
+
+10. **Normalización de imágenes para Mask R-CNN:** el loader BDD100K reutiliza `_image_tensor`, que normaliza con media/desviación ImageNet. El loader Cityscapes de instancias entrega tensores en [0,1] y Torchvision Mask R-CNN aplica su propia normalización interna. Por tanto, la ruta BDD100K normaliza dos veces y no es compatible con el contrato esperado del modelo. Corregir separando el preprocesamiento semántico del de instancias y añadir una aserción de rango.
+11. **Evaluación BDD100K de instancias:** el evaluador actual no solo carece de mask AP; su wrapper `InstanceSegmentationModel` construye un predictor de 8 salidas (background + 7 clases Cityscapes), mientras que el entrenador BDD100K guarda 9 salidas (background + 8 clases). No se puede cargar directamente ese checkpoint con el wrapper actual. Debe implementarse evaluador específico BDD100K que respete nombres/IDs y calcule box AP y mask AP.
+12. **Validación durante entrenamiento de Mask R-CNN:** el script construye el dataset de validación y reporta su tamaño, pero no ejecuta evaluación ni calcula pérdida/metricas sobre ese split durante las épocas. La validación está diferida a un evaluador posterior aún no compatible con BDD100K.
+13. **Pruebas:** el test sintético de instancias verifica forma/labels/boxes, pero no comprueba rango de imagen, múltiples instancias con IDs repetidos, casos de borde de flags ni equivalencia con la conversión oficial BDD100K.
+14. **CI del commit de auditoría `a9403414b61ff96987a4e6a2bff65475b1a9bac4`:** ejecución GitHub Actions `44945437399` se inició por push y, al registrar esta actualización, seguía `in_progress` en el paso “Install CPU PyTorch”. Todavía no hay conclusión de compileall/CLI/pytest. Enlace: https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44945437399.
+15. La ejecución CI previa `44944986268` reportó `success` para el commit de PR anterior; no sustituye el resultado del commit actual ni demuestra compatibilidad con BDD100K real o GPU.
+
+### Cierre de auditoría de esta intervención
+
+- Se completó auditoría estática de loaders, entrenadores, evaluador, conversor de carriles, notebook, guía, README, dependencias y workflow.
+- Se disparó CI mediante un commit documental. No se afirma que las pruebas hayan pasado mientras la ejecución siga en curso.
+- No se corrigió código en esta intervención; el propósito fue auditar y verificar sin introducir cambios funcionales no probados.
+- No se descargaron datasets, no se inició entrenamiento ni se generaron checkpoints.
+- PR #3 permanece abierto; no se realizó merge.
+- Prioridad de corrección: (1) normalización de BDD100K Mask R-CNN y pruebas, (2) evaluación BDD100K box/mask AP con 9 clases, (3) validador y adaptador de carriles con bitmask empaquetado/Bezier usando toolkit oficial, (4) adaptador de detección 2D y su evaluación, (5) descarga remota exacta con MD5 y validación de estructura.
