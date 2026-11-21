@@ -71,6 +71,8 @@ def main():
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--output", default="data/processed/bdd100k_lanes.pt")
     parser.add_argument("--no-pretrained-backbone", action="store_true")
+    parser.add_argument("--resume", nargs="?", const="auto", default=None,
+                        help="Resume from --output.last.pt or an explicit checkpoint.")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.workers < 0:
@@ -87,14 +89,26 @@ def main():
     val_loader = DataLoader(val_data, batch_size=args.batch_size, shuffle=False,
                             num_workers=args.workers, collate_fn=collate_fn,
                             pin_memory=device.type == "cuda")
-    model = build_model(not args.no_pretrained_backbone).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5)
     output = Path(args.output)
     last_path = Path(str(output) + ".last.pt")
-    history = []
+    resume_path = last_path if args.resume == "auto" else Path(args.resume) if args.resume else None
+    model = build_model(not args.no_pretrained_backbone and resume_path is None).to(device)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=8, gamma=0.5)
+    history, start_epoch = [], 0
+    if resume_path:
+        if not resume_path.is_file():
+            raise FileNotFoundError(f"No existe checkpoint para reanudar: {resume_path}")
+        checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
+        if checkpoint.get("head_classes") != HEADS:
+            raise ValueError("El checkpoint no corresponde a las tres subtareas de carriles BDD100K.")
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        start_epoch = int(checkpoint.get("epoch", 0))
+        history = checkpoint.get("history", [])
     offsets = {"category": (0, 8), "direction": (8, 10), "style": (10, 12)}
-    for epoch in range(args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         model.train()
         running = 0.0
         for images, targets in train_loader:
