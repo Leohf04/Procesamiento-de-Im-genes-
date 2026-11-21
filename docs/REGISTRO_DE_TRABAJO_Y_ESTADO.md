@@ -609,3 +609,14 @@ El usuario autorizó implementar la adaptación a BDD100K como dataset principal
   5. Smoke tests sintéticos y pruebas en Colab T4 antes de habilitar `RUN_TRAINING`.
 - Cityscapes queda como compatibilidad heredada; no es requisito del flujo BDD100K.
 - PR #3 debe permanecer abierto y sin fusionar. No se ha solicitado ni realizado merge.
+
+
+### Actualización de cierre de la intervención
+
+- Se corrigió el checkpoint público de Mask R-CNN para guardar los nombres/número de clases dinámicos del dataset BDD100K (no los metadatos heredados de Cityscapes).
+- Se corrigió el fixture sintético de instancias para reflejar que el canal B contiene `ann_id` para instance segmentation; el canal A se reserva para tracking.
+- Se generalizó el mensaje de validación del entrenador Mask R-CNN.
+- Se actualizó el notebook para comprobar presencia de imágenes 10K y máscaras semánticas/bitmasks por split, y para seleccionar entrenamiento semántico o de instancias. El notebook sigue sin descargar datos ni iniciar entrenamiento automáticamente.
+- Se ajustaron README, protocolo experimental y guía Colab para dejar claro que carriles multiatributo, detección 2D, evaluación de instancias y descarga automática reproducible siguen pendientes. Se marcó como no validado el conversor antiguo de carriles basado en vértices simples.
+- Últimos commits documentales/correctivos de esta continuación: `7976e6e`, `f64548f`, `ab208da`, `fb695bf`.
+- No se ejecutaron pruebas Python ni GitHub Actions; los tests añadidos permanecen pendientes de ejecución. No afirmar que el código está validado.
