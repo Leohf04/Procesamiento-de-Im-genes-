@@ -884,3 +884,15 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - No se descargó ningún archivo de dataset, no se extrajeron máscaras, no se validó el loader de instancias con datos reales y no se inició entrenamiento.
 - PR #3 continúa abierta, en borrador y sin fusionar.
 - Próximo paso: recuperar el run del workflow de sondeo; si algún endpoint admite rangos, obtener y validar un ZIP parcial solo si es posible extraer entradas completas de forma fiable (ZIP central directory puede requerir rangos finales). Si no admite rangos, evaluar acceso oficial y descarga temporal de 111 MB en infraestructura remota, sin transferir datos al teléfono.
+
+
+### Resultado del sondeo HTTP Range — 2026-11-21
+
+- GitHub Actions workflow `BDD100K instance archive range probe`, run **44950686146**, job **136987716731**, terminó en `success` (el script completó sus comprobaciones, no significa que el origen de datos haya pasado).
+- Endpoint ETHZ `https://dl.cv.ethz.ch/bdd100k/data/bdd100k_ins_seg_labels_trainval.zip`: no resolvió DNS desde el runner (`NameResolutionError`), por lo que no se pudo determinar soporte Range ni disponibilidad del archivo.
+- Endpoint S3 Berkeley citado en referencias externas `https://bdd-data-storage-release.s3.us-west-2.amazonaws.com/bdd100k/2021/bdd100k_ins_seg_labels_trainval.zip`: devolvió HTTP 404 tanto en HEAD como en GET Range. No se descargó el ZIP.
+- Resultado del script: `RESULT: NO_VERIFIED_RANGE_SOURCE`. Ninguno de los dos endpoints permitió verificar lectura parcial.
+- La ejecución no consumió el archivo de 111 MB: el cliente solo intentó leer hasta el primer bloque de 4 KiB de la respuesta Range y cerró la conexión.
+- Conclusión: **no es viable extraer una máscara individual por HTTP Range con las fuentes probadas**. El endpoint S3 probado no tiene ese objeto en esa ruta y ETHZ no resolvió desde GitHub Actions. Esto no demuestra que el archivo oficial no exista en otro endpoint ni que no se pueda descargar desde Colab/RunPod.
+- Próximo paso recomendado: probar la URL oficial autenticada que entrega el portal BDD100K (si el usuario tiene acceso autorizado) desde el entorno remoto; si la descarga del paquete de 111 MB está permitida, descargarlo solo en infraestructura remota, verificar MD5, extraer 2–4 máscaras RGBA y eliminar el ZIP. Si no se dispone de URL oficial funcional, buscar una fuente alternativa autorizada antes de validar.
+- No se descargó ningún dataset, no se extrajeron muestras, no se validó el loader de instancias con datos reales y no se inició entrenamiento. PR #3 sigue abierta, en draft y sin fusionar.
