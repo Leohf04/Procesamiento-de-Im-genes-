@@ -44,11 +44,11 @@ jobs:
 
       - name: Check Google Drive credentials
         env:
-          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
-          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
+          : ${{ secrets. }}
         run: |
-          if [ -z "$GDRIVE_SERVICE_ACCOUNT_JSON" ] || [ -z "$GDRIVE_FOLDER_ID" ]; then
-            echo "::error::Configura GDRIVE_SERVICE_ACCOUNT_JSON y GDRIVE_FOLDER_ID en Settings > Secrets and variables > Actions."
+          if [ -z "$GDRIVE_RCLONE_CONFIG" ] || [ -z "$" ]; then
+            echo "::error::Configura GDRIVE_RCLONE_CONFIG y  en Settings > Secrets and variables > Actions."
             exit 1
           fi
 
@@ -57,17 +57,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rclone
 
-      - name: Configure read/write access to the Drive folder
+      - name: Configure OAuth access to the user's Google Drive
         env:
-          GDRIVE_SERVICE_ACCOUNT_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
-          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: |
+          mkdir -p "$HOME/.config/rclone"
           umask 077
-          printf '%s' "$GDRIVE_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/gdrive-service-account.json"
-          rclone config create gdrive drive \
-            scope drive \
-            service_account_file "$RUNNER_TEMP/gdrive-service-account.json" \
-            root_folder_id "$GDRIVE_FOLDER_ID"
+          printf '%s' "$GDRIVE_RCLONE_CONFIG" > "$HOME/.config/rclone/rclone.conf"
+          chmod 600 "$HOME/.config/rclone/rclone.conf"
+          rclone listremotes | grep -qx 'gdrive:'
           rclone lsd gdrive:
 
       - name: Download dataset from Google Drive
@@ -109,4 +107,4 @@ jobs:
 
       - name: Remove temporary credentials
         if: always()
-        run: rm -f "$RUNNER_TEMP/gdrive-service-account.json"
+        run: rm -f "$HOME/.config/rclone/rclone.conf"
