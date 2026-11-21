@@ -35,3 +35,14 @@ def test_non_lane_bdd_annotation_is_ignored():
     ]}]}
     mask = rasterize_annotation(frame, width=24, height=24)
     assert np.count_nonzero(mask) == 0
+
+
+def test_deeplabv3plus_returns_input_sized_logits():
+    import pytest
+    torch = pytest.importorskip("torch")
+    from src.models.deeplabv3plus import DeepLabV3Plus
+
+    model = DeepLabV3Plus(num_classes=3, pretrained_backbone=False).eval()
+    with torch.inference_mode():
+        output = model(torch.zeros(1, 3, 64, 64))["out"]
+    assert tuple(output.shape) == (1, 3, 64, 64)
