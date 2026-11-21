@@ -11,6 +11,10 @@ Separar tres mediciones que no deben mezclarse: (1) calidad semántica, (2) cali
 - **COCO val2017**: conservarlo como benchmark auxiliar de detección COCO, no como sustituto de Cityscapes/BDD100K.
 - No usar el split de validación para ajustar umbrales y después reportarlo como test. Registrar cualquier selección de hiperparámetros.
 
+## Preparación reproducible desde Google Drive
+
+La preparación automatizada está descrita en [docs/DATASETS_GITHUB_ACTIONS.md](DATASETS_GITHUB_ACTIONS.md). El workflow manual descarga temporalmente desde una carpeta privada de Google Drive, valida BDD100K y genera máscaras binarias de carriles para train/val; sube el manifiesto y las máscaras derivadas de vuelta a Drive. No almacena imágenes ni anotaciones en GitHub. Cityscapes permanece deshabilitado hasta que el usuario tenga registro y acceso autorizado. La preparación no sustituye el entrenamiento y no demuestra que la partición BDD100K esté libre de fuga temporal: los splits deben organizarse por secuencia/video.
+
 ## Entrenamiento
 
 ### DeepLabV3+ semántico urbano (11 clases Cityscapes)
