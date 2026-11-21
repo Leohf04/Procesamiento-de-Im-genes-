@@ -91,3 +91,27 @@ def test_semantic_loader_keeps_imagenet_normalization(tmp_path):
     image, _ = BDD100KSemanticDataset(images, masks, size=(4, 4))[0]
 
     assert float(image.min()) < 0.0
+
+
+def test_detection_loader_maps_categories_and_scales_boxes(tmp_path):
+    import json
+    from src.utils.bdd100k_dataset import BDD100KDetectionDataset
+
+    images = tmp_path / "images"
+    images.mkdir()
+    Image.fromarray(np.zeros((8, 16, 3), dtype=np.uint8)).save(images / "frame.jpg")
+    labels = tmp_path / "det.json"
+    labels.write_text(json.dumps([{
+        "name": "frame.jpg",
+        "labels": [
+            {"category": "car", "box2d": {"x1": 2, "y1": 1, "x2": 10, "y2": 7}},
+            {"category": "traffic sign", "box2d": {"x1": 0, "y1": 0, "x2": 4, "y2": 4}},
+            {"category": "unknown", "box2d": {"x1": 1, "y1": 1, "x2": 2, "y2": 2}},
+        ],
+    }]), encoding="utf-8")
+
+    image, target = BDD100KDetectionDataset(images, labels, size=(4, 8))[0]
+
+    assert float(image.min()) >= 0.0 and float(image.max()) <= 1.0
+    assert target["labels"].tolist() == [3, 10]
+    assert target["boxes"].tolist() == [[1.0, 0.5, 5.0, 3.5], [0.0, 0.0, 2.0, 2.0]]
