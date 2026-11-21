@@ -119,6 +119,8 @@ def main():
         )
 
     model = _build_model(args.approach, backend, config)
+    if args.approach == "instance" and getattr(model, "urban_finetuned", False):
+        raise RuntimeError("El modelo Mask R-CNN está ajustado a Cityscapes, pero este evaluador usa GT COCO. Usa scripts/evaluate_cityscapes.py para métricas urbanas.")
     evaluator = ScenarioEvaluator(
         model=model,
         config=config,
