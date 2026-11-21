@@ -37,7 +37,7 @@ No pegues el token en una celda, no lo guardes en el notebook y no lo compartas 
 - Checkpoints, historiales, métricas, gráficas e informes se guardan en Drive.
 - No guardar datasets grandes en GitHub ni transferirlos desde el teléfono.
 
-Los datasets deben llegar directamente a la VM desde una fuente autorizada. Cityscapes requiere cuenta y aceptación de sus condiciones. No se implementó una descarga automática de Cityscapes ni se asume que una copia comunitaria de BDD100K sea válida.
+BDD100K es el dataset principal. Los datos deben llegar directamente a la VM desde una fuente oficial/autorizada; nunca descargues ni subas archivos desde el teléfono. La documentación oficial publica el mirror ETH Zürich y los tamaños aproximados: imágenes 10K 1.1 GB, máscaras semánticas 419 MB e instancias 111 MB. Las imágenes 10K no son necesariamente subconjunto exacto de las 100K. Para semántica/instancias no descargues vídeos 1.8 TB ni imágenes 100K si no vas a ejecutar detección/carriles. Consulta [descarga oficial BDD100K](https://github.com/bdd100k/bdd100k/blob/master/doc/source/download.rst) y [formato oficial de etiquetas](https://github.com/bdd100k/bdd100k/blob/master/doc/source/format.rst). No se configura una URL directa sin verificar primero el archivo exacto y su checksum.
 
 ## Reanudación de entrenamientos
 
@@ -79,3 +79,12 @@ python scripts/train_urban_segmentation.py \
 ## Estado de validación
 
 La existencia del notebook y los scripts no significa que se haya ejecutado un entrenamiento. Antes del primer entrenamiento hay que validar acceso GitHub, GPU, compatibilidad PyTorch/Torchvision y el dataset real.
+
+
+## Flujos BDD100K integrados
+
+- Semántica: `scripts/train_urban_segmentation.py --task bdd100k-semantic` usa 19 clases y `ignore=255`.
+- Instancias: `scripts/train_maskrcnn_cityscapes.py --dataset bdd100k` decodifica PNG RGBA oficiales y ajusta ocho clases.
+- Colab valida presencia y conteo de imágenes/máscaras, y mantiene `RUN_TRAINING=False` por defecto.
+- Aún no está integrada una descarga automática reproducible desde el mirror: antes debe verificarse el nombre exacto de cada archivo, su MD5 y las condiciones de acceso. No se deben inventar enlaces.
+- Detección 2D (100K/Det_20), carriles multiatributo (categoría/dirección/estilo), evaluación BDD100K de instancias y métricas mask AP siguen pendientes. No iniciar esos experimentos hasta completar y probar sus adaptadores.
