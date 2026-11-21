@@ -113,17 +113,11 @@ python scripts/train_maskrcnn_cityscapes.py --data-root data/cityscapes --epochs
 
 DeepLabV3+ predice 11 clases: road, sidewalk, person, rider, car, truck, bus, motorcycle, bicycle, traffic light y traffic sign. Mask R-CNN predice siete clases de instancia: person, rider, car, truck, bus, motorcycle y bicycle.
 
-## Segmentación de carriles con BDD100K
+## Carriles y detección 2D BDD100K — pendientes de integración
 
-Descarga imágenes y anotaciones *lane marking* de BDD100K. Genera máscaras binarias:
+BDD100K publica etiquetas de carriles con tres atributos evaluables: categoría, dirección y estilo. Sus máscaras oficiales son PNG monocanal empaquetadas; no son máscaras binarias genéricas. El parser anterior que interpretaba `poly2d.vertices` como una polilínea simple no debe utilizarse para generar resultados: el formato oficial usa curvas Bezier con puntos de control.
 
-```bash
-python scripts/prepare_bdd100k_lane_masks.py --labels data/bdd100k/labels/lane/train.json --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train
-python scripts/prepare_bdd100k_lane_masks.py --labels data/bdd100k/labels/lane/val.json --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val
-python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train --val-images-dir data/bdd100k/images/100k/val --val-masks-dir data/bdd100k/lane_masks/val --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_lanes.pt
-```
-
-Prepara una partición de validación independiente por secuencia/video. No dividas fotogramas adyacentes aleatoriamente entre train y validation.
+La siguiente fase debe usar las máscaras oficiales `labels/lane/masks/{train,val}` y decodificar/entrenar las tres subtareas, o invocar y verificar el convertidor oficial BDD100K. La detección 2D debe usar `images/100k` junto con `labels/det_20/det_{train,val}.json` (10 clases). Ninguno de esos dos flujos está listo para producir métricas académicas.
 
 ## Ejecución remota en Google Colab Free
 
@@ -133,7 +127,7 @@ Consulta [docs/COLAB_FREE.md](docs/COLAB_FREE.md) y abre el [notebook de Colab](
 
 La preparación puede ejecutarse con GitHub Actions y Google Drive sin almacenar datos en Git. Consulta [docs/DATASETS_GITHUB_ACTIONS.md](docs/DATASETS_GITHUB_ACTIONS.md) para configurar rclone mediante OAuth y guardar el archivo de configuración en el secreto `GDRIVE_RCLONE_CONFIG`.
 
-El workflow manual `.github/workflows/prepare-datasets.yml` valida BDD100K por lotes (hasta 4.000 imágenes por ejecución) y genera máscaras de carriles para train/val. Los archivos fuente deben estar previamente en Drive; cada lote se reanuda con el `next_offset` del manifiesto. Cityscapes permanece bloqueado hasta completar el registro y confirmar el acceso autorizado; no se intenta descargarlo automáticamente. Esta fase prepara datos, no entrena modelos.
+El workflow manual `.github/workflows/prepare-datasets.yml` es una ruta heredada de preparación por lotes desde Drive. No usarlo como conversor oficial de carriles hasta revisar su parser Bezier y el empaquetado de atributos. Esta fase no sustituye los nuevos loaders BDD100K ni ejecuta entrenamiento.
 
 ## Inferencia
 
