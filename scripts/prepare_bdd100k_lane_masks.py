@@ -1,7 +1,10 @@
-"""Rasterize BDD100K lane poly2d annotations into binary PNG masks.
+"""LEGACY/DEPRECATED: los polígonos BDD100K no deben rasterizarse a una máscara binaria.
 
-Expected BDD100K lane marking JSON format: list of frames with name and labels;
-lane labels contain category='lane' and poly2d vertices [[x,y], ...].
+Use las máscaras oficiales empaquetadas y BDD100KLaneDataset.
+
+This script is retained only for reproducing an earlier experiment. It discards
+lane category, direction, style, and Bezier control-point semantics. Do not use
+its output for BDD100K training or academic metrics.
 """
 import argparse
 import json
