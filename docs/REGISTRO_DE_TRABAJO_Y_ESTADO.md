@@ -625,3 +625,44 @@ El usuario autorizó implementar la adaptación a BDD100K como dataset principal
 - Último ajuste de protocolo: se retiraron los comandos antiguos de entrenamiento/evaluación binaria de carriles, porque no respetaban las tres subtareas oficiales BDD100K; commit `e03ac62`.
 
 - Se añadió al notebook una celda para ejecutar `pytest -q tests/test_bdd100k_dataset.py` y los smoke checks `--help` de ambos entrenadores antes de cualquier descarga/entrenamiento. La celda está preparada, pero todavía no se ha ejecutado. Commit `2f6ba43`.
+
+
+
+## 17. Auditoría técnica de continuidad — 2026-11-21
+
+El usuario autorizó realizar la auditoría de la rama, comprobar las implementaciones y ejecutar las pruebas antes de continuar con el desarrollo.
+
+### Archivos inspeccionados directamente en GitHub
+
+- `src/utils/bdd100k_dataset.py`
+- `tests/test_bdd100k_dataset.py`
+- `scripts/train_urban_segmentation.py`
+- `scripts/train_maskrcnn_cityscapes.py`
+- `scripts/evaluate_cityscapes.py`
+- `scripts/prepare_bdd100k_lane_masks.py`
+- `notebooks/colab_free_urban_training.ipynb`
+- `docs/COLAB_FREE.md`
+- `requirements.txt`
+- `README.md`
+- Workflow `.github/workflows/tests.yml`
+
+### Hallazgos confirmados por inspección estática
+
+1. **Loader semántico:** existe y valida IDs 0–18/255 y emparejamiento por nombre. No se ha probado aún con archivos oficiales reales.
+2. **Loader de instancias:** existe y construye targets de Mask R-CNN a partir de PNG RGBA. La decodificación y los flags requieren contraste con máscaras oficiales reales; no se debe dar por validada solo por el fixture sintético.
+3. **Entrenador semántico:** acepta BDD100K 19 clases, pero conserva Cityscapes como tarea predeterminada. La ruta BDD100K requiere rutas explícitas de train/val. El checkpoint best no contiene estado del optimizador, mientras que el .last sí.
+4. **Entrenador Mask R-CNN:** acepta BDD100K y ocho categorías. Crea un DataLoader de validación indirectamente solo como dataset; el entrenamiento no calcula pérdida ni métricas de validación. No se debe describir como entrenamiento con validación completa.
+5. **Evaluador:** BDD100K semántico calcula mIoU/IoU por clase. La rama de instancias sigue usando Cityscapes y AP de cajas estilo VOC; no evalúa BDD100K ni mask AP.
+6. **Carriles:** `scripts/prepare_bdd100k_lane_masks.py` espera `poly2d.vertices`, rasteriza una máscara binaria y no representa las tres subtareas oficiales. Mantener este conversor bloqueado/no validado.
+7. **Notebook:** las celdas de prueba ejecutan pytest y `--help`, pero el notebook no implementa descarga ni verificación MD5 automática. `RUN_TRAINING=False` se mantiene correctamente.
+8. **CI:** `.github/workflows/tests.yml` ejecuta compileall, smoke tests de CLI y pytest en push a `urban-models-and-benchmark`; por tanto, un commit documental en esta rama debe iniciar una ejecución de CI. El workflow instala PyTorch CPU y no valida CUDA/T4 ni datasets reales.
+9. **Documentación:** README/guía Colab describen explícitamente las limitaciones de detección, carriles y evaluación de instancias; el registro se mantiene como fuente de continuidad.
+
+### Límites de esta auditoría
+
+- La lectura de archivos confirma presencia y lógica estática, no ejecución.
+- En esta intervención todavía no se ha ejecutado pytest, compileall ni los smoke tests. Se actualizará este apartado con el resultado real de CI cuando esté disponible.
+- No se descargó BDD100K, no se usó la T4, no se entrenaron modelos ni se generaron checkpoints.
+- No se modificó código de entrenamiento ni se activó `RUN_TRAINING`.
+- PR #3 debe permanecer abierto y sin fusionar.
+- Próxima acción: provocar/observar CI de esta rama y revisar los logs; corregir fallos comprobados antes de implementar detección/carriles/AP de instancias.
