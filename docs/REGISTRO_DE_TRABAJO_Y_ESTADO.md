@@ -347,3 +347,65 @@ Se aclaró:
 - No se han descargado datos ni ejecutado entrenamientos.
 
 Punto de continuidad: completar preparación de cuenta, Drive y diagnóstico GPU/GitHub; luego diseñar la estrategia de acceso remoto a los datasets según los permisos y fuentes disponibles.
+
+
+## 11. Adaptación inicial a Google Colab Free — 2026-11-21
+
+El usuario confirmó que completó la preparación de Colab, Drive y autorización GitHub descrita en la intervención anterior, y autorizó comenzar la adaptación del repositorio. No se ha accedido a su sesión de Colab ni se han ejecutado celdas en su cuenta; el trabajo realizado es sobre el código del repositorio.
+
+### Cambios guardados en `urban-models-and-benchmark`
+
+- Se creó `notebooks/colab_free_urban_training.ipynb`:
+  - Monta Google Drive y crea carpetas de resultados persistentes.
+  - Clona la rama privada mediante token GitHub de solo lectura desde Colab Secrets (`GITHUB_TOKEN`) o entrada oculta de sesión.
+  - Instala dependencias adicionales sin reinstalar PyTorch/Torchvision del runtime de Colab.
+  - Diagnostica versiones de PyTorch/Torchvision, disponibilidad CUDA, GPU y estructura del dataset.
+  - Mantiene el entrenamiento desactivado por defecto (`RUN_TRAINING = False)).
+  - Expone configuración para entrenamiento semántico DeepLabV3+ y de instancias Mask R-CNN; BDD100K carriles queda pendiente de configurar rutas y validar fuente/particiones.
+  - Almacena checkpoints e historiales en Drive; los datasets se prevén en disco temporal de Colab.
+- Se creó `docs/COLAB_FREE.md` con instrucciones de acceso, token mínimo, almacenamiento, reanudación y límites del plan gratuito.
+- Se actualizó README para señalar Colab Free como entorno remoto previsto y enlazar la guía/notebook. El texto de Kaggle histórico permanece como referencia de documentación antigua, pero ya no es el flujo recomendado.
+- Se modificó `scripts/train_urban_segmentation.py`:
+  - Guarda checkpoint de mejor mIoU para evaluación.
+  - Guarda checkpoint reanudable `.last.pt` con modelo, optimizador, época e historial después de cada época.
+  - Acepta `--resume` o ruta explícita de checkpoint.
+  - `--epochs` representa el número total objetivo de épocas.
+  - Escritura atómica de checkpoints.
+- Se modificó `scripts/train_maskrcnn_cityscapes.py`:
+  - Guarda estado reanudable de modelo, optimizador y scheduler al terminar cada época.
+  - Conserva checkpoint compatible con evaluación/inferencia.
+  - Acepta `--resume` o ruta explícita.
+  - Actualiza historial JSON por época y escribe checkpoints atómicamente.
+
+### Commits realizados
+
+- `da12d12d175b44c929756ed9f497ce2c3f07c27e` — reanudación DeepLabV3+.
+- `2cb6fc66d671e3a1e7efa3f88adcb83ef695bb06` — reanudación Mask R-CNN.
+- `c11d3d38a02739b1bba76b9b8c9a06684aed3443` — notebook inicial Colab.
+- `b8415e7391ae3ba753171c8aef6e7e02696a5e24` — guía Colab.
+- `bfddafc70fdbfa24daf7800c9ba78bb028ee5b81` — actualización README.
+- `8e3877b70cb35479c49f28fcdf39e701c1a543b7` — evita actualizar NumPy explícitamente en el notebook.
+- `cb6b16773b2d55b7558a59500ced508f99176c20` — notebook con selector de entrenamiento semántico/instancias.
+
+### Validaciones y límites
+
+- Se comprobó que el notebook es JSON válido y contiene 17 celdas.
+- GitHub Actions para el commit de Mask R-CNN `2cb6fc6` completó con conclusión `success`.
+- La ejecución CI asociada al último commit del notebook `cb6b167` estaba en progreso en el momento de actualizar este registro; no declarar su resultado hasta consultarlo.
+- No se ha ejecutado el notebook en la cuenta del usuario, no se ha confirmado GPU real de su sesión, no se ha descargado dataset, no se ha iniciado entrenamiento y no hay checkpoints experimentales.
+- La descarga de Cityscapes no se automatiza: requiere comprobar registro, términos y mecanismo oficial de acceso. BDD100K comunitario sigue sin validación de procedencia/licencia/contenido.
+- El entrenamiento de carriles BDD100K no se habilita todavía en el notebook; falta integrar la preparación y validación de sus anotaciones y splits.
+- Colab puede interrumpir sesiones; los checkpoints se guardan al final de cada época y la reanudación no recupera el progreso a mitad de un lote.
+- El notebook solicita un token de lectura del repositorio privado. El usuario debe guardarlo en Colab Secrets y no compartirlo en el chat. La integración OAuth de GitHub/Colab para abrir notebooks no equivale necesariamente a credenciales Git para `git clone`.
+
+### Próximos pasos operativos
+
+1. Abrir el notebook de Colab desde el enlace incluido en README o en `docs/COLAB_FREE.md`.
+2. Ejecutar las celdas en orden hasta el diagnóstico; mantener `RUN_TRAINING=False`.
+3. Confirmar que clona la rama correcta, monta Drive, importa Torch/Torchvision y detecta GPU CUDA.
+4. Compartir la salida de diagnóstico sin tokens ni datos personales.
+5. Confirmar acceso autorizado a Cityscapes o seleccionar dataset alternativo; después validar estructura y correspondencia de imágenes/anotaciones desde la VM cloud.
+6. Hacer un smoke test de un lote pequeño antes de entrenamientos completos; verificar que los checkpoints se escriben en Drive y que `--resume` restaura estado.
+7. Adaptar después el pipeline BDD100K de carriles y sus particiones por secuencia.
+
+El usuario debe poder continuar desde Android; no solicitar descargas ni transferencias manuales de datasets desde el teléfono.
