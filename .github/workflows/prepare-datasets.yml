@@ -11,12 +11,34 @@ on:
           - bdd100k
           - cityscapes
       drive_source_path:
-        description: Folder path inside the configured Drive folder (for example bdd100k)
+        description: Folder path inside My Drive (for example datasets/bdd100k)
         required: true
         type: string
         default: bdd100k
+      split:
+        description: BDD100K split to process
+        required: true
+        type: choice
+        options:
+          - train
+          - val
+      offset:
+        description: Starting frame index in the selected split
+        required: true
+        type: string
+        default: "0"
+      batch_size:
+        description: Number of frames in this run (maximum 4000)
+        required: true
+        type: choice
+        options:
+          - "1000"
+          - "2000"
+          - "3000"
+          - "4000"
+        default: "3000"
       lane_thickness:
-        description: BDD100K lane-mask thickness in pixels
+        description: Lane mask thickness in pixels
         required: false
         type: string
         default: "8"
@@ -42,12 +64,12 @@ jobs:
           echo "::error::Cityscapes no está habilitado: registra una cuenta, acepta los términos oficiales y sube los paquetes autorizados a Google Drive antes de activar esta etapa."
           exit 1
 
-      - name: Check Google Drive credentials
+      - name: Check Google Drive OAuth configuration
         env:
           GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: |
           if [ -z "$GDRIVE_RCLONE_CONFIG" ]; then
-            echo "::error::Configura GDRIVE_RCLONE_CONFIG en Settings > Secrets and variables > Actions."
+            echo "::error::Configura el secreto GDRIVE_RCLONE_CONFIG en Settings > Secrets and variables > Actions."
             exit 1
           fi
 
@@ -56,7 +78,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y rclone
 
-      - name: Configure OAuth access to the user's Google Drive
+      - name: Configure OAuth access to Google Drive
         env:
           GDRIVE_RCLONE_CONFIG: ${{ secrets.GDRIVE_RCLONE_CONFIG }}
         run: |
@@ -67,43 +89,71 @@ jobs:
           rclone listremotes | grep -qx 'gdrive:'
           rclone lsd gdrive:
 
-      - name: Download dataset from Google Drive
+      - name: Download only the selected split annotations
         env:
           DRIVE_SOURCE_PATH: ${{ inputs.drive_source_path }}
+          SPLIT: ${{ inputs.split }}
         run: |
-          mkdir -p "$RUNNER_TEMP/dataset-source"
-          rclone copy "gdrive:$DRIVE_SOURCE_PATH" "$RUNNER_TEMP/dataset-source" --progress --transfers 4
-          if [ -z "$(find "$RUNNER_TEMP/dataset-source" -mindepth 1 -print -quit)" ]; then
-            echo "::error::La carpeta indicada en Google Drive está vacía o no existe."
-            exit 1
-          fi
+          mkdir -p "$RUNNER_TEMP/bdd100k"
+          rclone copyto "gdrive:$DRIVE_SOURCE_PATH/labels/lane/$SPLIT.json" "$RUNNER_TEMP/bdd100k/labels.json"
+
+      - name: Select bounded batch
+        env:
+          SPLIT: ${{ inputs.split }}
+          OFFSET: ${{ inputs.offset }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/prepared"
+          python scripts/select_bdd100k_batch.py \
+            --labels "$RUNNER_TEMP/bdd100k/labels.json" \
+            --split "$SPLIT" \
+            --offset "$OFFSET" \
+            --limit "$BATCH_SIZE" \
+            --output-json "$RUNNER_TEMP/bdd100k/batch.json" \
+            --files-list "$RUNNER_TEMP/bdd100k/files.txt" \
+            --manifest "$RUNNER_TEMP/prepared/selection_manifest.json"
+
+      - name: Download only images in this batch
+        env:
+          DRIVE_SOURCE_PATH: ${{ inputs.drive_source_path }}
+          SPLIT: ${{ inputs.split }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/bdd100k/images"
+          rclone copy "gdrive:$DRIVE_SOURCE_PATH/images/100k/$SPLIT" "$RUNNER_TEMP/bdd100k/images" \
+            --files-from "$RUNNER_TEMP/bdd100k/files.txt" --no-traverse --transfers 8 --checkers 16
 
       - name: Install preparation dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy 'opencv-python-headless<5'
 
-      - name: Validate dataset and prepare derived files
+      - name: Validate images and generate lane masks
         env:
-          DATASET: ${{ inputs.dataset }}
+          SPLIT: ${{ inputs.split }}
+          OFFSET: ${{ inputs.offset }}
           LANE_THICKNESS: ${{ inputs.lane_thickness }}
         run: |
-          python scripts/prepare_dataset_ci.py \
-            --dataset "$DATASET" \
-            --source-root "$RUNNER_TEMP/dataset-source" \
-            --output-dir "$RUNNER_TEMP/dataset-prepared" \
-            --lane-thickness "$LANE_THICKNESS"
+          python scripts/prepare_bdd100k_batch.py \
+            --labels "$RUNNER_TEMP/bdd100k/batch.json" \
+            --images-dir "$RUNNER_TEMP/bdd100k/images" \
+            --masks-dir "$RUNNER_TEMP/prepared/lane_masks" \
+            --manifest "$RUNNER_TEMP/prepared/dataset_manifest.json" \
+            --split "$SPLIT" \
+            --offset "$OFFSET" \
+            --thickness "$LANE_THICKNESS"
 
-      - name: Upload prepared outputs and manifest to Google Drive
+      - name: Upload prepared batch and manifests to Google Drive
         env:
-          DATASET: ${{ inputs.dataset }}
+          DRIVE_SOURCE_PATH: ${{ inputs.drive_source_path }}
+          SPLIT: ${{ inputs.split }}
+          OFFSET: ${{ inputs.offset }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
-          DEST="prepared/$DATASET/$RUN_ID-$RUN_ATTEMPT"
-          rclone copy "$RUNNER_TEMP/dataset-prepared" "gdrive:$DEST" --progress --transfers 4
+          DEST="$DRIVE_SOURCE_PATH/prepared/$SPLIT/offset-$OFFSET/run-$RUN_ID-$RUN_ATTEMPT"
+          rclone copy "$RUNNER_TEMP/prepared" "gdrive:$DEST" --progress --transfers 4
           echo "Resultados guardados en Google Drive: $DEST"
 
-      - name: Remove temporary credentials
+      - name: Remove temporary OAuth credentials
         if: always()
         run: rm -f "$HOME/.config/rclone/rclone.conf"
