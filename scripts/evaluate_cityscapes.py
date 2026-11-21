@@ -155,14 +155,15 @@ def evaluate_bdd100k_instances(images_dir, bitmasks_dir, checkpoint_path, output
             labels, scores, boxes, masks = labels[keep], scores[keep], boxes[keep], masks[keep]
             predictions.append({
                 "boxes": boxes,
-                "masks": masks,
+                "masks": [(np.packbits(mask.reshape(-1)), mask.shape) for mask in masks],
                 "class_names": [expected_names[label] for label in labels],
                 "scores": scores,
             })
             gt_labels = target["labels"].numpy().astype(int)
             ground_truth.append({
                 "boxes": target["boxes"].numpy(),
-                "masks": target["masks"].numpy(),
+                "masks": [(np.packbits(mask.reshape(-1)), mask.shape)
+                          for mask in target["masks"].numpy()],
                 "class_names": [expected_names[label] for label in gt_labels],
             })
 
