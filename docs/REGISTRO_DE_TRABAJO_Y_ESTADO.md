@@ -685,3 +685,65 @@ El usuario autorizó realizar la auditoría de la rama, comprobar las implementa
 - No se descargaron datasets, no se inició entrenamiento ni se generaron checkpoints.
 - PR #3 permanece abierto; no se realizó merge.
 - Prioridad de corrección: (1) normalización de BDD100K Mask R-CNN y pruebas, (2) evaluación BDD100K box/mask AP con 9 clases, (3) validador y adaptador de carriles con bitmask empaquetado/Bezier usando toolkit oficial, (4) adaptador de detección 2D y su evaluación, (5) descarga remota exacta con MD5 y validación de estructura.
+
+
+## 18. Correcciones BDD100K — 2026-11-21
+
+El usuario autorizó corregir los problemas detectados en la auditoría. Los cambios se realizaron directamente en la rama `urban-models-and-benchmark`, que alimenta el PR #3. El PR permanece abierto y sin fusionar.
+
+### Correcciones implementadas
+
+1. **Contrato de imágenes de Mask R-CNN:** `_image_tensor` ahora admite normalización opcional. Los loaders semánticos mantienen normalización ImageNet; los loaders de instancias y detección devuelven RGB CHW float32 en [0,1] para que Torchvision aplique su normalización interna.
+2. **Pruebas de preprocesamiento:** se añadieron pruebas para verificar rango [0,1] en instancias/detección y normalización ImageNet en semántica.
+3. **Evaluación BDD100K de instancias:** `scripts/evaluate_cityscapes.py --task bdd100k-instance` construye Mask R-CNN con nueve salidas (fondo + ocho clases), valida los metadatos del checkpoint y calcula Box AP y Mask AP por clase en umbrales 0.50–0.95, incluyendo AP50 y AP75.
+4. **Métrica Mask AP:** se añadió `compute_mask_average_precision_per_image` con matching greedy uno-a-uno por imagen e interpolación precision-recall. El informe declara expresamente que el protocolo es interno y no equivale a COCOeval oficial.
+5. **Memoria del evaluador:** máscaras de predicción/GT se almacenan con `np.packbits`; se limita la salida a 50 detecciones por imagen y score mínimo 0.05 para reducir uso de RAM en Colab.
+6. **Detector BDD100K:** se añadió `BDD100KDetectionDataset`, que lee `det_20` JSON, escala `box2d` y usa el orden oficial de diez categorías: bike, bus, car, motor, person, rider, traffic light, traffic sign, train, truck. Se añadió `scripts/train_bdd100k_detection.py` con Faster R-CNN, Box AP50 de validación y checkpoints reanudables.
+7. **Carriles BDD100K:** se añadió `BDD100KLaneDataset` para decodificar los PNG monocanal oficiales: bits 0–2 categoría, bit 3 fondo, bit 4 estilo y bit 5 dirección. Se añadió `scripts/train_bdd100k_lanes.py` con una red DeepLabV3 de tres cabezas (8 categorías, 2 direcciones y 2 estilos), ignore index 255, mIoU por subtarea y checkpoints reanudables.
+8. **Conversor antiguo de carriles:** `scripts/prepare_bdd100k_lane_masks.py` se marcó como obsoleto; su salida binaria pierde atributos y no se debe usar para entrenamiento ni métricas BDD100K.
+9. **Entrenadores por defecto:** `train_urban_segmentation.py` ahora selecciona BDD100K semántico por defecto; `train_maskrcnn_cityscapes.py` selecciona BDD100K por defecto. El modo binario de carriles del entrenador antiguo rechaza la ejecución y dirige al nuevo entrenador multi-tarea.
+10. **Inferencia de instancias:** `src/models/instance_seg.py` ahora lee `num_classes` y `class_names` del checkpoint, construye cabezas con el número correcto de clases y reconoce el label space BDD100K de instancias.
+11. **CI/documentación:** el workflow añade smoke tests CLI para los nuevos entrenadores; README y protocolo experimental describen rutas, clases, comandos y límites de las métricas.
+12. **Pruebas nuevas:** se añadieron fixtures para rango de imágenes, detección 2D, decodificación de los tres atributos de carriles, AP de máscaras y máscaras compactadas.
+
+### Fallos detectados y correcciones de pruebas
+
+- CI de commit `21b5dfb68cbfde8ba20f9a502d7db598e70519ac` completó instalación, compileall y smoke tests, pero pytest falló en dos expectativas incorrectas del test: un test suponía que una imagen gris de valor 128 debía tener algún canal normalizado negativo, y otro esperaba que el valor 255 no fuera background pese a que el bit 3 está activado.
+- Se corrigió el test semántico para comparar los valores normalizados esperados por canal y el test de carriles para tratar 255 como fondo/ignore en las tres salidas.
+- Los fallos de ejecución CI anteriores son evidencia de que pytest se ejecutó y encontró esos errores de fixtures; no deben contarse como pruebas aprobadas.
+
+### Commits principales de esta fase
+
+- `51abdf7`: corregir normalización del loader de instancias.
+- `d3a1f8b`: añadir métrica Mask AP.
+- `bb9265a`: añadir evaluador BDD100K Box AP/Mask AP.
+- `a073913`: añadir loader de detección 2D.
+- `f202b72`: añadir entrenador Faster R-CNN BDD100K.
+- `218d8a2`: añadir loader de carriles y corregir clases de detección oficiales.
+- `21b5dfb`: añadir entrenador multi-cabeza de carriles.
+- `e24eb7e` y `1339ac4`: compactar máscaras para evaluación.
+- `54e2d0e` y `d803b94`: añadir reanudación de entrenadores de detección/carriles.
+- `bb10f02` y `92f3eb7`: establecer BDD100K como tarea por defecto.
+- `9cf95cd` y `2548d6a`: hacer que inferencia cargue checkpoints BDD100K.
+- `f1d1601`: corregir expectativas de pruebas de carriles.
+- `ab64273`, `743c2c1`: actualizar protocolo y README.
+
+### Estado de validación al cierre de esta actualización
+
+- La CI del commit `f1d16010249ce8907631b84bcdf3f996da3162d0` seguía en ejecución en la etapa de instalación de dependencias al consultar su estado; todavía no había conclusión de pytest.
+- La CI de commits posteriores también está en curso. Debe comprobarse la ejecución correspondiente al HEAD final, no asumir que los workflows de commits intermedios validan los cambios posteriores.
+- No se ejecutó entrenamiento ni inferencia con BDD100K real.
+- No se descargó ningún dataset ni se consumió la T4 de Colab.
+- Las pruebas sintéticas no sustituyen la validación con máscaras/JSON oficiales reales.
+- El evaluador Mask AP propio no sustituye COCOeval/BDD100K oficial.
+- La precisión de carriles debe contrastarse con el evaluador oficial de F1 boundary (pix1/pix2/pix5); el entrenador actual registra mIoU por cabeza, no el F1 oficial.
+- La validación de detección es Box AP50 propio; no equivale a COCO mAP oficial.
+- PR #3 permanece abierto y sin fusionar.
+
+### Próximos pasos obligatorios
+
+1. Esperar y revisar la CI del HEAD final; corregir cualquier fallo.
+2. Ejecutar smoke tests y loaders con muestras oficiales pequeñas en Colab.
+3. Contrastar decoder de instancias, mapeos de clases y decoder lane bitfield con los paquetes oficiales y evaluadores oficiales.
+4. Añadir reanudación al entrenador semántico/Mask R-CNN si se detecta que no cubre los casos de interrupción del usuario.
+5. Solo tras validación real de los loaders, activar descarga remota mínima y luego entrenamiento.
