@@ -17,21 +17,21 @@ La preparación automatizada está descrita en [docs/DATASETS_GITHUB_ACTIONS.md]
 
 ## Entrenamiento
 
-### DeepLabV3+ semántico urbano (11 clases Cityscapes)
+### DeepLabV3+ semántico BDD100K (19 clases)
 
 ```bash
-python scripts/train_urban_segmentation.py --task cityscapes --data-root data/cityscapes --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_urban.pt
+python scripts/train_urban_segmentation.py --task bdd100k-semantic --images-dir data/bdd100k/images/10k/train --masks-dir data/bdd100k/labels/sem_seg/masks/train --val-images-dir data/bdd100k/images/10k/val --val-masks-dir data/bdd100k/labels/sem_seg/masks/val --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_bdd100k_semantic.pt
 ```
 
-Clases de salida: road, sidewalk, person, rider, car, truck, bus, motorcycle, bicycle, traffic_light y traffic_sign. Los IDs restantes se ignoran (255).
+Clases de salida (19): road, sidewalk, building, wall, fence, pole, traffic light, traffic sign, vegetation, terrain, sky, person, rider, car, truck, bus, train, motorcycle y bicycle. El ID 255 se ignora.
 
-### Mask R-CNN por instancias
+### Mask R-CNN por instancias BDD100K
 
 ```bash
-python scripts/train_maskrcnn_cityscapes.py --data-root data/cityscapes --epochs 20 --batch-size 2 --output data/processed/maskrcnn_cityscapes.pt
+python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k --images-dir data/bdd100k/images/10k/train --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/train --val-images-dir data/bdd100k/images/10k/val --val-bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val --epochs 20 --batch-size 2 --output data/processed/maskrcnn_bdd100k.pt
 ```
 
-El checkpoint parte de pesos COCO y ajusta las cabezas de cajas y máscaras a siete clases Cityscapes: person, rider, car, truck, bus, motorcycle y bicycle. Es un entrenamiento real solo después de ejecutar el comando con las anotaciones oficiales.
+El checkpoint parte de pesos COCO y ajusta las cabezas de cajas y máscaras a ocho clases BDD100K: pedestrian, rider, car, truck, bus, train, motorcycle y bicycle. Es un entrenamiento real solo después de ejecutar el comando con las anotaciones oficiales.
 
 ### Segmentación aprendida de carriles
 
