@@ -108,15 +108,28 @@ def compute_average_precision_per_image(predictions, gt_list, all_classes,
     return result
 
 
+def _to_bool_mask(mask):
+    """Decode a bool mask or the compact (np.packbits(mask), original_shape) form."""
+    if isinstance(mask, tuple) and len(mask) == 2:
+        packed, shape = mask
+        count = int(np.prod(shape))
+        return np.unpackbits(np.asarray(packed, dtype=np.uint8), count=count).reshape(shape).astype(bool)
+    return np.asarray(mask, dtype=bool)
+
+
 def compute_mask_average_precision_per_image(predictions, gt_list, all_classes,
                                               iou_threshold=0.5):
-    """VOC-style AP for binary instance masks, matched one-to-one per image."""
+    """VOC-style AP for binary instance masks, matched one-to-one per image.
+
+    Masks may be compacted with np.packbits(mask.reshape(-1)), paired with
+    their original shape, to reduce memory during evaluation.
+    """
     result = {}
     for cname in all_classes:
         gt_by_image = {}
         n_gt = 0
         for image_idx, gt in enumerate(gt_list):
-            masks = [np.asarray(mask, dtype=bool)
+            masks = [_to_bool_mask(mask)
                      for mask, cls in zip(gt["masks"], gt["class_names"]) if cls == cname]
             gt_by_image[image_idx] = {"masks": masks,
                                       "matched": np.zeros(len(masks), dtype=bool)}
@@ -126,7 +139,7 @@ def compute_mask_average_precision_per_image(predictions, gt_list, all_classes,
             scores = pred.get("scores", [1.0] * len(pred["masks"]))
             for mask, cls, score in zip(pred["masks"], pred["class_names"], scores):
                 if cls == cname:
-                    detections.append((float(score), image_idx, np.asarray(mask, dtype=bool)))
+                    detections.append((float(score), image_idx, _to_bool_mask(mask)))
         if n_gt == 0:
             result[cname] = float("nan")
             continue
