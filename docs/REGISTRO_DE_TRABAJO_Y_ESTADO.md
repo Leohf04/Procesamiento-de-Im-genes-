@@ -330,3 +330,20 @@ Se indicó al usuario que, antes de adaptar el repositorio, debe preparar desde 
 
 ### Punto de continuidad
 Esperar a que el usuario complete los pasos de acceso, autorización y diagnóstico. Solicitar captura del resultado de `nvidia-smi` y del test PyTorch (ocultando correo/datos personales si aparecen). Después revisar el resultado y continuar con la adaptación específica del repositorio.
+
+
+## 11. Aclaración sobre descarga de datasets con Colab Free — 2026-11-21
+
+El usuario preguntó si debe descargar datasets al utilizar Colab Free, mientras estaba en el paso 5 de preparación de Google Drive.
+
+Se aclaró:
+- No necesita descargar datasets en Android ni subirlos manualmente a Drive.
+- El diseño previsto descarga los datos directamente desde sus fuentes autorizadas a la máquina virtual de Colab.
+- El almacenamiento local de la VM de Colab es temporal y los datasets pueden perderse al finalizar/desconectarse la sesión.
+- Google Drive se propone para checkpoints, modelos, métricas, gráficas e informes; no es obligatorio guardar allí los datasets.
+- Se adaptará el entrenamiento para checkpoints periódicos y reanudación. Según disponibilidad y límites, se puede re-descargar datos desde la nube o evaluar una caché remota persistente.
+- Cityscapes y algunos recursos BDD100K pueden requerir registro, aceptación de licencia o credenciales. Colab no elimina esas condiciones.
+- El usuario puede continuar con el paso 5 creando la carpeta de resultados; no debe descargar datasets ahora.
+- No se han descargado datos ni ejecutado entrenamientos.
+
+Punto de continuidad: completar preparación de cuenta, Drive y diagnóstico GPU/GitHub; luego diseñar la estrategia de acceso remoto a los datasets según los permisos y fuentes disponibles.
