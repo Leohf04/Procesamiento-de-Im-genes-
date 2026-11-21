@@ -368,3 +368,29 @@ Esta sección registra cambios de código pendientes de validación dinámica:
 - Se añadieron pruebas de regresión para AP, matching por clase y mIoU multiclase.
 
 **Pendiente de validación:** no se han ejecutado pytest, inferencias Torch ni benchmarks. DeepLab sigue siendo DeepLabV3 (no V3+), Faster R-CNN sigue siendo detector de cajas y las escenas adversas continúan siendo sintéticas sobre COCO. No se han integrado Cityscapes/BDD100K ni entrenamiento urbano. El backend clásico conserva el nombre histórico `onnx_cv2`, aunque no ejecuta ONNX; se documenta como backend OpenCV/HOG.
+
+
+## 15. Infraestructura incorporada en la rama `urban-models-and-benchmark`
+
+Esta rama agrega una segunda fase de implementación, todavía pendiente de pruebas y entrenamiento real:
+
+- `src/models/deeplabv3plus.py`: arquitectura DeepLabV3+ con encoder ResNet-50, ASPP y decoder de bajo nivel.
+- `src/utils/urban_dataset.py`: dataset Cityscapes semántico y dataset de máscaras de carril.
+- `scripts/train_urban_segmentation.py`: entrenamiento DeepLabV3+ para 11 clases Cityscapes o 2 clases de carril.
+- `src/utils/cityscapes_instance_dataset.py` y `scripts/train_maskrcnn_cityscapes.py`: generación de cajas/máscaras por instancia y fine-tuning de Mask R-CNN en siete clases urbanas.
+- `scripts/prepare_bdd100k_lane_masks.py`: rasterización de anotaciones poligonales lane-marking de BDD100K.
+- `src/models/onnx_runtime.py`: inferencia real ONNX Runtime para logits semánticos y de carril.
+- `scripts/export_deeplabv3plus_onnx.py`: exportación de checkpoints DeepLabV3+ a ONNX.
+- `scripts/benchmark.py`: warm-up, sincronización CUDA, percentiles de latencia, FPS y metadatos del entorno.
+- `docs/PROTOCOLO_EXPERIMENTAL.md`: particiones, comandos y reglas para comparar métricas.
+
+### Límites que se mantienen
+
+- No se descargaron datasets ni se entrenaron checkpoints en esta fase.
+- Mask R-CNN usa el checkpoint urbano solo si el archivo configurado existe; de lo contrario usa los pesos COCO preentrenados.
+- El detector Faster R-CNN del enfoque híbrido sigue preentrenado en COCO.
+- La segmentación ONNX no produce cajas ni máscaras de instancia.
+- El benchmark mide inferencia del modelo, no captura/render/escritura end-to-end.
+- Las anotaciones de carriles requieren una partición train/validation preparada por secuencia para evitar fuga entre frames.
+
+No se debe afirmar que los modelos están adaptados o entrenados hasta ejecutar los scripts sobre los datasets oficiales, guardar los checkpoints y evaluar con el split reservado.
