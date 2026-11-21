@@ -777,3 +777,49 @@ Fuente oficial contrastada: https://github.com/bdd100k/bdd100k/blob/master/bdd10
 - `scripts/verify_setup.py` reportó `pycocotools` como dependencia opcional ausente y dataset no descargado; no impidió la CI. No se validaron muestras reales ni se ejecutó entrenamiento.
 - PR #3 continúa **abierta**, en borrador y sin fusionar.
 - Próximo paso: iniciar validación remota acotada con muestras oficiales BDD100K en Colab, verificando estructura, loaders y decodificación antes de cualquier entrenamiento.
+
+
+## 19. Inicio de validación con muestras reales BDD100K — 2026-11-21
+
+El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones: no descargar datos en el teléfono, no obtener el dataset completo en esta fase, no iniciar entrenamiento y conservar la PR #3 abierta.
+
+### Fuente de muestra seleccionada
+
+- Se revisó la documentación oficial BDD100K: el paquete 10K Images (1.1 GB, MD5 `08f26aecceda982568063d3d5873378e`) y los paquetes de etiquetas semánticas (419 MB, MD5 `9a2968dde3345eeb689cffb1e26f9c78`), instancias (111 MB, MD5 `651b41f229d7327d8c4af97772de4390`), carriles (434 MB, MD5 `dfe74f9ed6800765a0047414d620a186`) y Detection 2020 Labels (53 MB, MD5 `b86a3e1b7edbcad421b7dad2b3987c94`). La documentación indica que 10K Images se usa para semántica/instancias y 100K Images para detección/carriles.
+- Para no descargar paquetes completos, se seleccionó provisionalmente `liqijia/BDD100K-Semantic-Segmentation` en Hugging Face. Su tarjeta declara que redistribuye los JPEG y máscaras trainId sin modificar desde la publicación oficial, pero es un mirror de terceros y no se considera prueba independiente de procedencia.
+- Esta fuente permite validar solo el cargador semántico. No se encontró/confirmó una fuente equivalente fiable de muestras oficiales para bitmasks de instancias, JSON det_20 o máscaras lane en esta intervención.
+
+### Cambios añadidos a la rama
+
+- Nuevo `scripts/validate_bdd100k_semantic_sample.py`:
+  - Recupera por API de Hugging Face solo dos pares imagen/máscara de train y dos de validación por defecto; permite 1–8 por split.
+  - Valida RGB, máscara monocanal, dimensiones coincidentes e IDs 0–18/255.
+  - Ejecuta `BDD100KSemanticDataset` con resize 256x512 y comprueba formas, dtype e IDs resultantes.
+  - Usa directorio temporal y elimina las muestras al finalizar.
+- Nuevo workflow `.github/workflows/validate-bdd100k-sample.yml` con ejecución automática/manual.
+- `.github/workflows/tests.yml` incorpora el smoke test de muestras reales después de la suite sintética.
+- Notebook `notebooks/colab_free_urban_training.ipynb` incorpora sección 5.2 para ejecutar la validación en Colab.
+- `docs/COLAB_FREE.md` documenta el alcance y las limitaciones.
+- Commits de esta fase:
+  - `3ddf0c9`: script de validación semántica con muestras reales.
+  - `4fbcc7d`: workflow dedicado de muestras.
+  - `3fdef5f`: integración del smoke test real en CI.
+  - `ccffb96`: sección de validación en notebook.
+  - `23c7198`: documentación Colab.
+- HEAD actual comprobado tras los cambios: `23c7198f5a03a4bc47b7f5c8fcde0ed0edd41070`.
+
+### Estado de ejecución
+
+- GitHub Actions ejecuta las validaciones automatizadas. Al registrar esta actualización, el workflow dedicado `44947969722` estaba instalando PyTorch CPU/dependencias y todavía no había iniciado la descarga de muestras.
+- El workflow general de CI del commit `ccffb96`, run `44948002621`, también estaba en curso; la etapa de validación de muestras reales aún estaba pendiente.
+- Runs anteriores para commits intermedios también estaban en cola/en ejecución; sus resultados no sustituyen al check del HEAD más reciente.
+- No se afirma todavía que el loader semántico haya pasado con archivos reales. No se han validado loaders de instancias, detección ni carriles con datos reales.
+- No se inició entrenamiento, no se generaron checkpoints y no se descargó el dataset completo.
+- PR #3 permanece abierta, en borrador y sin fusionar.
+
+### Próximos pasos
+
+1. Revisar logs y conclusión del workflow dedicado y del CI general; corregir fallos reales si aparecen.
+2. Si el mirror HF valida correctamente el loader semántico, registrar el resultado como validación provisional de esa tarea.
+3. Preparar acceso remoto acotado a paquetes oficiales de instancias, detección y carriles. Antes de descargarlos, confirmar nombres, checksums y mecanismo para extraer muestras pequeñas sin descargar el archivo completo; si no es posible, informar con claridad.
+4. Solo después de validar loaders reales y confirmar disponibilidad de GPU, considerar entrenamiento; mantener `RUN_TRAINING=False` hasta entonces.
