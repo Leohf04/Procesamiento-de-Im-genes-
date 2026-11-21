@@ -848,3 +848,13 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - **Validación pendiente:** el cambio se debe ejecutar en GitHub Actions. Hasta que el workflow complete correctamente, no se declara validado el loader con muestras reales.
 - No se descargó el dataset completo, no se inició entrenamiento, no se generaron checkpoints y `RUN_TRAINING=False` sigue vigente.
 - PR #3 permanece abierta, en borrador y sin fusionar.
+
+
+### Resultado de la primera validación semántica con muestras reales — 2026-11-21
+
+- El workflow dedicado **BDD100K real-sample validation**, run `44949815647`, terminó con conclusión **success** en el commit del script `564dff9350d07acbe4daf687a2328ab3551c91ad`.
+- El script encontró y descargó desde Hugging Face exactamente cuatro pares: dos imágenes/máscaras del split train y dos del split val. Se verificó el emparejamiento por ID, modo RGB de las imágenes, máscaras monocanal, dimensiones iguales y valores permitidos 0–18/255.
+- `BDD100KSemanticDataset` procesó las cuatro muestras tras resize a 256x512; las comprobaciones de forma, tipo `torch.int64` e IDs resultantes finalizaron correctamente. El log termina con `RESULT: BDD100K semantic sample validation PASSED`.
+- Este resultado valida de forma provisional el acceso y el loader **semántico** con la redistribución Hugging Face `dronefreak/BDD100K-Semantic-Segmentation`; no certifica independientemente la procedencia y no valida instancias, detección ni carriles.
+- La CI general del HEAD documental `fca1309e3b573e0fa113e8ae5d6a74165775b230` se encontraba aún en ejecución en la instalación de PyTorch CPU al registrar esta actualización. Runs: `44949848684` (push) y `44949851302` (pull_request). Se debe comprobar su conclusión antes de cerrar la fase.
+- No se descargó el dataset completo, no se inició entrenamiento, no se generaron checkpoints y `RUN_TRAINING=False` sigue vigente. PR #3 permanece abierta, en borrador y sin fusionar.
