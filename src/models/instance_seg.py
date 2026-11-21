@@ -24,14 +24,21 @@ class InstanceSegmentationModel:
             from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
             self.device = torch.device(("cuda" if torch.cuda.is_available() else "cpu") if device == "auto" else device)
             if checkpoint_path and Path(checkpoint_path).is_file():
+                checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
+                class_names = checkpoint.get("class_names", CITYSCAPES_INSTANCE_NAMES)
+                num_classes = int(checkpoint.get("num_classes", len(class_names)))
+                if len(class_names) != num_classes:
+                    raise ValueError("Los metadatos del checkpoint Mask R-CNN no coinciden con num_classes.")
                 self.model = torchvision.models.detection.maskrcnn_resnet50_fpn_v2(weights=None, weights_backbone=None)
                 box_features = self.model.roi_heads.box_predictor.cls_score.in_features
-                self.model.roi_heads.box_predictor = FastRCNNPredictor(box_features, 8)
+                self.model.roi_heads.box_predictor = FastRCNNPredictor(box_features, num_classes)
                 mask_features = self.model.roi_heads.mask_predictor.conv5_mask.in_channels
-                self.model.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, 8)
-                checkpoint = torch.load(checkpoint_path, map_location=self.device)
+                self.model.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, num_classes)
                 self.model.load_state_dict(checkpoint["model_state_dict"])
-                self.category_names = CITYSCAPES_INSTANCE_NAMES
+                self.category_names = class_names
+                self.semantic_label_space = (
+                    "bdd100k" if "pedestrian" in class_names else "cityscapes"
+                )
                 self.urban_finetuned = True
             else:
                 weights = MaskRCNN_ResNet50_FPN_V2_Weights.DEFAULT
@@ -73,7 +80,7 @@ class InstanceSegmentationModel:
         masks = (raw_masks[keep] >= self.mask_threshold).astype(np.uint8) if keep else np.zeros((0, h, w), np.uint8)
         semantic = np.zeros((h, w), dtype=np.uint8)
         for mask, name in zip(masks, names):
-            class_id = SEMANTIC_CLASS_IDS.get(name)
+            class_id = SEMANTIC_CLASS_IDS.get("person" if name == "pedestrian" else name)
             if class_id is not None:
                 semantic[mask > 0] = class_id
         semantic_all = np.zeros((h, w), dtype=np.uint8)
@@ -82,7 +89,7 @@ class InstanceSegmentationModel:
         return {"boxes": fboxes, "labels": flabels, "class_names": names, "scores": fscores,
                 "instance_masks": masks, "urban_semantic_mask": semantic,
                 "urban_semantic_mask_all8": semantic_all, "urban_finetuned": self.urban_finetuned,
-                "semantic_label_space": "cityscapes" if self.urban_finetuned else "coco"}
+                "semantic_label_space": getattr(self, "semantic_label_space", "coco") if self.urban_finetuned else "coco"}
 
     def _predict_onnx_cv2(self, image_bgr):
         h, w = image_bgr.shape[:2]
