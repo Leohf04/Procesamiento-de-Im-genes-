@@ -75,9 +75,9 @@ python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100
 
 Prepara una partición de validación independiente por secuencia/video. No dividas fotogramas adyacentes aleatoriamente entre train y validation.
 
-## Ejecución remota en Kaggle
+## Ejecución remota en Google Colab Free
 
-Consulta [docs/KAGGLE_NOTEBOOK.md](docs/KAGGLE_NOTEBOOK.md) y abre [notebooks/kaggle_environment_check.ipynb](notebooks/kaggle_environment_check.ipynb) para configurar Kaggle, clonar esta rama privada mediante un secreto y comprobar GPU/inputs sin descargar datos al dispositivo local. La integración remota está en adaptación; por ahora el soporte de entrenamiento BDD100K existente cubre carriles, no sustituye todavía las tareas semánticas e instancias de Cityscapes.
+Consulta [docs/COLAB_FREE.md](docs/COLAB_FREE.md) y abre el [notebook de Colab](https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/colab_free_urban_training.ipynb). El notebook prepara Drive, clona esta rama privada mediante un token de solo lectura, comprueba PyTorch/CUDA y valida la estructura de los datasets. No descarga datasets automáticamente ni inicia entrenamiento al abrirse. Los scripts de DeepLabV3+ y Mask R-CNN guardan checkpoints reanudables entre sesiones. Colab Free no garantiza GPU ni sesiones persistentes.
 
 ## Preparación automatizada de datasets
 
@@ -161,6 +161,7 @@ tests/                   Pruebas unitarias y de integridad
 
 ## Documentación
 
+- [Guía de Google Colab Free](docs/COLAB_FREE.md)
 - [Registro de trabajo, decisiones y estado actual (documento de continuidad)](docs/REGISTRO_DE_TRABAJO_Y_ESTADO.md)
 
 - [Auditoría técnica](docs/AUDITORIA_Y_DOCUMENTACION.md)
