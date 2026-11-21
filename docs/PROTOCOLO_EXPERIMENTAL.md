@@ -49,6 +49,21 @@ El entrenamiento exige explícitamente directorios de train y validation separad
 
 El exportador ONNX actual cubre segmentación semántica y carriles. No exporta Mask R-CNN ni produce detecciones/cajas; no comparar esa ruta como segmentación por instancias.
 
+### Evaluar precisión en Cityscapes y BDD100K
+
+```bash
+# DeepLabV3+: IoU por clase y mIoU
+python scripts/evaluate_cityscapes.py --task semantic --data-root data/cityscapes --checkpoint data/processed/deeplabv3plus_urban.pt
+
+# Mask R-CNN: AP50 por clase sobre cajas GT de instancias
+python scripts/evaluate_cityscapes.py --task instance --data-root data/cityscapes --checkpoint data/processed/maskrcnn_cityscapes.pt
+
+# Carriles: IoU y F1 binarios en BDD100K validation
+python scripts/evaluate_lanes.py --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val --checkpoint data/processed/deeplabv3plus_lanes.pt
+```
+
+El AP de Mask R-CNN de este script corresponde a cajas, no a máscaras. No reportar mask AP hasta añadir/ejectuar una evaluación COCO-style de máscaras.
+
 ## Rendimiento (FPS y latencia)
 
 Ejecutar `scripts/benchmark.py` sobre la misma fuente, con la misma resolución, backend, modelo y número de frames para cada alternativa:
