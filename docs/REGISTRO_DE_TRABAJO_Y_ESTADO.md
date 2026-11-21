@@ -984,3 +984,23 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - El CI general correspondiente a los commits de esta intervención seguía en ejecución en la última consulta; revisar sus conclusiones antes de afirmar que está aprobado.
 - PR #3 comprobada: abierta, draft y sin fusionar. No se inició entrenamiento completo ni se descargó el dataset al dispositivo del usuario.
 - Próximo paso: revisar CI general y preparar el entrenamiento real reanudable sobre datos con acceso/licencia confirmados. Antes de entrenar se debe resolver la cobertura limitada de la muestra de instancias (solo cuatro clases) y no presentarla como sustituto de las anotaciones oficiales RGBA.
+
+
+### Preparación del preflight y protocolo de entrenamiento de instancias — 2026-11-21
+
+- Se revisó el estado después del smoke test: CI general sobre HEAD `c8b7b83ea821ed959c3a045bf1f5c06e3a9cd73b` (run `44956778283`) terminó `success`; PR #3 continúa abierta, draft y sin fusionar.
+- Se confirmó que la muestra de GitHub usada para el smoke test contiene solo 2 imágenes del split val, 37 máscaras y 4 clases (bus/car/motorcycle/truck). **No se utilizará para entrenar ni para reportar métricas**; no hay split train ni cobertura completa.
+- Se añadió `scripts/audit_bdd100k_instance_splits.py`, auditoría previa de las anotaciones oficiales RGBA. Comprueba:
+  - emparejamiento exacto imagen↔PNG y ausencia de máscaras huérfanas;
+  - modo RGBA original y dimensiones coincidentes;
+  - IDs de instancia, categorías 1–8 y flags ignore/crowd;
+  - separación entre stems de train y val;
+  - recuento de instancias por cada una de las ocho clases.
+  Por defecto bloquea el preflight si falta alguna clase en train; la ausencia en val se reporta, pero no bloquea por sí sola.
+- Se añadieron pruebas sintéticas `tests/test_bdd100k_instance_preflight.py` para conteo de instancia, rechazo de máscaras no RGBA y emparejamiento incompleto.
+- Se actualizó `scripts/train_maskrcnn_cityscapes.py` para validar también el orden/nombre de clases del checkpoint al reanudar y corregir el mensaje de dimensiones de clase (9 salidas: fondo + 8 clases). La reanudación continúa siendo por época; no promete restaurar aleatoriedad de lotes a mitad de época.
+- Se actualizó el notebook Colab para mostrar la auditoría oficial y exigir un informe `ready_for_training=true` antes de permitir `MODEL="instance"` con `RUN_TRAINING=True`. La muestra GitHub parcial no pasa por esta ruta.
+- Se documentó el procedimiento en `docs/PROTOCOLO_EXPERIMENTAL.md`. Evaluación BDD100K oficial se ejecuta después del entrenamiento sobre val, con el protocolo interno de AP claramente identificado; no equivale a COCOeval.
+- CI general disparado por estos commits: runs `44963069208`, `44963057605`, `44963053256` y otros asociados a commits intermedios. En la última consulta seguían en ejecución; **no se declara aún que esta modificación haya pasado CI**. Consultar el run más reciente y su conclusión.
+- No se inició entrenamiento ni se generaron checkpoints. No se descargaron datos al teléfono ni se intentó acceder sin autorización a las etiquetas oficiales. El acceso a las bitmasks oficiales RGBA sigue siendo el bloqueo real para iniciar el entrenamiento de instancias.
+- Próximo paso: confirmar CI; si pasa, realizar preflight con datos oficiales desde almacenamiento remoto autorizado. Si el usuario aún no dispone del paquete oficial, no entrenar con la muestra de cuatro clases: continuar con una tarea BDD100K que sí tenga train/val accesibles (por ejemplo semántica) o resolver acceso autorizado a instancias.
