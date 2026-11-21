@@ -136,7 +136,7 @@ def main():
                      "epoch": epoch + 1, "seed": args.seed, "history": history}, last_path)
         # Keep the public checkpoint path usable by the existing evaluation/inference scripts.
         atomic_save({"model_state_dict": model.state_dict(),
-                     "num_classes": len(CLASS_NAMES), "class_names": CLASS_NAMES,
+                     "num_classes": num_classes, "class_names": class_names,
                      "epoch": epoch + 1, "seed": args.seed}, output)
         Path(str(output) + ".history.json").write_text(
             json.dumps(history, indent=2), encoding="utf-8")
