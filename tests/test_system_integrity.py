@@ -132,14 +132,15 @@ def test_fine_classifier_untrained_and_training(tmp_path):
     assert label == "peatonsvm_untrained"
     assert score == 0.0
 
-    image = (np.ones((160, 160, 3), dtype=np.uint8) * 110)
-    samples = [
-        {
+    samples = []
+    for image_idx, intensity in enumerate([70, 90, 120, 150, 180, 210]):
+        image = np.full((160, 160, 3), intensity, dtype=np.uint8)
+        samples.append({
+            "image_id": image_idx,
             "image": image,
             "gt_boxes": [[10, 10, 60, 130], [70, 10, 130, 130]],
             "gt_labels": ["person", "car"],
-        }
-    ]
+        })
     class_names, confusion = classifier.train(samples, max_rois_per_class=10)
     assert len(class_names) >= 2
     assert confusion.shape[0] == confusion.shape[1]

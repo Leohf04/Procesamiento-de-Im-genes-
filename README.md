@@ -108,7 +108,7 @@ python scripts/download_coco_val2017.py
 Procesar una imagen con Mask R-CNN:
 
 ```bash
-python main.py --source ruta/imagen.jpg --approach instance --backend torch --no-gui --save-video salida.png
+python main.py --source ruta/imagen.jpg --approach instance --backend torch --no-gui --save-image salida.png
 ```
 
 Procesar una imagen con el enfoque híbrido:
@@ -132,7 +132,7 @@ python evaluate_scenarios.py --approach hybrid --backend torch --max-samples 30
 
 Los reportes se escriben en `data/outputs/`. El backend `onnx_cv2` puede probarse con `--backend onnx_cv2`, pero sus resultados no son comparables con los modelos neuronales.
 
-> **Nota sobre vídeo:** la inspección del código detectó que la opción `--save-video` no se propaga actualmente al procesamiento de fuentes de vídeo. En el caso de imágenes, esa opción se usa para guardar una imagen mediante OpenCV. Este comportamiento está documentado como pendiente de corrección; no se debe asumir que el comando anterior guarda vídeo.
+> **Salida:** usa `--save-image salida.png` para una imagen y `--save-video salida.mp4` para una fuente de vídeo o cámara.
 
 ## Evaluación
 
