@@ -60,3 +60,34 @@ def test_loader_fails_when_a_mask_is_missing(tmp_path):
 
     with pytest.raises(FileNotFoundError, match="Faltan"):
         BDD100KSemanticDataset(images, masks, size=(4, 4))
+
+
+def test_instance_loader_returns_torchvision_range_without_imagenet_normalization(tmp_path):
+    images, masks = tmp_path / "images", tmp_path / "masks"
+    images.mkdir()
+    masks.mkdir()
+    pixels = np.full((4, 4, 3), 128, dtype=np.uint8)
+    Image.fromarray(pixels).save(images / "frame.jpg")
+    rgba = np.zeros((4, 4, 4), dtype=np.uint8)
+    rgba[1:3, 1:3, 0] = 1
+    rgba[1:3, 1:3, 2] = 1
+    Image.fromarray(rgba, mode="RGBA").save(masks / "frame.png")
+
+    image, _ = BDD100KInstanceDataset(images, masks, size=(4, 4))[0]
+
+    assert image.dtype == torch.float32
+    assert float(image.min()) >= 0.0
+    assert float(image.max()) <= 1.0
+    assert 0.45 < float(image.mean()) < 0.56
+
+
+def test_semantic_loader_keeps_imagenet_normalization(tmp_path):
+    images, masks = tmp_path / "images", tmp_path / "masks"
+    images.mkdir()
+    masks.mkdir()
+    Image.fromarray(np.full((4, 4, 3), 128, dtype=np.uint8)).save(images / "frame.jpg")
+    Image.fromarray(np.zeros((4, 4), dtype=np.uint8)).save(masks / "frame.png")
+
+    image, _ = BDD100KSemanticDataset(images, masks, size=(4, 4))[0]
+
+    assert float(image.min()) < 0.0
