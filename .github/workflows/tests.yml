@@ -25,6 +25,6 @@ jobs:
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
       - name: Install project dependencies
         run: |
-          pip install numpy opencv-python-headless<5 scikit-learn matplotlib PyYAML tqdm joblib pytest onnx onnxruntime
+          pip install numpy 'opencv-python-headless<5' scikit-learn matplotlib PyYAML tqdm joblib pytest onnx onnxruntime
       - name: Run test suite
         run: pytest -q
