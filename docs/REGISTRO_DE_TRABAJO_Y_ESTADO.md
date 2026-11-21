@@ -823,3 +823,13 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 2. Si el mirror HF valida correctamente el loader semántico, registrar el resultado como validación provisional de esa tarea.
 3. Preparar acceso remoto acotado a paquetes oficiales de instancias, detección y carriles. Antes de descargarlos, confirmar nombres, checksums y mecanismo para extraer muestras pequeñas sin descargar el archivo completo; si no es posible, informar con claridad.
 4. Solo después de validar loaders reales y confirmar disponibilidad de GPU, considerar entrenamiento; mantener `RUN_TRAINING=False` hasta entonces.
+
+
+### Incidencia de la primera ejecución real y diagnóstico — 2026-11-21
+
+- El primer run dedicado `44947969722` (commit `4fbcc7d`) instaló correctamente PyTorch CPU y `huggingface_hub`, pero falló antes de descargar imágenes: `HfApi.list_repo_files` no encontró rutas que coincidieran con el prefijo `data/images/train/` supuesto por el script.
+- Este fallo es del adaptador de acceso al mirror; **no es un fallo del loader semántico**, que aún no llegó a ejecutarse con datos reales.
+- Se modificó `scripts/validate_bdd100k_semantic_sample.py` para imprimir el listado inicial y candidatos de archivos cuando la estructura no coincide. Commit `04cc5b9`.
+- El nuevo run dedicado `44948056735` (commit `04cc5b9`) se encontraba en instalación de dependencias, todavía sin ejecutar la validación, al momento de registrar esta incidencia.
+- La CI general de commits recientes también estaba en curso. Se debe consultar el run de la cabeza actual y leer el diagnóstico del script antes de elegir otra ruta.
+- No se descargó ninguna imagen de muestra en el primer intento, no se inició entrenamiento y no se generaron checkpoints.
