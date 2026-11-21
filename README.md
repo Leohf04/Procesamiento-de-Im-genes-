@@ -75,6 +75,12 @@ python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100
 
 Prepara una partición de validación independiente por secuencia/video. No dividas fotogramas adyacentes aleatoriamente entre train y validation.
 
+## Preparación automatizada de datasets
+
+La preparación puede ejecutarse con GitHub Actions y Google Drive sin almacenar datos en Git. Consulta [docs/DATASETS_GITHUB_ACTIONS.md](docs/DATASETS_GITHUB_ACTIONS.md) para configurar la cuenta de servicio y los secretos `GDRIVE_SERVICE_ACCOUNT_JSON` y `GDRIVE_FOLDER_ID`.
+
+El workflow manual `.github/workflows/prepare-datasets.yml` valida BDD100K y genera máscaras de carriles para train/val. Los archivos fuente deben estar previamente en la carpeta compartida de Drive. Cityscapes permanece bloqueado hasta completar el registro y confirmar el acceso autorizado; no se intenta descargarlo automáticamente. Esta fase prepara datos, no entrena modelos.
+
 ## Inferencia
 
 ```bash
