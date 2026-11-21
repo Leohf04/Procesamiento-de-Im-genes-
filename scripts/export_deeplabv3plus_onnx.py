@@ -3,6 +3,8 @@ import argparse
 from pathlib import Path
 import torch
 from torch import nn
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.models.deeplabv3plus import DeepLabV3Plus
 
 
