@@ -34,6 +34,8 @@ jobs:
           python scripts/train_maskrcnn_cityscapes.py --help
           python scripts/evaluate_cityscapes.py --help
           python scripts/evaluate_lanes.py --help
+          python scripts/export_deeplabv3plus_onnx.py --help
           python scripts/benchmark.py --help
+          python scripts/verify_setup.py
       - name: Run test suite
         run: pytest -q
