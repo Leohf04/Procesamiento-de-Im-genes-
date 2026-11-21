@@ -11,6 +11,8 @@ La rama `urban-models-and-benchmark` incorpora infraestructura para:
 - Ejecutar segmentación semántica y carriles exportados mediante **ONNX Runtime**.
 - Medir latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
 
+**Pruebas automatizadas:** GitHub Actions ejecutó compileall, smoke tests de CLI y `pytest -q`: **19 pruebas aprobadas** en Python 3.11 / CPU. Esto no equivale a entrenar modelos ni a medir métricas con los datasets reales.
+
 **Importante:** estos scripts no descargan automáticamente Cityscapes/BDD100K ni entrenan los modelos al instalar el repositorio. Los checkpoints deben generarse localmente con los comandos de abajo. No se han ejecutado entrenamientos ni benchmarks como parte de estos cambios.
 
 ## Arquitecturas
