@@ -28,9 +28,9 @@ def atomic_save(payload, path):
     os.replace(temporary, path)
 
 
-def build_model(num_classes):
+def build_model(num_classes, pretrained=True):
     model = fasterrcnn_resnet50_fpn(
-        weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT,
+        weights=FasterRCNN_ResNet50_FPN_Weights.DEFAULT if pretrained else None,
         weights_backbone=None,
     )
     features = model.roi_heads.box_predictor.cls_score.in_features
@@ -78,6 +78,10 @@ def main():
     parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--lr", type=float, default=0.005)
     parser.add_argument("--output", default="data/processed/bdd100k_fasterrcnn.pt")
+    parser.add_argument("--resume", nargs="?", const="auto", default=None,
+                        help="Resume from --output.last.pt or an explicit checkpoint.")
+    parser.add_argument("--no-pretrained", action="store_true",
+                        help="Do not initialize from COCO weights.")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.workers < 0:
@@ -95,15 +99,28 @@ def main():
     val_loader = DataLoader(val_data, batch_size=args.batch_size, shuffle=False,
                             num_workers=args.workers, collate_fn=collate_fn,
                             pin_memory=device.type == "cuda")
-    model = build_model(len(BDD100K_DETECTION_CLASSES) + 1).to(device)
+    output = Path(args.output)
+    last_path = Path(str(output) + ".last.pt")
+    resume_path = last_path if args.resume == "auto" else Path(args.resume) if args.resume else None
+    model = build_model(len(BDD100K_DETECTION_CLASSES) + 1,
+                        pretrained=(resume_path is None and not args.no_pretrained)).to(device)
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=args.lr, momentum=0.9, weight_decay=0.0005)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
-    history = []
-    output = Path(args.output)
-    last_path = Path(str(output) + ".last.pt")
-
-    for epoch in range(args.epochs):
+    history, start_epoch = [], 0
+    if resume_path:
+        if not resume_path.is_file():
+            raise FileNotFoundError(f"No existe checkpoint para reanudar: {resume_path}")
+        checkpoint = torch.load(resume_path, map_location=device, weights_only=False)
+        expected = ["background", *BDD100K_DETECTION_CLASSES]
+        if checkpoint.get("class_names") != expected:
+            raise ValueError("El checkpoint no corresponde al orden de clases BDD100K det_20.")
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        start_epoch = int(checkpoint.get("epoch", 0))
+        history = checkpoint.get("history", [])
+    for epoch in range(start_epoch, args.epochs):
         model.train()
         running_loss = 0.0
         for images, targets in train_loader:
