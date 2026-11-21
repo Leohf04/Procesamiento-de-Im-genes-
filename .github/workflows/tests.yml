@@ -32,6 +32,7 @@ jobs:
         run: |
           python scripts/train_urban_segmentation.py --help
           python scripts/train_maskrcnn_cityscapes.py --help
+          python scripts/audit_bdd100k_instance_splits.py --help
           python scripts/train_bdd100k_detection.py --help
           python scripts/train_bdd100k_lanes.py --help
           python scripts/evaluate_cityscapes.py --help
