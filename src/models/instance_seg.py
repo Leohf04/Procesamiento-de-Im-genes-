@@ -38,6 +38,7 @@ class InstanceSegmentationModel:
                 self.model = torchvision.models.detection.maskrcnn_resnet50_fpn_v2(weights=weights)
                 self.category_names = weights.meta["categories"]
             self.model.to(self.device).eval()
+            self.input_size = (512, 1024)
         else:
             self.hog_people = cv2.HOGDescriptor()
             self.hog_people.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
@@ -46,11 +47,19 @@ class InstanceSegmentationModel:
         import torch
         h, w = image_bgr.shape[:2]
         rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+        original_h, original_w = h, w
+        if self.urban_finetuned:
+            rgb = cv2.resize(rgb, (self.input_size[1], self.input_size[0]), interpolation=cv2.INTER_LINEAR)
         tensor = torch.from_numpy(rgb).permute(2, 0, 1).float().div(255).to(self.device)
         with torch.inference_mode():
             output = self.model([tensor])[0]
         scores, labels = output["scores"].cpu().numpy(), output["labels"].cpu().numpy()
         boxes, raw_masks = output["boxes"].cpu().numpy(), output["masks"][:, 0].cpu().numpy()
+        if self.urban_finetuned:
+            sx, sy = original_w / self.input_size[1], original_h / self.input_size[0]
+            boxes[:, [0, 2]] *= sx
+            boxes[:, [1, 3]] *= sy
+            raw_masks = np.stack([cv2.resize(mask, (original_w, original_h), interpolation=cv2.INTER_LINEAR) for mask in raw_masks]) if len(raw_masks) else np.zeros((0, original_h, original_w), np.float32)
         keep, names = [], []
         for idx, (score, label) in enumerate(zip(scores, labels)):
             if int(label) >= len(self.category_names):
