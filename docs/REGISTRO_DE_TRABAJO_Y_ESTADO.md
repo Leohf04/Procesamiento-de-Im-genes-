@@ -409,3 +409,45 @@ El usuario confirmó que completó la preparación de Colab, Drive y autorizaci�
 7. Adaptar después el pipeline BDD100K de carriles y sus particiones por secuencia.
 
 El usuario debe poder continuar desde Android; no solicitar descargas ni transferencias manuales de datasets desde el teléfono.
+
+
+## 12. Primera ejecución del notebook Colab por el usuario — 2026-11-21
+
+El usuario ejecutó el notebook `notebooks/colab_free_urban_training.ipynb` y compartió las salidas completas de las celdas iniciales y de diagnóstico.
+
+### Resultados confirmados por la salida compartida
+
+- Google Drive se montó correctamente en `/content/drive` y se crearon las carpetas de resultados.
+- El repositorio privado se clonó correctamente en `/content/Procesamiento-de-Im-genes-`, en la rama `urban-models-and-benchmark`.
+- El último commit mostrado por el clon fue `d0b62fa034249be9f4ecea739be8e559f495124e`, que coincide con el HEAD actual de la rama consultado en GitHub.
+- La instalación de dependencias adicionales terminó sin error visible.
+- `scripts/verify_setup.py` terminó con código de salida 0.
+- El entorno reportó PyTorch `2.14.1+cpu`, Torchvision `0.29.1+cpu` y `torch.cuda.is_available() == False`; no se detectó GPU ni CUDA.
+- Cityscapes no existe todavía en `/content/datasets/cityscapes`; BDD100K tampoco existe en `/content/datasets/bdd100k`.
+- `RUN_TRAINING=False`; no se inició ningún entrenamiento ni se generaron checkpoints experimentales.
+
+### Diagnóstico y decisión
+
+La ejecución fue correcta como prueba de acceso, almacenamiento y verificación básica, pero la sesión actual es CPU-only. Esto no demuestra que Colab Free nunca pueda proporcionar GPU; significa que la sesión asignada al usuario no recibió una GPU o se inició con acelerador CPU.
+
+### Próximos pasos operativos
+
+1. En Colab, abrir **Entorno de ejecución → Cambiar tipo de entorno de ejecución**, seleccionar **T4 GPU** en Acelerador de hardware si está disponible y guardar.
+2. El cambio de acelerador reinicia la máquina virtual: volver a ejecutar el notebook desde la primera celda para remontar Drive, clonar/actualizar el repositorio y reinstalar las dependencias.
+3. Repetir el diagnóstico. Continuar solo si `torch.cuda.is_available()` devuelve `True` y `nvidia-smi` identifica una GPU. Si T4 GPU no aparece o Colab no la asigna, no insistir con entrenamiento; registrar la indisponibilidad y evaluar otra sesión/alternativa gratuita.
+4. Mantener `RUN_TRAINING=False` hasta confirmar acceso autorizado a un dataset, verificar su estructura completa y realizar un smoke test pequeño.
+5. No pedir al usuario que descargue datasets al teléfono ni que los suba manualmente.
+
+### CI
+
+Se consultó GitHub Actions: ejecución `44927072119` (run 138, workflow “Python tests”) finalizó con conclusión `success`. El resultado valida las pruebas automatizadas asociadas al commit `cb6b16773b2d55b7558a59500ced508f99176c20`; no representa una prueba de entrenamiento real ni de GPU/Colab.
+
+### Estado al cierre
+
+- Acceso al repo y Drive: confirmado.
+- Verificación básica del proyecto: confirmada.
+- CI: éxito.
+- GPU CUDA en la sesión compartida: no disponible.
+- Datasets: aún no disponibles en la VM.
+- Entrenamiento y evaluación experimental: no iniciados.
+- No se ha incurrido en gastos ni desplegado infraestructura de pago.
