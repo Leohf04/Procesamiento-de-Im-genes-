@@ -38,17 +38,11 @@ python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k --images-dir data/
 
 El checkpoint parte de pesos COCO y ajusta las cabezas de cajas y máscaras a ocho clases BDD100K: pedestrian, rider, car, truck, bus, train, motorcycle y bicycle. Es un entrenamiento real solo después de ejecutar el comando con las anotaciones oficiales.
 
-### Segmentación aprendida de carriles
+### Carriles BDD100K — bloqueado hasta adaptar las tres subtareas
 
-Descargar las anotaciones lane-marking de BDD100K y generar máscaras:
+No ejecutar `scripts/prepare_bdd100k_lane_masks.py` ni el entrenamiento binario antiguo para producir resultados académicos. El formato oficial codifica categoría, dirección y estilo en una máscara monocanal y el JSON `poly2d` contiene curvas Bezier. El conversor anterior trataba vértices como líneas simples y no preservaba los tres atributos.
 
-```bash
-python scripts/prepare_bdd100k_lane_masks.py --labels data/bdd100k/labels/lane/train.json --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train
-python scripts/prepare_bdd100k_lane_masks.py --labels data/bdd100k/labels/lane/val.json --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val
-python scripts/train_urban_segmentation.py --task lanes --images-dir data/bdd100k/images/100k/train --masks-dir data/bdd100k/lane_masks/train --val-images-dir data/bdd100k/images/100k/val --val-masks-dir data/bdd100k/lane_masks/val --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_lanes.pt
-```
-
-El entrenamiento exige explícitamente directorios de train y validation separados. Preparar esa partición por secuencia/video antes de entrenar; no usar frames del mismo clip en ambos grupos. El checkpoint de carriles es opcional en inferencia; si falta, el sistema devuelve una máscara vacía y no simula segmentación HSV.
+La implementación debe usar las máscaras oficiales `labels/lane/masks/{train,val}` y entrenar/evaluar las tres salidas (9 categorías, 2 direcciones y 2 estilos evaluables, excluyendo background), o usar el conversor oficial BDD100K. Se requieren pruebas con máscaras reales y visualizaciones antes de habilitar el entrenamiento.
 
 ## Inferencia
 
@@ -59,18 +53,14 @@ El entrenamiento exige explícitamente directorios de train y validation separad
 
 El exportador ONNX actual cubre segmentación semántica y carriles. No exporta Mask R-CNN ni produce detecciones/cajas; no comparar esa ruta como segmentación por instancias.
 
-### Evaluar precisión en Cityscapes y BDD100K
+### Evaluar precisión BDD100K
 
 ```bash
-# DeepLabV3+: IoU por clase y mIoU
-python scripts/evaluate_cityscapes.py --task semantic --data-root data/cityscapes --checkpoint data/processed/deeplabv3plus_urban.pt
-
-# Mask R-CNN: AP50 por clase sobre cajas GT de instancias
-python scripts/evaluate_cityscapes.py --task instance --data-root data/cityscapes --checkpoint data/processed/maskrcnn_cityscapes.pt
-
-# Carriles: IoU y F1 binarios en BDD100K validation
-python scripts/evaluate_lanes.py --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val --checkpoint data/processed/deeplabv3plus_lanes.pt
+# Semántica BDD100K: IoU por clase y mIoU
+python scripts/evaluate_cityscapes.py --task bdd100k-semantic --images-dir data/bdd100k/images/10k/val --masks-dir data/bdd100k/labels/sem_seg/masks/val --checkpoint data/processed/deeplabv3plus_bdd100k_semantic.pt
 ```
+
+La evaluación de instancias BDD100K (box AP y mask AP) sigue pendiente. El evaluador Cityscapes existente no es compatible con los bitmasks BDD100K. El evaluador binario de carriles queda bloqueado hasta implementar las tres subtareas oficiales.
 
 El AP de Mask R-CNN de este script corresponde a cajas, no a máscaras. No reportar mask AP hasta añadir y ejecutar una evaluación COCO-style de máscaras.
 
