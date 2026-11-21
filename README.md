@@ -5,9 +5,9 @@ Proyecto académico del Equipo 2 para detectar y segmentar objetos de escenas vi
 ## Estado actual
 
 La rama `urban-models-and-benchmark` incorpora infraestructura para:
-- Entrenar **DeepLabV3+ ResNet-50** en las 11 clases semánticas de Cityscapes.
-- Ajustar **Mask R-CNN** desde pesos COCO a siete clases de instancia de Cityscapes.
-- Preparar máscaras de carriles desde polígonos anotados de BDD100K y entrenar un segmentador binario.
+- Entrenar **DeepLabV3+ ResNet-50** en las 19 clases semánticas oficiales de BDD100K.
+- Ajustar **Mask R-CNN** desde pesos COCO a las ocho clases de instancia de BDD100K, decodificando sus bitmasks RGBA.
+- Mantener cargadores Cityscapes heredados y una ruta binaria de carriles en revisión; el parser de curvas Bezier y las tres subtareas de carriles aún no están validados.
 - Ejecutar segmentación semántica y carriles exportados mediante **ONNX Runtime**.
 - Medir latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
 
@@ -19,8 +19,8 @@ La rama `urban-models-and-benchmark` incorpora infraestructura para:
 
 | Componente | Arquitectura | Datos / estado |
 |---|---|---|
-| Segmentación semántica | DeepLabV3+ ResNet-50 | Script de entrenamiento Cityscapes; requiere checkpoint local |
-| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Fine-tuning Cityscapes implementado; requiere checkpoint local |
+| Segmentación semántica | DeepLabV3+ ResNet-50 | Loader/entrenador/evaluador BDD100K 19 clases; requiere datos y checkpoint |
+| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Loader RGBA + fine-tuning BDD100K 8 clases; evaluación de mask AP pendiente |
 | Carriles | DeepLabV3+ binario | Conversión de polígonos BDD100K + entrenamiento implementados; requiere checkpoint |
 | ONNX | ONNX Runtime | Inferencia semántica/carriles; no produce cajas ni instancias |
 | Detector híbrido | Faster R-CNN COCO | Sigue preentrenado COCO; no está fine-tuned en Cityscapes |
@@ -175,8 +175,8 @@ ONNX Runtime carga logits semánticos y del segmentador de carriles. Esta ruta n
 ## Protocolo de evaluación
 
 Consulta [docs/PROTOCOLO_EXPERIMENTAL.md](docs/PROTOCOLO_EXPERIMENTAL.md). Resume:
-- Cityscapes train/val para segmentación semántica y máscaras de instancias.
-- BDD100K para carriles y condiciones reales, separando secuencias.
+- BDD100K 10K train/val para semántica e instancias; máscaras oficiales y mapeos de clases.
+- BDD100K 100K + labels det_20/lane para detección y carriles; sus adaptadores específicos están pendientes.
 - mIoU por clase, AP@0.5 por clase y evaluación de máscaras cuando esté disponible el evaluador correspondiente.
 - Benchmark con warm-up, sincronización CUDA, latencia media/mediana/p95/p99, resolución y hardware.
 
