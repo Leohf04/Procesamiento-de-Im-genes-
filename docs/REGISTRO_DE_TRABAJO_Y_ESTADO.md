@@ -451,3 +451,44 @@ Se consultó GitHub Actions: ejecución `44927072119` (run 138, workflow “Pyth
 - Datasets: aún no disponibles en la VM.
 - Entrenamiento y evaluación experimental: no iniciados.
 - No se ha incurrido en gastos ni desplegado infraestructura de pago.
+
+
+## 13. Segunda ejecución de Colab: GPU T4 disponible — 2026-11-21
+
+El usuario volvió a ejecutar el notebook después de seleccionar un acelerador GPU en Colab y compartió las salidas.
+
+### Resultados confirmados
+
+- Drive montado correctamente en `/content/drive`; carpetas de resultados creadas.
+- Repositorio privado actualizado/clonado correctamente en la rama `urban-models-and-benchmark`.
+- El HEAD mostrado fue `0914fc7 docs: record first Colab runtime diagnostics`, correspondiente al registro anterior.
+- Dependencias adicionales instaladas sin error visible.
+- PyTorch `2.14.1+cu130`, Torchvision `0.29.1+cu130`.
+- `torch.cuda.is_available() == True`.
+- GPU asignada: NVIDIA Tesla T4, aproximadamente 14.56 GiB de VRAM (nvidia-smi muestra 15360 MiB).
+- `nvidia-smi` identifica driver 580.82.07 y CUDA 13.0.
+- `scripts/verify_setup.py` terminó con código de salida 0.
+- Cityscapes sigue ausente en `/content/datasets/cityscapes`; BDD100K sigue ausente en `/content/datasets/bdd100k`.
+- `RUN_TRAINING=False`; no se inició entrenamiento ni se generaron checkpoints.
+
+### Diagnóstico
+
+La asignación de GPU quedó resuelta en esta sesión: Colab Free entregó una T4 y el stack PyTorch/Torchvision ya reconoce CUDA. La sesión es adecuada para continuar con validación de datos y pruebas pequeñas, pero la GPU no garantiza persistencia ni disponibilidad en futuras sesiones.
+
+### Próximos pasos
+
+1. Mantener el entrenamiento desactivado.
+2. Resolver el acceso autorizado a Cityscapes (registro/licencia y descarga directa desde la VM) o elegir un dataset alternativo cuya licencia y estructura sean compatibles.
+3. Verificar la fuente, licencia, integridad, clases y particiones antes de utilizar cualquier copia de BDD100K.
+4. Descargar/preparar los datos directamente desde la nube a `/content/datasets`, nunca al teléfono; confirmar espacio disponible y checksums.
+5. Ejecutar validación de estructura y un smoke test pequeño; solo después planificar entrenamiento por etapas y persistencia de checkpoints en Drive.
+
+### Estado al cierre
+
+- GPU T4/CUDA: confirmada en la sesión compartida.
+- Drive y repositorio privado: correctos.
+- Verificación básica: correcta.
+- CI del commit previo: éxito (run `44927072119`).
+- Datasets: no disponibles.
+- Entrenamiento/evaluación experimental: no iniciados.
+- Costes: ninguno; no se desplegó infraestructura de pago.
