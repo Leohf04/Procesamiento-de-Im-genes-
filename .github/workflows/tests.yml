@@ -37,6 +37,8 @@ jobs:
           python scripts/export_deeplabv3plus_onnx.py --help
           python scripts/benchmark.py --help
           python scripts/prepare_dataset_ci.py --help
+          python scripts/select_bdd100k_batch.py --help
+          python scripts/prepare_bdd100k_batch.py --help
           python scripts/verify_setup.py
       - name: Run test suite
         run: pytest -q
