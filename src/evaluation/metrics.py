@@ -106,3 +106,60 @@ def compute_average_precision_per_image(predictions, gt_list, all_classes,
         changes = np.where(mrec[1:] != mrec[:-1])[0]
         result[cname] = float(np.sum((mrec[changes + 1] - mrec[changes]) * mpre[changes + 1]))
     return result
+
+
+def compute_mask_average_precision_per_image(predictions, gt_list, all_classes,
+                                              iou_threshold=0.5):
+    """VOC-style AP for binary instance masks, matched one-to-one per image."""
+    result = {}
+    for cname in all_classes:
+        gt_by_image = {}
+        n_gt = 0
+        for image_idx, gt in enumerate(gt_list):
+            masks = [np.asarray(mask, dtype=bool)
+                     for mask, cls in zip(gt["masks"], gt["class_names"]) if cls == cname]
+            gt_by_image[image_idx] = {"masks": masks,
+                                      "matched": np.zeros(len(masks), dtype=bool)}
+            n_gt += len(masks)
+        detections = []
+        for image_idx, pred in enumerate(predictions):
+            scores = pred.get("scores", [1.0] * len(pred["masks"]))
+            for mask, cls, score in zip(pred["masks"], pred["class_names"], scores):
+                if cls == cname:
+                    detections.append((float(score), image_idx, np.asarray(mask, dtype=bool)))
+        if n_gt == 0:
+            result[cname] = float("nan")
+            continue
+        detections.sort(key=lambda item: item[0], reverse=True)
+        tp = np.zeros(len(detections), dtype=np.float64)
+        fp = np.zeros(len(detections), dtype=np.float64)
+        for idx, (_, image_idx, mask) in enumerate(detections):
+            entry = gt_by_image[image_idx]
+            if not entry["masks"]:
+                fp[idx] = 1
+                continue
+            ious = []
+            for gt_mask in entry["masks"]:
+                if mask.shape != gt_mask.shape:
+                    raise ValueError(f"Máscaras de predicción/GT incompatibles: {mask.shape} != {gt_mask.shape}")
+                intersection = np.logical_and(mask, gt_mask).sum()
+                union = np.logical_or(mask, gt_mask).sum()
+                ious.append(float(intersection / union) if union else 0.0)
+            best = int(np.argmax(ious))
+            if ious[best] >= iou_threshold and not entry["matched"][best]:
+                tp[idx] = 1
+                entry["matched"][best] = True
+            else:
+                fp[idx] = 1
+        if not len(detections):
+            result[cname] = 0.0
+            continue
+        recall = np.cumsum(tp) / n_gt
+        precision = np.cumsum(tp) / np.maximum(np.cumsum(tp + fp), np.finfo(float).eps)
+        mrec = np.concatenate(([0.0], recall, [1.0]))
+        mpre = np.concatenate(([0.0], precision, [0.0]))
+        for i in range(len(mpre) - 2, -1, -1):
+            mpre[i] = max(mpre[i], mpre[i + 1])
+        changes = np.where(mrec[1:] != mrec[:-1])[0]
+        result[cname] = float(np.sum((mrec[changes + 1] - mrec[changes]) * mpre[changes + 1]))
+    return result
