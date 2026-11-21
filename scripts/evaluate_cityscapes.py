@@ -9,11 +9,15 @@ from torch.utils.data import DataLoader
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.models.deeplabv3plus import DeepLabV3Plus
-from src.models.instance_seg import InstanceSegmentationModel
+from torchvision.models.detection import maskrcnn_resnet50_fpn_v2
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from src.utils.urban_dataset import CityscapesFineDataset, CITYSCAPES_CLASSES
-from src.utils.bdd100k_dataset import BDD100KSemanticDataset, BDD100K_SEMANTIC_CLASSES
+from src.utils.bdd100k_dataset import (BDD100KSemanticDataset, BDD100K_SEMANTIC_CLASSES,
+                                       BDD100KInstanceDataset, BDD100K_INSTANCE_CLASSES)
 from src.utils.cityscapes_instance_dataset import CityscapesInstanceDataset
-from src.evaluation.metrics import compute_average_precision_per_image
+from src.evaluation.metrics import (compute_average_precision_per_image,
+                                    compute_mask_average_precision_per_image)
 
 
 INSTANCE_NAMES = ["background", "person", "rider", "car", "truck", "bus", "motorcycle", "bicycle"]
@@ -111,12 +115,107 @@ def evaluate_instances(root, checkpoint_path, output_path):
     print(json.dumps(report, indent=2))
 
 
+
+def evaluate_bdd100k_instances(images_dir, bitmasks_dir, checkpoint_path, output_path,
+                               mask_threshold=0.5):
+    """Evaluate BDD100K Mask R-CNN checkpoints with box AP and instance-mask AP."""
+    checkpoint_path = Path(checkpoint_path)
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"No existe el checkpoint: {checkpoint_path}")
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    expected_names = ["background", *BDD100K_INSTANCE_CLASSES]
+    if checkpoint.get("num_classes") != len(expected_names):
+        raise ValueError("El checkpoint no contiene fondo + 8 clases de instancias BDD100K.")
+    if checkpoint.get("class_names") and checkpoint["class_names"] != expected_names:
+        raise ValueError("Los nombres/orden de clases del checkpoint no coinciden con BDD100K.")
+
+    dataset = BDD100KInstanceDataset(images_dir, bitmasks_dir)
+    model = maskrcnn_resnet50_fpn_v2(weights=None, weights_backbone=None)
+    box_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(box_features, len(expected_names))
+    mask_features = model.roi_heads.mask_predictor.conv5_mask.in_channels
+    model.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, len(expected_names))
+    model.load_state_dict(checkpoint["model_state_dict"])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device).eval()
+
+    predictions, ground_truth = [], []
+    with torch.inference_mode():
+        for index in range(len(dataset)):
+            image, target = dataset[index]
+            output = model([image.to(device)])[0]
+            labels = output["labels"].cpu().numpy().astype(int)
+            scores = output["scores"].cpu().numpy()
+            boxes = output["boxes"].cpu().numpy()
+            masks = (output["masks"][:, 0] >= mask_threshold).cpu().numpy().astype(np.uint8)
+            keep = (labels > 0) & (labels < len(expected_names))
+            labels, scores, boxes, masks = labels[keep], scores[keep], boxes[keep], masks[keep]
+            predictions.append({
+                "boxes": boxes,
+                "masks": masks,
+                "class_names": [expected_names[label] for label in labels],
+                "scores": scores,
+            })
+            gt_labels = target["labels"].numpy().astype(int)
+            ground_truth.append({
+                "boxes": target["boxes"].numpy(),
+                "masks": target["masks"].numpy(),
+                "class_names": [expected_names[label] for label in gt_labels],
+            })
+
+    thresholds = [round(value, 2) for value in np.arange(0.50, 0.951, 0.05)]
+    box_ap, mask_ap = {}, {}
+    for threshold in thresholds:
+        box_ap[f"{threshold:.2f}"] = compute_average_precision_per_image(
+            predictions, ground_truth, BDD100K_INSTANCE_CLASSES, threshold
+        )
+        mask_ap[f"{threshold:.2f}"] = compute_mask_average_precision_per_image(
+            predictions, ground_truth, BDD100K_INSTANCE_CLASSES, threshold
+        )
+
+    def summarize(per_threshold):
+        values = [value for per_class in per_threshold.values()
+                  for value in per_class.values() if np.isfinite(value)]
+        per_class_mean = {}
+        for class_name in BDD100K_INSTANCE_CLASSES:
+            class_values = [per_threshold[key][class_name] for key in per_threshold
+                            if np.isfinite(per_threshold[key][class_name])]
+            per_class_mean[class_name] = float(np.mean(class_values)) if class_values else None
+        return {"per_class_ap50_95": per_class_mean,
+                "map50_95": float(np.mean(values)) if values else None}
+
+    report = {
+        "task": "bdd100k_instance_segmentation",
+        "images": len(dataset),
+        "split": "val",
+        "box_ap": {
+            "ap50": box_ap["0.50"],
+            "ap75": box_ap["0.75"],
+            **summarize(box_ap),
+        },
+        "mask_ap": {
+            "ap50": mask_ap["0.50"],
+            "ap75": mask_ap["0.75"],
+            **summarize(mask_ap),
+        },
+        "iou_thresholds": thresholds,
+        "mask_threshold": mask_threshold,
+        "metric_note": "AP calculado con matching greedy por imagen y curva precision-recall interpolada; no equivale a COCOeval oficial. Los valores son comparables solo usando este mismo protocolo.",
+        "checkpoint": str(checkpoint_path),
+    }
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    Path(output_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", choices=["semantic", "bdd100k-semantic", "instance"], required=True)
+    parser.add_argument("--task", choices=["semantic", "bdd100k-semantic", "instance", "bdd100k-instance"], required=True)
     parser.add_argument("--data-root")
     parser.add_argument("--images-dir", help="BDD100K validation images")
     parser.add_argument("--masks-dir", help="BDD100K validation semantic masks")
+    parser.add_argument("--bitmasks-dir", help="BDD100K validation RGBA instance bitmasks")
+    parser.add_argument("--mask-threshold", type=float, default=0.5)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--output", default="data/outputs/cityscapes_metrics.json")
     args = parser.parse_args()
@@ -128,6 +227,11 @@ def main():
         if not args.images_dir or not args.masks_dir:
             parser.error("BDD100K semantic requiere --images-dir y --masks-dir")
         evaluate_bdd100k_semantic(args.images_dir, args.masks_dir, args.checkpoint, args.output)
+    elif args.task == "bdd100k-instance":
+        if not args.images_dir or not args.bitmasks_dir:
+            parser.error("BDD100K instance requiere --images-dir y --bitmasks-dir")
+        evaluate_bdd100k_instances(args.images_dir, args.bitmasks_dir, args.checkpoint,
+                                   args.output, args.mask_threshold)
     else:
         if not args.data_root:
             parser.error("--data-root es obligatorio para Cityscapes instance")
