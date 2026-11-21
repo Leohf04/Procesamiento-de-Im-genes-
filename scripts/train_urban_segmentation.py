@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.models.deeplabv3plus import DeepLabV3Plus
 from src.utils.urban_dataset import CityscapesFineDataset, LaneMaskDataset, CITYSCAPES_CLASSES
+from src.utils.bdd100k_dataset import BDD100KSemanticDataset, BDD100K_SEMANTIC_CLASSES
 
 
 def atomic_save(payload, destination):
@@ -24,7 +25,7 @@ def atomic_save(payload, destination):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", choices=["cityscapes", "lanes"], default="cityscapes")
+    parser.add_argument("--task", choices=["cityscapes", "bdd100k-semantic", "lanes"], default="cityscapes")
     parser.add_argument("--data-root", help="Cityscapes root for cityscapes task")
     parser.add_argument("--images-dir", help="BDD100K images directory for lanes task")
     parser.add_argument("--masks-dir", help="Rasterized BDD100K masks directory for lanes task")
@@ -55,6 +56,12 @@ def main():
         dataset = CityscapesFineDataset(args.data_root, "train", size)
         validation_dataset = CityscapesFineDataset(args.data_root, "val", size)
         num_classes, class_names = 11, list(CITYSCAPES_CLASSES)
+    elif args.task == "bdd100k-semantic":
+        if not all([args.images_dir, args.masks_dir, args.val_images_dir, args.val_masks_dir]):
+            parser.error("Para BDD100K semántico indica imágenes y máscaras de train/val.")
+        dataset = BDD100KSemanticDataset(args.images_dir, args.masks_dir, size)
+        validation_dataset = BDD100KSemanticDataset(args.val_images_dir, args.val_masks_dir, size)
+        num_classes, class_names = 19, list(BDD100K_SEMANTIC_CLASSES)
     else:
         if not all([args.images_dir, args.masks_dir, args.val_images_dir, args.val_masks_dir]):
             parser.error("Para --task lanes indica train y validación: --images-dir, --masks-dir, --val-images-dir y --val-masks-dir")
