@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from src.models.deeplabv3plus import DeepLabV3Plus
 from src.utils.urban_dataset import CityscapesFineDataset, LaneMaskDataset, CITYSCAPES_CLASSES
 
@@ -12,7 +12,7 @@ from src.utils.urban_dataset import CityscapesFineDataset, LaneMaskDataset, CITY
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", choices=["cityscapes", "lanes"], default="cityscapes")
-    parser.add_argument("--data-root", required=True, help="Cityscapes root for cityscapes task")
+    parser.add_argument("--data-root", help="Cityscapes root for cityscapes task")
     parser.add_argument("--images-dir", help="BDD100K images directory for lanes task")
     parser.add_argument("--masks-dir", help="Rasterized BDD100K masks directory for lanes task")
     parser.add_argument("--epochs", type=int, default=30)
@@ -28,24 +28,20 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     size = (args.height, args.width)
     if args.task == "cityscapes":
+        if not args.data_root:
+            parser.error("--data-root es obligatorio para --task cityscapes")
         dataset = CityscapesFineDataset(args.data_root, "train", size)
         validation_dataset = CityscapesFineDataset(args.data_root, "val", size)
         num_classes, class_names = 11, list(CITYSCAPES_CLASSES)
     else:
-        if not args.images_dir or not args.masks_dir:
-            parser.error("--images-dir y --masks-dir son obligatorios para --task lanes")
+        if not all([args.images_dir, args.masks_dir, args.val_images_dir, args.val_masks_dir]):
+            parser.error("Para --task lanes indica train y validación: --images-dir, --masks-dir, --val-images-dir y --val-masks-dir")
         dataset = LaneMaskDataset(args.images_dir, args.masks_dir, size)
-        validation_dataset = None
+        validation_dataset = LaneMaskDataset(args.val_images_dir, args.val_masks_dir, size)
         num_classes, class_names = 2, ["background", "lane_marking"]
-    if len(dataset) < 2:
-        raise ValueError("Se requieren al menos dos imágenes para separar train/validation.")
-    if validation_dataset is None:
-        val_count = max(1, round(len(dataset) * 0.15))
-        train_count = len(dataset) - val_count
-        train_set, val_set = random_split(dataset, [train_count, val_count],
-                                          generator=torch.Generator().manual_seed(args.seed))
-    else:
-        train_set, val_set = dataset, validation_dataset
+    if len(dataset) < 1 or len(validation_dataset) < 1:
+        raise ValueError("Se requiere al menos una imagen en train y validation.")
+    train_set, val_set = dataset, validation_dataset
     train_loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=device.type == "cuda")
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False,
