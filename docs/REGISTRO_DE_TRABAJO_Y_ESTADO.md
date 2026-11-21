@@ -873,3 +873,14 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - CI general del HEAD `9fc543b9451c5c34641b044147da78ebd8547bf0`: run `44949913773`, job `136985347857`, conclusión **success**. Logs: `32 passed in 10.34s`, smoke tests CLI correctos y `RESULT: BDD100K semantic sample validation PASSED`.
 - PR #3 se verificó como `open`, `draft=true`, `merged=false`. No se inició entrenamiento, no se generaron checkpoints y `RUN_TRAINING=False` permanece sin cambios.
 - No se modificó código de loaders en esta intervención; se registró la investigación y el bloqueo para no presentar una validación sintética como validación real.
+
+
+## Comprobación remota de HTTP Range para bitmasks de instancias — 2026-11-21
+
+- Se confirmó en la documentación oficial que el paquete Instance Segmentation contiene bitmasks RGBA para el subconjunto 10K, pesa 111 MB y publica MD5 `651b41f229d7327d8c4af97772de4390`. El formato oficial se documenta en el repositorio BDD100K: R categoría, G atributos y B:A annotation ID de 16 bits. Fuentes: https://github.com/bdd100k/bdd100k/blob/master/doc/source/download.rst y https://github.com/bdd100k/bdd100k/blob/master/doc/source/format.rst.
+- Se identificó un endpoint S3 de Berkeley que se cita en referencias de descarga como `https://bdd-data-storage-release.s3.us-west-2.amazonaws.com/bdd100k/2021/bdd100k_ins_seg_labels_trainval.zip`. El endpoint ETHZ documentado es `https://dl.cv.ethz.ch/bdd100k/data/`; la página de índice devolvió 502 desde el visor web, por lo que aún no se confirma disponibilidad.
+- Se añadió `scripts/probe_bdd100k_instance_range.py`, que prueba HEAD y una petición GET `Range: bytes=0-4095` contra ambos endpoints. La respuesta se procesa en streaming y se cierra tras como máximo el primer bloque de 4 KiB; el ZIP no se guarda ni se descarga completo. El script solo considera soporte verificado si recibe HTTP 206, Content-Range desde byte 0 y firma ZIP `PK\x03\x04`.
+- Se añadió el workflow `.github/workflows/probe-bdd100k-instance-range.yml` para ejecutar la comprobación en GitHub Actions. La primera consulta de ejecuciones no mostró todavía un run asociado a este workflow; se ha ajustado el filtro para que la actualización de este registro dispare la prueba. **Resultado HTTP Range: pendiente de ejecución**, no se afirma todavía que el servidor acepte rangos.
+- No se descargó ningún archivo de dataset, no se extrajeron máscaras, no se validó el loader de instancias con datos reales y no se inició entrenamiento.
+- PR #3 continúa abierta, en borrador y sin fusionar.
+- Próximo paso: recuperar el run del workflow de sondeo; si algún endpoint admite rangos, obtener y validar un ZIP parcial solo si es posible extraer entradas completas de forma fiable (ZIP central directory puede requerir rangos finales). Si no admite rangos, evaluar acceso oficial y descarga temporal de 111 MB en infraestructura remota, sin transferir datos al teléfono.
