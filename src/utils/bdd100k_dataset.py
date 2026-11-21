@@ -93,7 +93,7 @@ class BDD100KInstanceDataset(Dataset):
     """Eight-class Mask R-CNN dataset decoded from official RGBA bitmask PNGs.
 
     R stores category ID (1..8), G stores flags (ignore/crowd in bits 0/1),
-    and the instance ID is (B << 8) + A. Instances with ignore/crowd flags
+    and B stores the instance ID for instance segmentation (A is reserved for tracking). Instances with ignore/crowd flags
     are excluded, as required by the official evaluation convention.
     """
 
@@ -112,7 +112,7 @@ class BDD100KInstanceDataset(Dataset):
         encoded = np.asarray(rgba, dtype=np.uint8)
         category = encoded[..., 0]
         flags = encoded[..., 1]
-        instance_id = (encoded[..., 2].astype(np.uint16) << 8) | encoded[..., 3].astype(np.uint16)
+        instance_id = encoded[..., 2].astype(np.uint16)
 
         masks, labels = [], []
         for ann_id in np.unique(instance_id):
