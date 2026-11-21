@@ -38,6 +38,26 @@ python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k --images-dir data/
 
 El checkpoint parte de pesos COCO y ajusta las cabezas de cajas y máscaras a ocho clases de instancia BDD100K. El loader entrega imágenes en [0,1], ya que Torchvision normaliza internamente. El evaluador nuevo acepta checkpoints con nueve salidas (fondo + 8 clases) y calcula Box AP y Mask AP.
 
+
+### Auditoría previa obligatoria para Mask R-CNN BDD100K
+
+Antes del primer entrenamiento, ejecutar sobre los directorios oficiales:
+
+```bash
+python scripts/audit_bdd100k_instance_splits.py \
+  --train-images data/bdd100k/images/10k/train \
+  --train-bitmasks data/bdd100k/labels/ins_seg/bitmasks/train \
+  --val-images data/bdd100k/images/10k/val \
+  --val-bitmasks data/bdd100k/labels/ins_seg/bitmasks/val \
+  --output data/outputs/bdd100k_instance_preflight.json
+```
+
+La auditoría verifica que cada imagen tenga exactamente su máscara PNG, que la máscara original sea RGBA y coincida en dimensiones, que los IDs de anotación/categorías/flags sean coherentes y que no haya stems compartidos entre train y val. Informa el número de instancias por clase; por defecto bloquea el proceso si alguna de las ocho clases no aparece en train. Las clases ausentes en val se informan, pero no bloquean por sí solas el entrenamiento. El informe `ready_for_training` debe ser `true`.
+
+La muestra GitHub alternativa usada para el smoke test de Torchvision contiene solo dos imágenes del split val y cuatro clases (bus, car, motorcycle, truck), con máscaras binarias por objeto. Sirve para validar el adaptador parcial y el forward/backward, **no** para entrenar, no para medir AP y no para reemplazar los PNG RGBA oficiales. No mover esas imágenes a train ni mezclar sus resultados con la evaluación oficial.
+
+El notebook de Colab ejecuta esta auditoría y exige un informe aprobado antes de permitir `MODEL="instance"` con `RUN_TRAINING=True`. El entrenamiento guarda `.last.pt` (estado de modelo/optimizador/scheduler) y el checkpoint de evaluación; la reanudación es por época. Tras completar el entrenamiento, ejecutar el evaluador BDD100K de instancias sobre el split val oficial. No iniciar el entrenamiento mientras no se tenga acceso autorizado a las bitmasks oficiales.
+
 ### Carriles BDD100K: categoría, dirección y estilo
 
 Entrenar con las máscaras oficiales `labels/lane/masks/{train,val}`, no con polígonos rasterizados a una máscara binaria:
