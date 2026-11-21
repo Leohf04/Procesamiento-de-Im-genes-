@@ -939,3 +939,19 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
 - Las escrituras secuenciales de cuatro archivos provocaron varios runs redundantes de CI general; no se alteraron datos del dataset. En futuras modificaciones agrupar cambios en un solo commit si la herramienta disponible lo permite.
 - No se ha iniciado entrenamiento ni se han creado checkpoints. La validación oficial RGBA sigue pendiente y la muestra GitHub solo cubre cuatro clases de vehículo.
 - PR #3 debe seguir abierta, draft y sin fusionar.
+
+
+### Resultado de validación de la muestra GitHub de instancias — 2026-11-21
+
+- La primera corrección de la prueba sintética permitió que ambas pruebas del adaptador pasaran (`2 passed`). La ejecución siguiente detectó que el script ejecutado directamente no tenía la raíz del repositorio en `sys.path`; se corrigió añadiendo la raíz antes de importar `src` (commit `17bf38d1fb97d412397ebe333376592479798b49`).
+- Validación remota repetida sobre HEAD `8e212c417dc260c1a84e388e46002a30bed2cda9`: workflow run **44956137606**, conclusión **success**.
+- Evidencia del log:
+  - Se descargaron solo 2 imágenes de validación y sus JSON/máscaras: `80f308d1-e30a628d` (23 máscaras) y `82d184d4-00000000` (14 máscaras).
+  - El adaptador produjo tensores imagen `(3,256,512)`, cajas `(23,4)` y máscaras `(23,256,512)` para la primera; y `(3,256,512)`, cajas `(14,4)` y máscaras `(14,256,512)` para la segunda.
+  - Total: **2 imágenes, 37 instancias**, clases observadas `bus, car, motorcycle, truck`.
+  - Las 2 pruebas unitarias pasaron y el script terminó con `RESULT: BDD100K GITHUB INSTANCE SAMPLE VALIDATION PASSED`.
+- Los datos se descargaron únicamente al runner efímero y el script usó `TemporaryDirectory`; no se guardaron en el repositorio, Google Drive ni el dispositivo del usuario.
+- **Qué queda validado:** la ruta remota GitHub, lectura JPG/JSON/PNG, emparejamiento de máscaras por objeto, dimensiones, clases mapeadas, construcción de cajas/máscaras y estructura de tensores para una muestra de 2 imágenes y 37 instancias.
+- **Qué NO queda validado:** el loader oficial `BDD100KInstanceDataset` de RGBA, los annotation IDs/flags oficiales, las ocho clases oficiales completas, el entrenamiento de Mask R-CNN ni métricas de benchmark. Esta muestra no reemplaza el dataset oficial ni permite reportar AP de validación.
+- El workflow general de Python asociado al HEAD `8e212c417dc260c1a84e388e46002a30bed2cda9` (run `44956141257`) seguía en ejecución al actualizar esta nota; revisar su conclusión por separado antes de afirmar que CI general pasó.
+- PR #3 comprobada: `open`, `draft=true`, `merged=false`. Mantener sin fusionar.
