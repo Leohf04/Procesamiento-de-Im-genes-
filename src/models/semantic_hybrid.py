@@ -54,10 +54,11 @@ class SemanticHybridModel:
         rgb=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
         resized=cv2.resize(rgb,(self.input_size[1],self.input_size[0]),interpolation=cv2.INTER_LINEAR)
         tensor=torch.from_numpy(resized).permute(2,0,1).float()/255
+        detector_tensor=torch.from_numpy(rgb).permute(2,0,1).float()/255
         with torch.inference_mode():
             logits=self.seg_model(self.seg_normalize(tensor).unsqueeze(0).to(self.device))["out"][0]
             raw=logits.argmax(0).cpu().numpy().astype(np.uint8)
-            det=self.det_model([tensor.to(self.device)])[0]
+            det=self.det_model([detector_tensor.to(self.device)])[0]
             lane = None
             if self.lane_model is not None:
                 lane_logits=self.lane_model(self.seg_normalize(tensor).unsqueeze(0).to(self.device))["out"][0]
