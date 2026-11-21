@@ -89,6 +89,16 @@ El archivo `configs/config.yaml` apunta a:
 
 Si falta el checkpoint DeepLabV3+, el enfoque híbrido se detiene con un error explícito. Si falta el checkpoint de carriles, devuelve una máscara vacía y marca `lane_model_loaded=false`; no finge segmentación aprendida.
 
+### Evaluar precisión
+
+```bash
+python scripts/evaluate_cityscapes.py --task semantic --data-root data/cityscapes --checkpoint data/processed/deeplabv3plus_urban.pt
+python scripts/evaluate_cityscapes.py --task instance --data-root data/cityscapes --checkpoint data/processed/maskrcnn_cityscapes.pt
+python scripts/evaluate_lanes.py --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val --checkpoint data/processed/deeplabv3plus_lanes.pt
+```
+
+El AP de Mask R-CNN implementado en esta evaluación es AP de cajas, no AP de máscaras.
+
 ## Exportar a ONNX
 
 ```bash
