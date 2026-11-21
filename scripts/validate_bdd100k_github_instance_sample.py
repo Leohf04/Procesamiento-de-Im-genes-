@@ -74,6 +74,7 @@ def main():
     parser.add_argument("--samples", type=int, default=4, choices=range(1, 9))
     parser.add_argument("--height", type=int, default=256)
     parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--maskrcnn-smoke-test", action="store_true", help="Run one CPU Mask R-CNN forward/loss/backward pass; does not train or save weights.")
     args = parser.parse_args()
 
     with tempfile.TemporaryDirectory(prefix="bdd100k-github-sample-") as tmp:
@@ -153,6 +154,47 @@ def main():
             )
         if not expected_classes.issubset(observed_classes):
             raise RuntimeError("El loader perdió clases presentes en las anotaciones.")
+
+        if args.maskrcnn_smoke_test:
+            from torchvision.models.detection import maskrcnn_resnet50_fpn
+
+            # Keep this a bounded compatibility check: one image, at most eight
+            # instances, small spatial size, random weights, no optimizer step.
+            smoke_dataset = BDD100KGitHubInstanceSampleDataset(root, size=(128, 256))
+            image, target = smoke_dataset[0]
+            keep = min(8, len(target["labels"]))
+            if keep == 0:
+                raise RuntimeError("La muestra no contiene instancias para Mask R-CNN.")
+            target = {
+                key: value[:keep] if key in {"boxes", "labels", "masks", "area", "iscrowd"} else value
+                for key, value in target.items()
+            }
+            model = maskrcnn_resnet50_fpn(
+                weights=None,
+                weights_backbone=None,
+                num_classes=9,
+                min_size=128,
+                max_size=256,
+                box_detections_per_img=10,
+                rpn_pre_nms_top_n_train=32,
+                rpn_post_nms_top_n_train=16,
+                box_batch_size_per_image=32,
+            )
+            model.train()
+            losses = model([image], [target])
+            if not losses or not all(torch.is_tensor(v) and v.ndim == 0 and torch.isfinite(v).item() for v in losses.values()):
+                raise RuntimeError(f"Mask R-CNN devolvió pérdidas inválidas: {losses}")
+            total_loss = sum(losses.values())
+            total_loss.backward()
+            if not torch.isfinite(total_loss).item():
+                raise RuntimeError("La pérdida total de Mask R-CNN no es finita.")
+            print(
+                "MASKRCNN_SMOKE_TEST PASSED "
+                f"instances={keep} losses={{{', '.join(f'{k}={v.item():.5f}' for k, v in losses.items())}}} "
+                f"total={total_loss.item():.5f} backward=ok optimizer_step=no checkpoint=no"
+            )
+            del model, losses, total_loss
+
         print(
             f"SUMMARY images={len(dataset)} instances={total_instances} "
             f"classes={','.join(sorted(observed_classes))}"
