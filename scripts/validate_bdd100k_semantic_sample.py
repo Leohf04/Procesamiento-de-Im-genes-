@@ -33,12 +33,18 @@ def safe_repo_path(parent: str, child: str) -> str:
 
 def fetch_split(api: HfApi, repo_id: str, source_split: str, output: Path, limit: int):
     prefix = f"data/images/{source_split}/"
+    all_files = api.list_repo_files(repo_id=repo_id, repo_type="dataset")
     metadata_files = sorted(
-        name for name in api.list_repo_files(repo_id=repo_id, repo_type="dataset")
-        if name.startswith(prefix) and name.endswith("/metadata.jsonl")
+        name for name in all_files
+        if name.startswith(prefix) and name.endswith("metadata.jsonl")
     )
     if not metadata_files:
-        raise RuntimeError(f"No se encontraron metadata.jsonl para split {source_split}")
+        candidates = [name for name in all_files if "metadata" in name.lower() or source_split in PurePosixPath(name).parts]
+        raise RuntimeError(
+            f"No se encontraron metadata.jsonl para split {source_split}. "
+            f"Primeros archivos del repositorio: {all_files[:30]}; "
+            f"candidatos relacionados: {candidates[:50]}"
+        )
 
     image_dir = output / "images" / SPLITS[source_split]
     mask_dir = output / "masks" / SPLITS[source_split]
