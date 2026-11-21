@@ -28,8 +28,8 @@ BDD100K_INSTANCE_CLASSES = (
     "motorcycle", "bicycle",
 )
 BDD100K_DETECTION_CLASSES = (
-    "pedestrian", "rider", "car", "truck", "bus", "train",
-    "motorcycle", "bicycle", "traffic light", "traffic sign",
+    "bike", "bus", "car", "motor", "person", "rider",
+    "traffic light", "traffic sign", "train", "truck",
 )
 _IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 _MEAN = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
@@ -244,3 +244,36 @@ class BDD100KDetectionDataset(Dataset):
             "iscrowd": torch.zeros((len(labels),), dtype=torch.int64),
         }
         return _image_tensor(image_path, self.size, normalize=False), target
+
+
+class BDD100KLaneDataset(Dataset):
+    """Decode official packed BDD100K lane masks into category/direction/style targets.
+
+    Bit layout (least significant first): category bits 0..2, background bit 3,
+    style bit 4, direction bit 5. Background pixels are assigned ignore_index=255.
+    """
+    def __init__(self, images_dir, masks_dir, size=(512, 1024)):
+        self.pairs = _paired_files(images_dir, masks_dir)
+        self.size = tuple(size)
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, index):
+        image_path, mask_path = self.pairs[index]
+        packed = Image.open(mask_path).convert("L").resize(
+            (self.size[1], self.size[0]), Image.Resampling.NEAREST
+        )
+        encoded = np.asarray(packed, dtype=np.uint8)
+        background = ((encoded >> 3) & 1).astype(bool)
+        category = (encoded & 0b00000111).astype(np.int64)
+        style = ((encoded >> 4) & 1).astype(np.int64)
+        direction = ((encoded >> 5) & 1).astype(np.int64)
+        for target in (category, style, direction):
+            target[background] = 255
+        image = _image_tensor(image_path, self.size, normalize=True)
+        return image, {
+            "category": torch.from_numpy(category.copy()),
+            "direction": torch.from_numpy(direction.copy()),
+            "style": torch.from_numpy(style.copy()),
+        }
