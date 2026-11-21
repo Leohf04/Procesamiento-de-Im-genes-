@@ -136,6 +136,9 @@ def evaluate_bdd100k_instances(images_dir, bitmasks_dir, checkpoint_path, output
     mask_features = model.roi_heads.mask_predictor.conv5_mask.in_channels
     model.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, len(expected_names))
     model.load_state_dict(checkpoint["model_state_dict"])
+    # Bound per-frame outputs to keep the 1K-image validation split tractable in Colab.
+    model.roi_heads.detections_per_img = 50
+    model.roi_heads.score_thresh = 0.05
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device).eval()
 
@@ -184,18 +187,22 @@ def evaluate_bdd100k_instances(images_dir, bitmasks_dir, checkpoint_path, output
         return {"per_class_ap50_95": per_class_mean,
                 "map50_95": float(np.mean(values)) if values else None}
 
+    def json_safe(per_class):
+        return {name: (float(value) if np.isfinite(value) else None)
+                for name, value in per_class.items()}
+
     report = {
         "task": "bdd100k_instance_segmentation",
         "images": len(dataset),
         "split": "val",
         "box_ap": {
-            "ap50": box_ap["0.50"],
-            "ap75": box_ap["0.75"],
+            "ap50": json_safe(box_ap["0.50"]),
+            "ap75": json_safe(box_ap["0.75"]),
             **summarize(box_ap),
         },
         "mask_ap": {
-            "ap50": mask_ap["0.50"],
-            "ap75": mask_ap["0.75"],
+            "ap50": json_safe(mask_ap["0.50"]),
+            "ap75": json_safe(mask_ap["0.75"]),
             **summarize(mask_ap),
         },
         "iou_thresholds": thresholds,
