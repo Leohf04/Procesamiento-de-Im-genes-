@@ -78,7 +78,9 @@ def download_pair(s3, image_key: str, mask_key: str, tmp: str, tag: str) -> dict
         s3.download_file(BUCKET, key, target)
     image_meta, mask_meta = describe_image(image_path), describe_image(mask_path)
     with Image.open(mask_path) as mask:
-        unique_colors = len(set(mask.convert("RGB").getdata()))
+        colors = mask.convert("RGB").getcolors(maxcolors=100000)
+        unique_colors = len(colors) if colors is not None else None
+        color_values = sorted([list(color) for _, color in colors])[:60] if colors else []
     return {
         "image_key": image_key, "mask_key": mask_key,
         "image_bytes": os.path.getsize(image_path),
@@ -91,6 +93,7 @@ def download_pair(s3, image_key: str, mask_key: str, tmp: str, tag: str) -> dict
             and image_meta["height"] == mask_meta["height"]
         ),
         "unique_mask_colors": unique_colors,
+        "mask_rgb_colors_sample": color_values,
     }
 
 
@@ -124,6 +127,24 @@ def main() -> int:
             )
         except Exception:
             continue
+
+    class_list_key = next(
+        (item["key"] for item in report["class_list_candidates"]), None
+    )
+    if class_list_key:
+        class_list_path = os.path.join(tempfile.gettempdir(), "a2d2_class_list_preflight.json")
+        s3.download_file(BUCKET, class_list_key, class_list_path)
+        with open(class_list_path, encoding="utf-8") as handle:
+            class_list = json.load(handle)
+        report["class_list"] = {
+            "json_type": type(class_list).__name__,
+            "keys": sorted(class_list.keys())[:80] if isinstance(class_list, dict) else None,
+            "sample_entries": (
+                list(class_list.items())[:12] if isinstance(class_list, dict)
+                else class_list[:12] if isinstance(class_list, list) else None
+            ),
+        }
+        os.remove(class_list_path)
 
     semantic_sequences = list_sequences(s3, SEMANTIC_ROOT)
     semantic_image = None
