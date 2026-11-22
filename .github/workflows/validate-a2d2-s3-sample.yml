@@ -1,0 +1,35 @@
+name: Validate A2D2 anonymous S3 sample
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/validate_a2d2_s3_sample.py"
+      - ".github/workflows/validate-a2d2-s3-sample.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install validation dependencies
+        run: python -m pip install --disable-pip-version-check boto3 pillow
+      - name: List public bucket and validate one paired sample
+        run: python scripts/validate_a2d2_s3_sample.py
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2d2-s3-preflight-report
+          path: a2d2_s3_preflight_report.json
+          if-no-files-found: warn
+          retention-days: 14
