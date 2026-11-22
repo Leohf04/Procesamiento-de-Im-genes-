@@ -1358,3 +1358,19 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - CI Python del HEAD `42f8e7419cd052b4623475edc6f66c40e846bf1f`: runs [44992979167](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992979167) y [44992977459](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992977459) en progreso al cierre. No declarar tests aprobados hasta revisar sus conclusiones.
 - PR #3 verificada: abierta, draft, sin fusionar; HEAD actualizado al commit `42f8e7419cd052b4623475edc6f66c40e846bf1f`.
 - Aún no hay manifiestos confirmados ni artifacts validados. El siguiente paso es esperar/verificar ambos jobs, revisar artifacts y auditar conteos, duplicados, emparejamiento y fuga entre secuencias. Entrenamiento sigue desactivado; no se descargan datos completos ni se inicia entrenamiento.
+
+
+### Verificación de generación y auditoría de manifiestos — 2026-11-22
+
+- Se volvió a consultar este registro antes de revisar las ejecuciones.
+- Workflow final de manifiestos [44992977292](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992977292): **success**. Ambos jobs terminaron correctamente y subieron artifacts separados:
+  - A2D2: artifact [14742059955](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992977292/artifacts/14742059955), 207,323 bytes, SHA-256 del ZIP ca12a915bac4e597d8bf22a9d28a144d505a14cebb070d8459f553b55515dd97.
+  - UrbanSyn: artifact [14741878951](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992977292/artifacts/14741878951), 58,209 bytes, SHA-256 del ZIP 73e23edd6b49669d4c5cca1fc0f129928f24b3eea76812b74f6f10e2a242815b.
+- Se descargaron ambos ZIP mediante la integración GitHub y se inspeccionaron los JSONL directamente:
+  - A2D2: 1,000 train + 1,000 val + 1,000 test = 3,000 registros. 23 secuencias distribuidas 18 train / 3 val / 2 test. Cero IDs nulos, cero duplicados dentro o entre splits, cero solapamiento de group_id; cada fila incluye URI S3 para RGB y semántica y metadatos de tamaño/ETag. Split experimental por secuencia, no oficial.
+  - UrbanSyn: 1,000 train + 751 val + 783 test = 2,534 registros. Cero IDs nulos, cero duplicados dentro o entre splits, cero solapamiento de group_id; registros con RGB, semseg, panoptic y bbox2D y revision HF 8599498aceee9072f1e067a4a4efed7f20b11809. Agrupación por sample ID porque no se verificó metadata de secuencia; no garantiza independencia por secuencia. Split experimental, no oficial.
+  - Ambos ZIP contienen tres JSONL y un summary JSON. La auditoría no descargó ni decodificó las 5,534 muestras completas ni calculó distribución de clases.
+- CI Python del HEAD: [44993021461](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44993021461) success; compileall, CLIs, validación BDD100K y **49 passed in 9.22s**. El run gemelo [44993016907](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44993016907) también success. Runs anteriores del commit 42f8e cancelados por concurrencia quedan reemplazados por estos checks satisfactorios del HEAD 6dd185b5200865997524b3fdc1b66dc9fd9ab33a.
+- PR #3 sigue abierta, draft y sin fusionar; HEAD actual 6dd185b5200865997524b3fdc1b66dc9fd9ab33a.
+- Conclusión: la generación de manifiestos sí terminó y los artifacts existen. No equivale a descargar los datasets ni validar el contenido de cada anotación. Antes de entrenar faltan: validar muestra más amplia y distribución por clase; revisar los 23 grupos A2D2 y sus proporciones; verificar independencia temporal/secuencias de UrbanSyn (o documentar limitación); resolver licencia UrbanSyn; descargar subconjunto acotado al almacenamiento remoto y ejecutar smoke tests con targets reales de manifiesto.
+- RUN_TRAINING=False: no se ha iniciado entrenamiento de producción, no hay checkpoints ni métricas de precisión. PR #3 no se fusiona.
