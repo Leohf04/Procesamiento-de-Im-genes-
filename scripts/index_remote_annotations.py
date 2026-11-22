@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build per-image annotation statistics from remote A2D2 and UrbanSyn manifests."""
 from __future__ import annotations
-import argparse, json, io
+import argparse, json, io, sys
 from collections import Counter
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import numpy as np
 from PIL import Image
 from src.data_adapters import (decode_a2d2_instances, decode_a2d2_semantic,
