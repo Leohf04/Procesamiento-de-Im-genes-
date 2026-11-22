@@ -10,7 +10,7 @@ La combinación activa es **A2D2 + UrbanSyn + SHIFT**. La matriz de cobertura, e
 
 - **A2D2:** escenas reales; semántica e instancias/detección solo después de decodificar los archivos oficiales. No se han confirmado atributos por imagen para estratificar clima/hora.
 - **UrbanSyn:** semántica 19 clases, panoptic de objetos dinámicos y cajas 2D. Sintético; no tiene clase dedicada de carriles ni condiciones ambientales reales.
-- **SHIFT:** RGB, semseg, cajas 2D e instance segmentation 2D; complemento de domain shift sintético. Acceso a sus endpoints pendiente de prueba.
+- **SHIFT:** la descarga oficial está actualmente inaccesible por DNS. Se encontró un espejo HF parcial con solo `discrete/videos`; su CSV `val/front` contiene metadatos de clima y hora, pero los archivos RGB/semseg son tar grandes. Se usa solo como candidato de evaluación sintética después de extraer y emparejar una muestra; no hay datos `continuous/` en ese espejo.
 - No concatenar datasets ni comparar métricas de clases distintas sin un adaptador explícito. Mantener resultados separados por fuente y dominio.
 - Mantener splits oficiales y separar por secuencia/escena para evitar fuga temporal. No ajustar umbrales en validation y reportarlos como test.
 - No etiquetar como evaluación real de lluvia/noche/niebla una corrupción artificial. Los aumentos se informan por separado.
@@ -21,7 +21,7 @@ La combinación activa es **A2D2 + UrbanSyn + SHIFT**. La matriz de cobertura, e
 - Instancias: Mask R-CNN; UrbanSyn panoptic se convierte en instancias individuales; SHIFT/A2D2 requieren adaptadores validados.
 - Detección: cajas 2D UrbanSyn/SHIFT. Cajas 3D A2D2 no se consideran 2D nativas; proyectarlas solo con calibración comprobada.
 - Carriles y señales: evaluar únicamente cuando la fuente tenga etiquetas explícitas. UrbanSyn tiene clase semántica traffic sign, pero no lane-marking ni cajas/instancias para señales según la ficha consultada.
-- Robustez: SHIFT para domain shifts sintéticos; A2D2 para dominio real general. No afirmar estratos reales día/noche/lluvia/niebla sin metadata comprobada.
+- Robustez: SHIFT para domain shifts sintéticos si la muestra de video/semseg se valida; A2D2 para dominio real general. El CSV del espejo SHIFT declara clima/hora a nivel de secuencia. No afirmar estratos reales día/noche/lluvia/niebla para A2D2 sin metadata comprobada.
 
 ## Preparación heredada BDD100K desde Google Drive (no activa)
 
@@ -138,3 +138,11 @@ El informe incluye media, mediana, p95, p99, FPS derivado de latencia media, res
 - El detector Faster R-CNN del enfoque híbrido sigue usando pesos COCO; la segmentación semántica y la segmentación de carriles sí tienen rutas de entrenamiento urbanas.
 - El script de benchmark mide inferencia del pipeline del modelo, no latencia end-to-end de captura/GUI.
 - Los adaptadores de detección/carriles y el evaluador Mask AP ya están implementados, pero aún requieren validación con máscaras/anotaciones oficiales reales y contraste con los evaluadores oficiales.
+
+
+## Estado de preflights (2026-11-22)
+
+- A2D2: muestra semántica aprobada (RGB+mask 1920×1208); `class_list.json` leído (55 clases/colores). El mismo mapa contiene subclases como Car 1–4, Bicycle 1–4 y Pedestrian 1–3; falta validar conversión de estas etiquetas a instancias individuales. La carpeta de instancia separada no produjo PNGs en la ruta explorada.
+- UrbanSyn: dos muestras completas RGB/semseg/panoptic/bbox aprobadas a 2048×1024; IDs semánticos 0–19 y panoptic dinámico verificados. Ver [workflow 44971557432](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971557432).
+- SHIFT: servidor oficial no resuelve DNS. El espejo HF parcial expone `seq.csv` con clima/hora (incluye rain/fog/night) y archivos grandes solo de `discrete/videos/val/front`; sin `continuous/`. Preflight de video por HTTP Range pendiente.
+- No ejecutar los comandos BDD100K de las secciones posteriores: son referencia heredada, no parte de la estrategia activa.
