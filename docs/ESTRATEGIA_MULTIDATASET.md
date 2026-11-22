@@ -166,3 +166,10 @@ También se incorporó un smoke test de entrenamiento en CPU que construye los m
 - SHIFT continúa excluido de métricas mientras no se resuelva la alineación temporal RGB/semseg (10 frente a 25 FPS).
 
 **Estado de entrenamiento:** no iniciar todavía entrenamiento de producción. El smoke test no sustituye el preflight de datos reales. `RUN_TRAINING=False` permanece vigente.
+
+
+### Loaders de manifiesto añadidos
+
+La implementación se amplió con cuatro clases `torch.utils.data.Dataset`: `A2D2SemanticDataset`, `A2D2InstanceDataset`, `UrbanSynSemanticDataset` y `UrbanSynInstanceDataset`. Reciben manifiestos explícitos con rutas de imágenes/etiquetas; permiten redimensionado coherente (bilineal para RGB, nearest para máscaras), normalización ImageNet para DeepLab y tensores [0,1] para Mask R-CNN. Se añadieron pruebas de lectura temporal con archivos sintéticos para las cuatro clases.
+
+El manifiesto y el mapeo fuente→canónico deben generarse/verificarse a partir de los splits y metadatos oficiales; estos loaders no descargan datasets ni inventan el split. La validación sobre muestras reales remotas y la sincronización SHIFT siguen pendientes.
