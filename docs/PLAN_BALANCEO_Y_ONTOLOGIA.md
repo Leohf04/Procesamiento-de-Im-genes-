@@ -81,3 +81,13 @@ Se implementó `scripts/index_remote_annotations.py` y el workflow `.github/work
 El workflow ejecuta por defecto una prueba acotada de 100 muestras por split/dataset (300 por dataset) y genera manifiestos reproducibles, índices y plan balanceado como artifact. Puede ejecutarse manualmente con un máximo mayor (hasta los 1.000 por split del manifiesto configurado). El artifact contiene solo estadísticas y referencias; no imágenes ni máscaras.
 
 **Estado de la prueba al 2026-11-22:** los manifiestos de prueba ya se generaron correctamente; el indexado per-image del run 45002662737 seguía en ejecución al último registro. No declarar el balanceo real finalizado hasta inspeccionar los seis JSONL, los resúmenes de cobertura y el informe balanced_training_plan.json.
+
+
+## Política inicial de pesos y muestreo — 2026-11-22
+
+Se añade `src/class_balancing.py` como utilidad independiente y testeada:
+- Semántica: pesos de CrossEntropyLoss con frecuencia de píxeles de train, inversa de raíz cuadrada, media uno; clases ausentes reciben peso cero y deben declararse como no entrenables en ese split.
+- Instancias: `WeightedRandomSampler` con peso por imagen calculado como promedio de rareza de las clases presentes, no por cantidad de objetos. Se fija semilla y se usa solo el índice train.
+- No calcular pesos con validation/test, no alterar sus distribuciones y no combinar conteos de A2D2 y UrbanSyn.
+- Estos helpers aún no están conectados a los scripts de entrenamiento antiguos, que operan sobre Cityscapes/BDD100K y tienen datasets distintos. Su integración con los loaders UrbanSyn/A2D2 se hará después de inspeccionar el índice ampliado y validar las rutas locales de imágenes/anotaciones.
+- Los pesos no resuelven clases ausentes: para esas clases hace falta otra fuente o redefinir explícitamente el alcance de la tarea.
