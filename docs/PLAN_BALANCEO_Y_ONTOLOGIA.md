@@ -91,3 +91,31 @@ Se añade `src/class_balancing.py` como utilidad independiente y testeada:
 - No calcular pesos con validation/test, no alterar sus distribuciones y no combinar conteos de A2D2 y UrbanSyn.
 - Estos helpers aún no están conectados a los scripts de entrenamiento antiguos, que operan sobre Cityscapes/BDD100K y tienen datasets distintos. Su integración con los loaders UrbanSyn/A2D2 se hará después de inspeccionar el índice ampliado y validar las rutas locales de imágenes/anotaciones.
 - Los pesos no resuelven clases ausentes: para esas clases hace falta otra fuente o redefinir explícitamente el alcance de la tarea.
+
+## Integración de pesos y sampler en loaders urban-v1 — 2026-11-22
+
+Se añadió `src/urban_training.py` con `build_urban_train_loader`, una integración explícita de los helpers de `src/class_balancing.py`:
+
+- **Semántica:** agrega `semantic_pixels` de filas train y devuelve pesos por clase para pasarlos a `torch.nn.CrossEntropyLoss(weight=...)`. El DataLoader mantiene muestreo uniforme de imágenes; el balanceo ocurre a nivel de píxel/clase.
+- **Instancias:** construye un `WeightedRandomSampler` determinista con las frecuencias por imagen del índice train y usa `detection_collate_fn` para targets variables de Torchvision.
+- Rechaza filas marcadas como validation/test, estados de anotación no `ok`, o longitudes distintas entre dataset e índice. No recibe estadísticas de evaluación.
+- Se añadieron pruebas de integración sintéticas en `tests/test_urban_training_loader.py` para pesos semánticos, sampler/collate de instancias y rechazo de estadísticas de evaluación o índices desalineados.
+
+**Límite de esta integración:** el helper requiere que el llamador entregue un dataset local ya materializado y filas de anotación del manifiesto train en el mismo orden. No descarga datos, no convierte referencias remotas en rutas locales y no inicia entrenamiento. Hasta auditar el artifact ampliado y probar la correspondencia exacta de IDs/rutas no debe conectarse a un entrenamiento real. A2D2 y UrbanSyn deben instanciarse como loaders separados.
+
+Ejemplo de uso previsto (solo tras materializar y validar el split train):
+
+```python
+from src.urban_training import build_urban_train_loader
+
+train_loader, class_weights = build_urban_train_loader(
+    train_dataset,
+    train_annotation_rows,
+    task="semantic",
+    class_to_id=semantic_name_to_id(),
+    batch_size=4,
+)
+criterion = torch.nn.CrossEntropyLoss(weight=class_weights, ignore_index=255)
+```
+
+Para instancias, usar `task="instances"`; el loader aplica `WeightedRandomSampler` y devuelve `None` como pesos de pérdida. El cálculo de pesos y sampler sigue separado por dataset/dominio.
