@@ -172,10 +172,19 @@ def build_plan(manifest_dir: Path, annotation_dir: Path, output_dir: Path, *,
                     role = "primary"
                 else:
                     role = "separate_domain_source"
-                selected, summary = greedy_balanced_select(
-                    enriched, count_key=count_key, seed=seed,
-                    max_samples=max_samples_per_split, per_class_cap=per_class_cap
-                )
+                if split == "train":
+                    selected, summary = greedy_balanced_select(
+                        enriched, count_key=count_key, seed=seed,
+                        max_samples=max_samples_per_split, per_class_cap=per_class_cap
+                    )
+                else:
+                    # Keep validation and test complete and in manifest order.
+                    selected = enriched
+                    _, summary = greedy_balanced_select(
+                        enriched, count_key=count_key, seed=seed,
+                        max_samples=len(enriched), per_class_cap=None
+                    )
+                    summary["selection"] = "complete split; no downsampling or reordering"
                 out_path = output_dir / f"{dataset}_{task}_{split}.jsonl"
                 write_jsonl(out_path, selected)
                 report["plans"][dataset][split][task] = {
