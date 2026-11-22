@@ -1331,3 +1331,6 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 2. Lanzar generación de manifiestos en el entorno remoto (no en el teléfono), guardar JSONL y resúmenes en almacenamiento remoto persistente.
 3. Auditar conteos y cobertura por clase, revisar splits y licencias; luego ajustar tamaños de subconjunto según VRAM/espacio disponibles.
 4. Resolver SHIFT y licencia UrbanSyn antes de habilitar los experimentos que dependan de ellos.
+
+- Se añadió workflow `.github/workflows/build-reproducible-subsets.yml` para ejecutar el generador remotamente y publicar un artifact de manifiestos por 30 días. Se dispara al cambiar el script/workflow y admite ejecución manual con semilla y límite configurables.
+- Primera ejecución automática [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162) quedó **queued** al registrar; todavía no hay manifiestos reales generados. CI de tests [44974469066](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469066) también queued.
