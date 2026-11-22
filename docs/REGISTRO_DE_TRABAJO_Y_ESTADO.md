@@ -2,7 +2,7 @@
 
 > **Documento de continuidad.** Este archivo es la fuente principal para recuperar el contexto, las decisiones, el estado real y los próximos pasos del trabajo. Debe consultarse al comenzar cada nueva intervención relacionada con el proyecto y actualizarse al terminarla, registrando también cuando una acción no se haya podido completar.
 >
-> Última actualización: **2026-11-21**.
+> Última actualización: **2026-11-22**.
 
 ## 1. Identidad y objetivo del proyecto
 
@@ -1161,3 +1161,33 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - `RUN_TRAINING=False` permanece obligatorio.
 - Próximo paso: consultar las ejecuciones nuevas de UrbanSyn/A2D2/SHIFT; corregir según logs; después decodificar las etiquetas y construir el mapeo de clases. Solo con los tres preflights y pruebas de adaptadores aprobados se autoriza preparar el entrenamiento.
 - PR #3 debe seguir abierta, en draft y sin fusionar.
+
+
+### Resultados de validación remota y estado de datos — 2026-11-22
+
+#### A2D2
+- Workflow [44971559558](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971559558) y la versión extendida [44971681934](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971681934) terminaron success.
+- Se descargó desde S3 anónimo una imagen RGB y su máscara semántica: 1920×1208; dimensiones iguales; RGB PNG 3,817,263 bytes; máscara RGB PNG 71,403 bytes, 21 colores. SHA-256 imagen `1ea14036742fe8b453add67ce6a09b7f306de21d2a0906c90568e1e7b7ec15cc`; máscara `43a7a453fe632228d181f06673fc7c9adfd16f19060f70ef31161138d2c89666`.
+- Se descargó `camera_lidar_semantic/class_list.json`: 55 colores/clases. La muestra mapea clases de superficie y participantes, incluyendo `Car 1-4`, `Bicycle 1-4`, `Pedestrian 1-3`, `Truck 1-3` y `Solid line`.
+- La ruta explorada de `camera_lidar_semantic_instance` no contenía PNGs en `label/cam_front_center`. A2D2 documenta instance segmentation generada desde etiquetas semánticas, con subclases para participantes; queda pendiente validar conversión de componentes a máscaras individuales.
+- Se actualizó el script para inspeccionar el class map y buscar las subclases.
+
+#### UrbanSyn
+- Workflow [44971557432](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971557432) success: 7.539 IDs completos; se descargaron dos muestras, RGB/semántica/panoptic/bbox2D, resolución 2048×1024. Semántica en RGB triplicado y canal de clase panoptic verificados.
+- Preflight positivo solo para esas dos muestras. Licencia HF CC BY-SA 4.0 frente a página oficial CC BY-NC-SA 4.0: revisar antes de redistribuir/derivar.
+
+#### SHIFT
+- Workflow de endpoints oficiales [44971481786](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971481786) falló por DNS/NXDOMAIN del host `dl.cv.ethz.ch`.
+- Se encontró espejo HF parcial `KevinConnorLee/SHIFT`; workflow [44971720763](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971720763) success. Tiene 21 archivos, solo `discrete/videos`, sin `continuous/`. `val/front` ocupa 15.7 GB; archivos: img.tar 9.62 GB, semseg.tar 3.56 GB, det_insseg_2d.json 954 MB, seq.csv 19.7 kB.
+- `seq.csv` confirma columnas `start_weather_fine` y `start_timeofday_fine`; primeras filas incluyen small rain/night, small fog/night, heavy fog/noon y mid rain/noon.
+- El primer preflight solo leyó 16 MiB de cada tar y no pudo extraer un video completo. Se añadió un segundo preflight con HTTP Range y límite de 64 MiB por primer miembro MP4; workflows [44971805203](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971805203) y posterior revisión están pendientes.
+- HF marca el mirror como MIT, pero el DevKit original marca CC BY-NC-SA 4.0. No asumir relicenciamiento; revisar términos y no redistribuir.
+
+#### Próximos pasos
+1. Revisar el resultado del preflight SHIFT por rango y confirmar video RGB/semseg emparejado.
+2. Implementar pruebas de conversión A2D2 RGB-colormap a IDs semánticos y subclases de instancia a máscaras por objeto; verificar connected components.
+3. Crear adaptador UrbanSyn panoptic RGB (R/G instance ID, B class ID) a máscaras/targets Mask R-CNN y pruebas con muestras.
+4. Crear ontología común solo para intersección de etiquetas equivalentes; documentar clases exclusivas y ignore.
+5. Mantener `RUN_TRAINING=False` hasta completar puertas anteriores y revisar licencias.
+6. No descargar conjuntos completos; las pruebas se ejecutan remotamente y de forma acotada.
+7. PR #3 permanece abierta, draft y sin fusionar.
