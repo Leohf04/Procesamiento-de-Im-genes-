@@ -158,8 +158,10 @@ def compare_video_pts(rgb_path: str, semantic_path: str) -> dict:
     rt, st = rgb.pop("_timestamps"), sem.pop("_timestamps")
     overlap_start, overlap_end = max(rt[0], st[0]), min(rt[-1], st[-1])
     overlap = max(0.0, overlap_end - overlap_start)
-    shorter_duration = max(1e-9, min(rt[-1] - rt[0], st[-1] - st[0]))
-    overlap_ratio = overlap / shorter_duration
+    rgb_duration = max(1e-9, rt[-1] - rt[0])
+    semantic_duration = max(1e-9, st[-1] - st[0])
+    overlap_fraction_rgb = overlap / rgb_duration
+    overlap_fraction_semantic = overlap / semantic_duration
     same_index = None
     if len(rt) == len(st):
         errors = [abs(a - b) for a, b in zip(rt, st)]
@@ -189,11 +191,13 @@ def compare_video_pts(rgb_path: str, semantic_path: str) -> dict:
     return {
         "rgb": rgb, "semantic": sem,
         "shared_timeline_overlap_seconds": overlap,
-        "overlap_fraction_of_shorter_stream": overlap_ratio,
+        "overlap_fraction_of_rgb_stream": overlap_fraction_rgb,
+        "overlap_fraction_of_semantic_stream": overlap_fraction_semantic,
         "same_index_pts_delta": same_index,
         "nearest_timestamp_delta": nearest_stats,
         "status": "PTS_ALIGNMENT_CANDIDATE_REQUIRES_VISUAL_SPOTCHECK"
-            if overlap_ratio >= 0.95 and nearest_stats is not None
+            if overlap_fraction_rgb >= 0.95 and overlap_fraction_semantic >= 0.95
+            and nearest_stats is not None and nearest_stats["p95_abs_delta_seconds"] <= 0.02
             else "NOT_TEMPORALLY_ALIGNED_BY_PTS",
         "caveat": "Matching PTS is necessary but not sufficient; semantic/RGB content still requires visual frame-pair verification.",
     }
