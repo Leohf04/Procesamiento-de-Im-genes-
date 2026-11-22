@@ -313,3 +313,9 @@ class UrbanSynInstanceDataset(_ManifestDataset):
         decoded = decode_urbansyn_panoptic(panoptic, self.source_to_canonical,
                                            self.min_instance_area)
         return image, to_torchvision_target(decoded, image_id=int(record.get("image_id", index)))
+
+
+def detection_collate_fn(batch):
+    """Keep variable-length Mask R-CNN targets as lists instead of stacking."""
+    images, targets = zip(*batch)
+    return list(images), list(targets)
