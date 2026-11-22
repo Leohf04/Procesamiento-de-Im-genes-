@@ -1345,3 +1345,16 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - HEAD de `urban-models-and-benchmark`: `e134e73fe1d3755e9537d0823d1592efaf8519e4`. PR #3 sigue abierta, en draft y sin fusionar.
 - Próximo paso: investigar por qué se canceló el job de manifiestos y relanzar una ejecución controlada; después auditar conteos, duplicados, emparejamiento de recursos y ausencia de fuga entre secuencias. No iniciar entrenamiento mientras no existan manifiestos validados.
 - `RUN_TRAINING=False`; no hay entrenamiento de producción, checkpoints ni métricas experimentales.
+
+
+### Investigación y corrección de la cancelación de manifiestos — 2026-11-22
+
+- Se consultó primero este registro y se recuperaron los logs completos del job [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162).
+- Causa confirmada: el paso `Build remote-reference manifests` estuvo ejecutándose desde 02:05:59Z hasta 03:06:03Z y GitHub reportó `The operation was canceled`; el workflow tenía `timeout-minutes: 60`. Por tanto, el job alcanzó el timeout de una hora. No hay evidencia de error de decodificación ni de fallo de tests en esa ejecución.
+- Se optimizó `scripts/prepare_reproducible_subsets.py`: A2D2 ahora indexa los nombres/metadatos de máscaras una vez por secuencia y los empareja en memoria, en lugar de hacer un `head_object` por cada imagen. También pagina la enumeración de secuencias y emite progreso por secuencia.
+- Se modificó `.github/workflows/build-reproducible-subsets.yml`: los inventarios A2D2 y UrbanSyn corren como jobs de matriz independientes, cada uno con timeout máximo de 360 minutos y artifact separado.
+- Commits guardados en la rama: optimización A2D2 `b47bd63120a7d00c0d2ae355a59e445813c33b19`; workflow paralelo `42f8e7419cd052b4623475edc6f66c40e846bf1f` (HEAD observado al cierre).
+- Nueva ejecución del workflow con ambos datasets: [44992977292](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992977292), dos jobs (A2D2 y UrbanSyn) en progreso al actualizar este registro. Ejecución intermedia del commit anterior [44992975111](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992975111) también se inició por el trigger push antes de que quedara aplicado el workflow paralelo; no tomarla como la validación final de la nueva configuración.
+- CI Python del HEAD `42f8e7419cd052b4623475edc6f66c40e846bf1f`: runs [44992979167](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992979167) y [44992977459](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44992977459) en progreso al cierre. No declarar tests aprobados hasta revisar sus conclusiones.
+- PR #3 verificada: abierta, draft, sin fusionar; HEAD actualizado al commit `42f8e7419cd052b4623475edc6f66c40e846bf1f`.
+- Aún no hay manifiestos confirmados ni artifacts validados. El siguiente paso es esperar/verificar ambos jobs, revisar artifacts y auditar conteos, duplicados, emparejamiento y fuga entre secuencias. Entrenamiento sigue desactivado; no se descargan datos completos ni se inicia entrenamiento.
