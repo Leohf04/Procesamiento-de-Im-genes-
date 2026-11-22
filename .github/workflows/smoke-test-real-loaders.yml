@@ -37,7 +37,7 @@ jobs:
       - name: Install CPU PyTorch and data dependencies
         run: |
           python -m pip install --disable-pip-version-check torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install numpy pillow boto3 huggingface_hub
+          python -m pip install numpy pillow boto3 huggingface_hub opencv-python-headless
       - name: Download A2D2 manifest
         uses: actions/download-artifact@v4
         with:
