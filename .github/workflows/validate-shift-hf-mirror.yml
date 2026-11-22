@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install bounded preflight dependencies
-        run: python -m pip install --upgrade huggingface_hub requests pillow
+        run: python -m pip install --upgrade huggingface_hub requests pillow opencv-python-headless
       - name: Inspect metadata and bounded archive prefixes
         run: python scripts/validate_shift_hf_mirror.py
       - name: Upload mirror report
