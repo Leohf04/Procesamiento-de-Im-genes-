@@ -26,3 +26,10 @@ def test_a2d2_synthetic_rgb_mask():
     result=summarize_a2d2_mask(rgb,colors,{"road":0,"car":13,"person":11,"bicycle":18},{"car":3,"person":1,"bicycle":8})
     assert result["semantic_pixels"] == {"bicycle":4,"car":16,"person":4,"road":40}
     assert result["instance_counts"] == {"bicycle":1,"car":1,"person":1}
+
+def test_a2d2_static_classes_are_preserved_by_shared_normalizer():
+    from src.data_adapters import normalize_class_name
+    assert normalize_class_name("Building") == "building"
+    assert normalize_class_name("Vegetation") == "vegetation"
+    assert normalize_class_name("Traffic sign") == "traffic sign"
+    assert normalize_class_name("Solid line") == "lane marking"
