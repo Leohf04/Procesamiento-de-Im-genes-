@@ -1597,3 +1597,17 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Los helpers aún no están conectados a los trainers antiguos (Cityscapes/BDD100K); falta validar el artifact ampliado y rutas locales para integrar los loaders UrbanSyn/A2D2 sin alterar el flujo legacy. No se deben calcular pesos usando validation/test ni afirmar que el balanceo de datos reales está finalizado.
 - Commits de esta tarea: `4398bb64` (helper), `beba56bd` (tests), `76d4cf9a` (documentación). HEAD al cierre de estos cambios: `76d4cf9aeb4c5274933e137b258a8826aebe0b71`.
 - Próximo paso: comprobar CI del nuevo HEAD; volver a consultar run `45005700564` y artifact; si la indexación termina, auditar 1.000 muestras por split, clases ausentes y manifiestos. Después conectar sampler/pesos al loader multidataset, con prueba de integración sintética. `RUN_TRAINING=False`.
+
+
+#### Comprobaciones de continuidad — 2026-11-22
+
+- Se volvió a leer este registro antes de consultar el estado remoto.
+- HEAD confirmado en `urban-models-and-benchmark`: `c8ea2a7cc6acb7fa39c0e645609c392fd90998c8`.
+- PR #3: `open`, `draft=true`, `merged=false`; su head SHA coincide exactamente con el HEAD de la rama. Se mantiene sin fusionar.
+- CI Python sobre el HEAD actual terminó correctamente en ambos eventos: push `45006574610` y pull_request `45006579199`. En ambos jobs finalizaron success instalación CPU PyTorch/dependencias, compileall, validación de CLIs, `pytest -q` y validación de muestras semánticas BDD100K. El probe BDD100K del mismo SHA `45006574562` también terminó success.
+- Los runs de CI cancelados corresponden a commits intermedios supersedidos; no representan fallos del HEAD actual.
+- Revisión del indexador ampliado: run `45005700564`, SHA `c08ea9a363098880e577f9104cc4fd3f32c72efa`, sigue `in_progress`. El job `index-and-plan` completó setup, checkout, Python, dependencias y manifiestos reproducibles; el paso `Index per-image annotations` continúa en curso. Los pasos de construcción del plan y publicación del artifact siguen pendientes. La consulta de artifacts devolvió una lista vacía; por tanto, no hay artifact de 1.000 filas disponible para inspección.
+- El smoke de 100 filas `45005695816` también continúa `in_progress`, en el mismo paso de indexación; todavía sin artifact.
+- No se declara terminada la indexación per-image ampliada, ni el plan balanceado real, ni la integración de sampler/pesos en loaders. La validación de código/CI está verde, pero no sustituye esas comprobaciones de datos.
+- No se inició entrenamiento; `RUN_TRAINING=False` se mantiene. No hay checkpoints ni métricas experimentales nuevas.
+- Próximo paso: volver a consultar ambos workflows; al finalizar el run 1.000, descargar y auditar el artifact (integridad de filas/IDs, manifiestos, clases presentes/ausentes y cobertura por split). Después integrar sampler/pesos a los loaders multidataset con prueba sintética y smoke sin entrenamiento.
