@@ -33,3 +33,10 @@ def test_a2d2_static_classes_are_preserved_by_shared_normalizer():
     assert normalize_class_name("Vegetation") == "vegetation"
     assert normalize_class_name("Traffic sign") == "traffic sign"
     assert normalize_class_name("Solid line") == "lane marking"
+
+def test_a2d2_bus_instances_are_not_dropped():
+    colors = {(1, 2, 3): "Bus 1"}
+    rgb = np.zeros((6, 6, 3), dtype=np.uint8)
+    rgb[1:5, 1:5] = (1, 2, 3)
+    result = summarize_a2d2_mask(rgb, colors, {"bus": 15}, {"bus": 5})
+    assert result["instance_counts"] == {"bus": 1}
