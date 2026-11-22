@@ -173,3 +173,15 @@ También se incorporó un smoke test de entrenamiento en CPU que construye los m
 La implementación se amplió con cuatro clases `torch.utils.data.Dataset`: `A2D2SemanticDataset`, `A2D2InstanceDataset`, `UrbanSynSemanticDataset` y `UrbanSynInstanceDataset`. Reciben manifiestos explícitos con rutas de imágenes/etiquetas; permiten redimensionado coherente (bilineal para RGB, nearest para máscaras), normalización ImageNet para DeepLab y tensores [0,1] para Mask R-CNN. Se añadieron pruebas de lectura temporal con archivos sintéticos para las cuatro clases.
 
 El manifiesto y el mapeo fuente→canónico deben generarse/verificarse a partir de los splits y metadatos oficiales; estos loaders no descargan datasets ni inventan el split. La validación sobre muestras reales remotas y la sincronización SHIFT siguen pendientes.
+
+
+## 12. Validación de adaptadores con muestras remotas reales (2026-11-22)
+
+Se ampliaron los preflights para ejecutar `src/data_adapters.py` sobre las anotaciones efectivamente descargadas, no solo comprobar formatos:
+
+- A2D2: el workflow [44974096279](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974096279) terminó **success**. En una muestra real frontal 1920×1208 se ejecutó el decoder semántico y el de instancias. Resultado: 55 entradas del class list; IDs canónicos observados 2, 3, 5, 6, 7, 12 y ignore 255; 66 componentes/instancias reconstruidos, con labels 3, 5, 6 y 7. Se generaron máscaras (66×1208×1920) y cajas (66×4). Es una validación de una muestra, no evidencia de cobertura global ni de exactitud de instancias bajo oclusión.
+- UrbanSyn: el preflight se modificó para decodificar semántica y panoptic reales en 2 muestras, validar tamaños, labels y estructura de máscaras/cajas. La ejecución corregida [44974144391](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974144391) estaba en curso al registrar; no declarar resultado hasta verificar.
+- Los workflows fallidos anteriores se debieron a import path `src` no incluido en sys.path del script; se corrigió insertando la raíz del repositorio. No fueron fallos de decodificación de anotaciones.
+- El preflight A2D2 ya prueba la conversión de máscara real con los decodificadores, pero todavía solo se valida una muestra frontal. La reconstrucción por componentes puede dividir objetos ocluidos/desconectados.
+- No se cambió la licencia de UrbanSyn: discrepancia oficial/HF permanece en revisión. No redistribuir.
+- No se activó entrenamiento. Los subconjuntos de producción y los manifiestos reproducibles aún no están listos; `RUN_TRAINING=False`.
