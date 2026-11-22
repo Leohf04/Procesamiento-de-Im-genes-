@@ -1,6 +1,13 @@
 name: Audit urban classes and annotations
 
 on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/audit_urban_annotations.py"
+      - ".github/workflows/audit-urban-annotations.yml"
+      - "tests/test_urban_annotation_audit.py"
   workflow_dispatch:
     inputs:
       manifest_run_id:
