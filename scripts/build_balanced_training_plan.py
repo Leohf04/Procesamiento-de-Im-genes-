@@ -13,6 +13,13 @@ import hashlib
 import json
 from collections import Counter
 from pathlib import Path
+import sys
+
+# Support direct execution from the repository root (the GitHub Actions workflow
+# invokes this file as ``python scripts/build_balanced_training_plan.py``).
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from src.urban_ontology import load_urban_ontology, semantic_name_to_id, instance_name_to_id, source_semantic_map, source_instance_map
 
