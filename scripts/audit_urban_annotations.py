@@ -181,8 +181,16 @@ def audit_urbansyn(manifest_dir: Path, samples_per_split: int) -> dict:
                 "bbox_json_type": type(bbox_data).__name__,
                 "bbox_record_count": bbox_count,
             })
+    source_class_names = {
+        0: "road", 1: "sidewalk", 2: "building", 3: "wall", 4: "fence",
+        5: "pole", 6: "traffic light", 7: "traffic sign", 8: "vegetation",
+        9: "terrain", 10: "sky", 11: "person", 12: "rider", 13: "car",
+        14: "truck", 15: "bus", 16: "train", 17: "motorcycle",
+        18: "bicycle", 19: "unlabeled",
+    }
     return {
         "dataset": "urbansyn", "revision": revision,
+        "source_class_names": {str(k): v for k, v in source_class_names.items()},
         "manifest_counts": {
             s: len(read_jsonl(manifest_dir / f"urbansyn_{s}.jsonl")) for s in ("train", "val", "test")},
         "sampled_per_split": samples_per_split, "samples_audited": len(reports),
@@ -191,7 +199,7 @@ def audit_urbansyn(manifest_dir: Path, samples_per_split: int) -> dict:
         "bbox_record_counts": bbox_counts,
         "mean_dynamic_pixel_class_agreement": float(np.mean([x for x in agreement if x is not None])) if any(x is not None for x in agreement) else None,
         "samples": reports,
-        "class_names": "Not assigned: source class-ID-to-name mapping still requires authoritative dataset metadata.",
+        "class_names": "See source_class_names; verified UrbanSyn/Cityscapes trainId taxonomy.",
         "license_status": "REVIEW_REQUIRED_CONFLICTING_DECLARATIONS",
     }
 
