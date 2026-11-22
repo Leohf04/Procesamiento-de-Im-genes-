@@ -1584,3 +1584,16 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Próximo paso: inspeccionar el artifact del run 1.000 y comprobar la cobertura por clase y split con los nuevos campos; revisar CI del HEAD. Después, definir pesos/sampler de entrenamiento y validar loaders con los manifiestos completos antes de habilitar cualquier entrenamiento.
 
 - **Cierre de esta actualización del registro:** el addendum anterior quedó guardado en commit `590d7bc096c99fbfb4a7032929ebcf1df80761ab`. En la consulta posterior, el workflow ampliado de 1.000 muestras `45005700564` seguía indexando y el smoke de 100 muestras `45005695816` también seguía activo; no se encontró aún artifact nuevo. CI del HEAD del registro estaba pendiente en runs `45005835685` (push) y `45005831167` (PR). El probe BDD100K del HEAD `590d7bc0` terminó success (`45005831271`). La PR #3 continúa abierta, draft y sin fusionar. No habilitar entrenamiento hasta inspeccionar el artifact de 1.000 muestras y resolver la estrategia de muestreo/pesos.
+
+#### Siguiente objetivo: estrategia de pesos y muestreo consciente de clases — 2026-11-22
+
+- Se volvió a consultar el registro y auditar HEAD/PR/Actions antes de trabajar. HEAD de partida `529222b544c09a4ade9336aa2e5557ec87b104fe`; PR #3 abierta, draft, merged=false. CI Python push y PR de ese HEAD: success (`45005890158`, `45005885890`); probe BDD100K success (`45005885769`).
+- El workflow ampliado `45005700564` (SHA `c08ea9a3`) aún no había publicado artifact: job `index-and-plan` seguía en el paso `Index per-image annotations`; el run de 100 muestras `45005695816` también seguía activo. No existe todavía un artifact de 1.000 muestras que pueda auditarse. Se mantiene pendiente de finalización remota.
+- Se implementó `src/class_balancing.py`:
+  - `semantic_class_weights`: pesos de CrossEntropyLoss calculados desde píxeles de train con frecuencia inversa de raíz cuadrada, normalización media uno, cero para clases ausentes y validación de conteos.
+  - `instance_sample_weights`: peso por imagen como promedio de rareza de las clases de instancia presentes, evitando ponderar solo por número de objetos.
+  - `make_instance_sampler`: WeightedRandomSampler reproducible con semilla y replacement.
+- Se añadieron pruebas para normalización/ausencia de clases, preferencia por clase rara y reproducibilidad del sampler; se documentó que los pesos se calculan solo con train y que A2D2/UrbanSyn permanecen separados.
+- Los helpers aún no están conectados a los trainers antiguos (Cityscapes/BDD100K); falta validar el artifact ampliado y rutas locales para integrar los loaders UrbanSyn/A2D2 sin alterar el flujo legacy. No se deben calcular pesos usando validation/test ni afirmar que el balanceo de datos reales está finalizado.
+- Commits de esta tarea: `4398bb64` (helper), `beba56bd` (tests), `76d4cf9a` (documentación). HEAD al cierre de estos cambios: `76d4cf9aeb4c5274933e137b258a8826aebe0b71`.
+- Próximo paso: comprobar CI del nuevo HEAD; volver a consultar run `45005700564` y artifact; si la indexación termina, auditar 1.000 muestras por split, clases ausentes y manifiestos. Después conectar sampler/pesos al loader multidataset, con prueba de integración sintética. `RUN_TRAINING=False`.
