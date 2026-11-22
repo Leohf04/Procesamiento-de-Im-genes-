@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Mapping, Sequence
 
+import torch
 from torch.utils.data import DataLoader
 
 from src.class_balancing import make_instance_sampler, semantic_class_weights
@@ -61,7 +62,7 @@ def build_urban_train_loader(
         loader = DataLoader(
             dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
             pin_memory=pin_memory, drop_last=drop_last,
-            generator=__import__("torch").Generator().manual_seed(int(seed)),
+            generator=torch.Generator().manual_seed(int(seed)),
         )
         return loader, weights
 
