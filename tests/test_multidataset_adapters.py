@@ -73,7 +73,9 @@ def test_deeplab_and_maskrcnn_forward_backward_smoke():
     # Semantic segmentation: real architecture, synthetic batch/labels, one optimizer step.
     semantic = DeepLabV3Plus(num_classes=4, pretrained_backbone=False).train()
     image = torch.randn(1, 3, 64, 64)
-    labels = torch.randint(0, 4, (1, 64, 64), dtype=torch.long)
+    source_semantic = np.zeros((64, 64), dtype=np.uint8)
+    source_semantic[16:48, 16:48] = 1
+    labels = torch.from_numpy(decode_urbansyn_semantic(source_semantic, {0: 0, 1: 1}).astype(np.int64))[None]
     loss = torch.nn.functional.cross_entropy(semantic(image)["out"], labels)
     loss.backward()
     assert torch.isfinite(loss)
@@ -88,15 +90,11 @@ def test_deeplab_and_maskrcnn_forward_backward_smoke():
     model.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, 3)
     model.train()
     img = torch.rand(3, 64, 64)
-    target = {
-        "boxes": torch.tensor([[8., 8., 35., 48.]]),
-        "labels": torch.tensor([1], dtype=torch.int64),
-        "masks": torch.zeros((1, 64, 64), dtype=torch.uint8),
-        "image_id": torch.tensor([0]),
-        "area": torch.tensor([1080.]),
-        "iscrowd": torch.tensor([0], dtype=torch.int64),
-    }
-    target["masks"][0, 8:48, 8:35] = 1
+    panoptic = np.zeros((64, 64, 3), dtype=np.uint8)
+    panoptic[8:48, 8:35, 1] = 1  # instance ID = R*256 + G
+    panoptic[8:48, 8:35, 2] = 11  # source class ID in blue channel
+    decoded_instances = decode_urbansyn_panoptic(panoptic, {11: 1})
+    target = to_torchvision_target(decoded_instances, image_id=0)
     losses = model([img], [target])
     total = sum(losses.values())
     total.backward()
