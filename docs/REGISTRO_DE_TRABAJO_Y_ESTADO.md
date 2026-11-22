@@ -1191,3 +1191,12 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 5. Mantener `RUN_TRAINING=False` hasta completar puertas anteriores y revisar licencias.
 6. No descargar conjuntos completos; las pruebas se ejecutan remotamente y de forma acotada.
 7. PR #3 permanece abierta, draft y sin fusionar.
+
+
+### Seguimiento final de esta intervención — 2026-11-22
+
+- README actualizado: A2D2/UrbanSyn con preflights semánticos positivos; SHIFT espejo parcial y muestra RGB/semseg pendiente.
+- El preflight SHIFT con HTTP Range tuvo dos fallos de código corregibles: (1) el primer workflow no instaló OpenCV; (2) el siguiente identificó el primer miembro TAR como directorio `./`, no como MP4. Se corrigió el script para instalar OpenCV en workflow y saltar directorios TAR.
+- Último script SHIFT: commit `5f54e40e116a2b4a516ef829d281e151d625da78`. Workflow asociado [44971898884](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971898884) estaba en ejecución al cerrar esta actualización; no declarar resultado hasta consultarlo.
+- El workflow de pruebas de código [44971898853](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971898853) también estaba en ejecución. Los checks anteriores no sustituyen este resultado final.
+- Entrenamiento permanece desactivado. No se han descargado datasets completos ni se han generado checkpoints.
