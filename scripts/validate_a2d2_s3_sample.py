@@ -224,7 +224,7 @@ def main() -> int:
         report["semantic"]["mask_color_mapping"] = mapped
         instance_names = [
             value for value in class_map.values()
-            if re.match(r"^(car|truck|pedestrian|bicycle|cyclist|motor biker|motorcycle)\\s+[1-4]$", str(value), re.I)
+            if re.match(r"^(car|truck|pedestrian|bicycle|cyclist|motor biker|motorcycle)\s+[1-4]$", str(value), re.I)
         ]
         report["semantic"]["instance_subclass_names_found"] = sorted(instance_names)
     report["instance_sample_status"] = (
@@ -235,8 +235,8 @@ def main() -> int:
         else "NOT_CONFIRMED"
     )
     report["class_mapping_status"] = (
-        "CLASS_LIST_FOUND_PENDING_PARSE"
-        if report["class_list_candidates"] else "PENDING_CLASS_LIST_LOCATION"
+        "CLASS_MAP_PARSED"
+        if class_map else "PENDING_CLASS_LIST_LOCATION"
     )
     with open("a2d2_s3_preflight_report.json", "w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=2)
