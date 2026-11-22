@@ -52,7 +52,9 @@ def source_semantic_map(dataset: str, ontology: dict | None = None) -> dict[int,
         raise ValueError(f"Unsupported dataset: {dataset}")
     key = ("urbansyn_train_id_to_semantic_id" if normalized == "urbansyn"
            else "a2d2_normalized_name_to_semantic_id")
-    return ontology["semantic"]["sources"][key]
+    mapping = ontology["semantic"]["sources"][key]
+    return ({int(source_id): int(target_id) for source_id, target_id in mapping.items()}
+            if normalized == "urbansyn" else {str(k): int(v) for k, v in mapping.items()})
 
 
 def source_instance_map(dataset: str, ontology: dict | None = None) -> dict[int, int] | dict[str, int]:
@@ -62,4 +64,6 @@ def source_instance_map(dataset: str, ontology: dict | None = None) -> dict[int,
         raise ValueError(f"Unsupported dataset: {dataset}")
     key = ("urbansyn_train_id_to_instance_id" if normalized == "urbansyn"
            else "a2d2_normalized_name_to_instance_id")
-    return ontology["instances"]["sources"][key]
+    mapping = ontology["instances"]["sources"][key]
+    return ({int(source_id): int(target_id) for source_id, target_id in mapping.items()}
+            if normalized == "urbansyn" else {str(k): int(v) for k, v in mapping.items()})
