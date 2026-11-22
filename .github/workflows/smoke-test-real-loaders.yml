@@ -58,7 +58,7 @@ jobs:
         run: |
           python scripts/smoke_test_real_manifest_loaders.py \
             --manifest-dir artifacts/manifests \
-            --size "${{ inputs.image_size }}" \
+            --size "${{ inputs.image_size || '512' }}" \
             --output artifacts/real_loader_smoke_report.json
       - name: Upload aggregate report only
         uses: actions/upload-artifact@v4
