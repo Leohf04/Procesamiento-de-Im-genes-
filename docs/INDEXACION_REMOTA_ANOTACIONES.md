@@ -20,4 +20,4 @@ El primer procesamiento puede tardar varias horas y consumir ancho de banda de G
 ## Salida y límites
 Genera seis archivos JSONL, resúmenes de cobertura y manifiestos balanceados separados por dataset/tarea. Validation y test permanecen completos. No se mezclan dominios.
 
-El selector prioriza clases raras por presencia en imágenes; no reemplaza un sampler ni pesos de pérdida. Revisar uncovered_classes antes de entrenar. RUN_TRAINING permanece False. Licencia UrbanSyn: criterio conservador CC BY-NC-SA 4.0; no redistribuir datos ni máscaras.
+El selector prioriza clases raras por presencia en imágenes; no reemplaza un sampler ni pesos de pérdida. El informe contrasta además la cobertura observada con las clases esperadas de la ontología por dataset/tarea: `unavailable_classes` enumera clases sin presencia en todo el split indexado y `uncovered_classes` las que no quedaron representadas en la selección. El workflow manual y el smoke por cambios usan ahora 1.000 muestras por split como límite predeterminado. RUN_TRAINING permanece False. Licencia UrbanSyn: criterio conservador CC BY-NC-SA 4.0; no redistribuir datos ni máscaras.
