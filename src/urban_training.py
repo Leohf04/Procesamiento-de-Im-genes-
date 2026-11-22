@@ -43,6 +43,35 @@ def build_urban_train_loader(
         raise ValueError(
             f"Training annotation rows ({len(rows)}) must match dataset length ({len(dataset)})"
         )
+
+    # Dataset adapters retain the source manifest records. Validate identity and
+    # order, not only length: two manifests can contain the same IDs in different
+    # orders, which would silently attach the wrong class statistics to images.
+    dataset_records = getattr(dataset, "records", None)
+    if dataset_records is None:
+        raise ValueError(
+            "Dataset must expose manifest records with sample_id to validate annotation alignment"
+        )
+    dataset_ids = [str(record.get("sample_id", "")) for record in dataset_records]
+    annotation_ids = [str(row.get("sample_id", "")) for row in rows]
+    if any(not sample_id for sample_id in dataset_ids + annotation_ids):
+        raise ValueError("Dataset and annotation rows must all contain non-empty sample_id values")
+    if len(set(dataset_ids)) != len(dataset_ids):
+        raise ValueError("Dataset manifest contains duplicate sample_id values")
+    if len(set(annotation_ids)) != len(annotation_ids):
+        raise ValueError("Training annotation rows contain duplicate sample_id values")
+    if dataset_ids != annotation_ids:
+        mismatch = next(
+            index for index, (dataset_id, annotation_id)
+            in enumerate(zip(dataset_ids, annotation_ids))
+            if dataset_id != annotation_id
+        )
+        raise ValueError(
+            "Dataset and annotation rows are not aligned by sample_id/order "
+            f"at index {mismatch}: dataset={dataset_ids[mismatch]!r}, "
+            f"annotations={annotation_ids[mismatch]!r}"
+        )
+
     wrong_split = [
         str(row.get("sample_id", index))
         for index, row in enumerate(rows)
