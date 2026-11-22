@@ -1294,3 +1294,40 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - Siguiente bloque: ampliar A2D2 a múltiples muestras; verificar y versionar la ontología fuente→canónica de UrbanSyn/A2D2; determinar splits oficiales antes de generar manifiestos train/val; calcular tamaño del subset y preparar descarga remota a Colab/Drive. La discrepancia de licencia UrbanSyn y la sincronización SHIFT (10/25 FPS) siguen abiertas.
 - RUN_TRAINING=False; no se inicia entrenamiento ni se crean checkpoints/métricas de precisión.
 - PR #3 permanece abierta, draft y sin fusionar.
+
+
+## 13. Preparación de subconjuntos reproducibles — 2026-11-22
+
+Solicitud del usuario: preparar los subconjuntos reproducibles.
+
+### Implementación guardada en la rama
+
+- Se añadió `scripts/prepare_reproducible_subsets.py`.
+- Se añadió `tests/test_reproducible_subsets.py` con pruebas de determinismo, agrupación por secuencia, límite por split y rechazo de IDs duplicados.
+- Se actualizó `docs/ESTRATEGIA_MULTIDATASET.md` con el protocolo y comandos.
+- El generador no descarga datos: solo consulta índices/metadatos remotos y escribe referencias JSONL.
+
+### Política reproducible
+
+- Semilla predeterminada: 2026.
+- Asignación 80/10/10 train/val/test mediante SHA-256 de `seed:group_id`.
+- Máximo predeterminado: 1.000 muestras por split; orden de selección estable por hash de ID.
+- A2D2: solo pares front-camera RGB + semántica; grupo = secuencia, evitando repartir frames de una secuencia entre splits. Incluye URI, tamaño y ETag de RGB/máscara.
+- UrbanSyn: solo IDs con RGB, semseg, panoptic y bbox2D completos; grupo = ID de muestra, con commit SHA de Hugging Face fijado. No se ha confirmado metadata de secuencia para agrupar más arriba.
+- SHIFT queda fuera hasta resolver alineación temporal RGB/semseg.
+
+### Limitaciones y estado real
+
+- Los splits generados son experimentales y hash-deterministas, no particiones oficiales.
+- El ETag/tamaño de A2D2 ayuda a detectar cambios, pero S3 no se ha fijado a un snapshot inmutable.
+- UrbanSyn sigue sujeto a aclaración de licencia; el script no descarga ni redistribuye sus archivos.
+- No se han generado manifiestos con el inventario completo todavía: eso requiere ejecutar el script en el entorno remoto con boto3/huggingface_hub y acceso a las fuentes. No se ha descargado ningún dataset completo.
+- No se ha entrenado ningún modelo; `RUN_TRAINING=False`.
+- PR #3 permanece abierta, draft y sin fusionar.
+
+### Próximos pasos
+
+1. Ejecutar pruebas CI del nuevo generador.
+2. Lanzar generación de manifiestos en el entorno remoto (no en el teléfono), guardar JSONL y resúmenes en almacenamiento remoto persistente.
+3. Auditar conteos y cobertura por clase, revisar splits y licencias; luego ajustar tamaños de subconjunto según VRAM/espacio disponibles.
+4. Resolver SHIFT y licencia UrbanSyn antes de habilitar los experimentos que dependan de ellos.
