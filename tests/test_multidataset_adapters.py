@@ -99,3 +99,11 @@ def test_deeplab_and_maskrcnn_forward_backward_smoke():
     total = sum(losses.values())
     total.backward()
     assert all(torch.isfinite(value) for value in losses.values())
+
+
+def test_empty_instance_masks_return_valid_empty_targets():
+    colors = load_a2d2_class_list({"#ff0000": "Car 1"})
+    decoded = decode_a2d2_instances(np.zeros((5, 7, 3), dtype=np.uint8), colors)
+    assert decoded["masks"].shape == (0, 5, 7)
+    assert decoded["boxes"].shape == (0, 4)
+    assert decoded["area"].shape == (0,)
