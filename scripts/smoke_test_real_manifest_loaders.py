@@ -5,8 +5,9 @@ Only one deterministic record per split and dataset is downloaded to temporary
 runner storage. No source data is written to the repository or uploaded.
 """
 from __future__ import annotations
-import argparse, hashlib, json, tempfile
+import argparse, hashlib, json, tempfile, sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from urllib.parse import urlparse
 
 import boto3
