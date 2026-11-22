@@ -101,12 +101,13 @@ def main() -> int:
     )
     sizes = {item.path: getattr(item, "size", None) for item in path_info}
 
+    card_data = getattr(info, "card_data", None)
+    mirror_license = getattr(card_data, "license", None) if card_data else None
     report = {
         "dataset": REPO, "revision": REVISION, "commit": getattr(info, "sha", None),
         "file_count": len(files),
         "continuous_paths_present": any(path.startswith("continuous/") for path in files),
-        "mirror_license_metadata": getattr(info, "card_data", None).get("license")
-            if getattr(info, "card_data", None) else None,
+        "mirror_license_metadata": mirror_license,
         "official_license_note": "Original SHIFT DevKit declares CC BY-NC-SA 4.0; mirror MIT metadata is not treated as permission to relicense source data.",
         "files": sizes, "sequence_metadata": None, "samples": {},
     }
