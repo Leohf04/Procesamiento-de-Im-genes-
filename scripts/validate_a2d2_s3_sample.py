@@ -20,6 +20,8 @@ from botocore import UNSIGNED
 from botocore.config import Config
 from PIL import Image
 
+from src.data_adapters import decode_a2d2_instances, decode_a2d2_semantic, load_a2d2_class_list, to_torchvision_target
+
 BUCKET = "audi-autonomous-driving-dataset"
 REGION = "eu-central-1"
 SEMANTIC_ROOT = "camera_lidar_semantic/"
@@ -210,10 +212,32 @@ def main() -> int:
         report["instance"]["sequence_prefixes_seen"] = len(instance_sequences)
         report["instance"]["diagnostics"] = instance_diagnostics[:MAX_SEQUENCES]
 
+        # Run the production adapter against the real downloaded RGB labels.
+        if class_map and semantic_image and report["semantic"]["sample"]:
+            adapter_class_map = load_a2d2_class_list(class_map)
+            with Image.open(os.path.join(tmp, "semantic_mask.png")) as handle:
+                semantic_rgb = __import__("numpy").asarray(handle.convert("RGB"))
+            semantic_ids = decode_a2d2_semantic(semantic_rgb, adapter_class_map)
+            instance_decoded = decode_a2d2_instances(
+                semantic_rgb, adapter_class_map, min_component_area=8
+            )
+            instance_target = to_torchvision_target(instance_decoded, image_id=0)
+            report["adapter_validation"] = {
+                "semantic_shape": list(semantic_ids.shape),
+                "semantic_class_ids": sorted(int(x) for x in __import__("numpy").unique(semantic_ids)),
+                "semantic_ignore_pixels": int((semantic_ids == 255).sum()),
+                "instance_count": int(len(instance_target["labels"])),
+                "instance_labels": sorted(int(x) for x in __import__("numpy").unique(instance_target["labels"].numpy())),
+                "mask_tensor_shape": list(instance_target["masks"].shape),
+                "box_tensor_shape": list(instance_target["boxes"].shape),
+                "status": "PASS_REAL_SAMPLE_ADAPTERS",
+            }
+
     semantic = report["semantic"]["sample"]
     instance = report["instance"]["sample"]
     report["status"] = (
-        "PASS_SEMANTIC_SAMPLE" if semantic and semantic["dimensions_match"]
+        "PASS_SEMANTIC_AND_ADAPTER_SAMPLE"
+        if semantic and semantic["dimensions_match"] and report.get("adapter_validation", {}).get("status") == "PASS_REAL_SAMPLE_ADAPTERS"
         else "INCOMPLETE_SEMANTIC_SAMPLE"
     )
     if semantic and class_map:
@@ -241,7 +265,7 @@ def main() -> int:
     with open("a2d2_s3_preflight_report.json", "w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=2)
     print(json.dumps(report, indent=2))
-    return 0 if report["status"] == "PASS_SEMANTIC_SAMPLE" else 2
+    return 0 if report["status"] == "PASS_SEMANTIC_AND_ADAPTER_SAMPLE" else 2
 
 
 if __name__ == "__main__":
