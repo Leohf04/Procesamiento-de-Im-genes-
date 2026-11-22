@@ -146,3 +146,10 @@ El informe incluye media, mediana, p95, p99, FPS derivado de latencia media, res
 - UrbanSyn: dos muestras completas RGB/semseg/panoptic/bbox aprobadas a 2048×1024; IDs semánticos 0–19 y panoptic dinámico verificados. Ver [workflow 44971557432](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971557432).
 - SHIFT: servidor oficial no resuelve DNS. El espejo HF parcial expone `seq.csv` con clima/hora (incluye rain/fog/night) y archivos grandes solo de `discrete/videos/val/front`; sin `continuous/`. Preflight de video por HTTP Range pendiente.
 - No ejecutar los comandos BDD100K de las secciones posteriores: son referencia heredada, no parte de la estrategia activa.
+
+
+## Matices confirmados por los preflights (2026-11-22)
+
+- A2D2 tiene 41.277 imágenes con etiquetas semánticas y de instancia para 38 categorías según el paper oficial. Las instancias de participantes están codificadas mediante subclases de color (por ejemplo Car 1–4); los objetos no adyacentes pueden reutilizar subclases. El adaptador debe crear máscaras por componentes conectados y probar oclusiones/fragmentación. A2D2 es diurno; no se usará para un benchmark nocturno.
+- SHIFT espejo: una muestra RGB y semseg se decodificó con el mismo nombre, resolución 1280×800 y 501 frames. Sin embargo, los metadatos de video son 10 FPS frente a 25 FPS; la sincronización temporal no está aprobada. No calcular métricas SHIFT hasta resolverlo.
+- UrbanSyn: el sitio oficial confirma que las máscaras panoptic se codifican con RG como ID de instancia y B como ID de clase; panoptic y cajas 2D cubren solo objetos dinámicos. No hay clase dedicada de lane-marking en UrbanSyn.
