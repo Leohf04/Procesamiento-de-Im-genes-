@@ -1,0 +1,63 @@
+name: Smoke test real urban manifest loaders
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest_run_id:
+        description: Successful reproducible manifest workflow run ID
+        required: true
+        default: "44992977292"
+      image_size:
+        description: Square loader smoke-test size
+        required: true
+        default: "512"
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  real-loader-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: urban-models-and-benchmark
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU PyTorch and data dependencies
+        run: |
+          python -m pip install --disable-pip-version-check torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install numpy pillow boto3 huggingface_hub
+      - name: Download A2D2 manifest
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 14742059955
+          run-id: ${{ inputs.manifest_run_id }}
+          github-token: ${{ github.token }}
+          path: artifacts/manifests
+          merge-multiple: true
+      - name: Download UrbanSyn manifest
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 14741878951
+          run-id: ${{ inputs.manifest_run_id }}
+          github-token: ${{ github.token }}
+          path: artifacts/manifests
+          merge-multiple: true
+      - name: Run all four loaders on real samples
+        run: |
+          python scripts/smoke_test_real_manifest_loaders.py \
+            --manifest-dir artifacts/manifests \
+            --size "${{ inputs.image_size }}" \
+            --output artifacts/real_loader_smoke_report.json
+      - name: Upload aggregate report only
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-loader-smoke-${{ github.run_id }}
+          path: artifacts/real_loader_smoke_report.json
+          if-no-files-found: error
+          retention-days: 30
