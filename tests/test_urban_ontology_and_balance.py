@@ -98,7 +98,7 @@ def test_build_plan_keeps_eval_splits_complete_and_domains_separate(tmp_path):
             ]
             with (manifests / f"{dataset}_{split}.jsonl").open("w", encoding="utf-8") as handle:
                 for row in rows:
-                    handle.write(json.dumps(row) + "\\n")
+                    handle.write(json.dumps(row) + "\n")
             with (annotations / f"{dataset}_{split}.annotations.jsonl").open("w", encoding="utf-8") as handle:
                 for i, row in enumerate(rows):
                     stats = {
@@ -106,7 +106,7 @@ def test_build_plan_keeps_eval_splits_complete_and_domains_separate(tmp_path):
                         "semantic_pixels": {"road": 100, "car": 5 if i == 0 else 0},
                         "instance_counts": {"car": 1 if i < 2 else 0, "person": 1 if i == 2 else 0},
                     }
-                    handle.write(json.dumps(stats) + "\\n")
+                    handle.write(json.dumps(stats) + "\n")
     report = build_plan(manifests, annotations, output, max_samples_per_split=1)
     for dataset in ("a2d2", "urbansyn"):
         for split in ("val", "test"):
