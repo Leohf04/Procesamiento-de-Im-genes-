@@ -56,7 +56,7 @@ def get_range(path: str, start: int, end: int) -> tuple[bytes, dict]:
 def extract_first_video(path: str, target_dir: str, kind: str) -> dict:
     # Tar archives begin with a directory member "./"; scan a bounded prefix
     # until the first MP4 header is found.
-    prefix, prefix_meta = get_range(path, 0, 4 * 1024 * 1024 - 1)
+    prefix, prefix_meta = get_range(path, 0, 16 * 1024 * 1024 - 1)
     offset = 0
     selected = None
     while offset + 512 <= len(prefix):
