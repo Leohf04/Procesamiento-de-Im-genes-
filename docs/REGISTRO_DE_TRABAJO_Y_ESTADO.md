@@ -1236,3 +1236,19 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - Para iniciar entrenamiento, primera descarga acotada solo de los subconjuntos train/val que alimentarán UrbanSyn semántica/panoptic y A2D2 semántica. No descargar SHIFT completo; solo un subconjunto pequeño para evaluación después de corregir alineación. Dataset en almacenamiento temporal de Colab, checkpoints/resultados en Drive.
 - RUN_TRAINING=False se mantiene. No hay checkpoints, métricas ni entrenamiento.
 - PR #3 sigue abierta, draft y sin fusionar.
+
+
+### Implementación inicial de adaptadores y pruebas de modelos — 2026-11-22
+
+- Se consultó primero este registro y se verificó la rama `urban-models-and-benchmark` y PR #3.
+- Se añadió `src/data_adapters.py`:
+  - A2D2: `class_list.json` RGB→nombre, mapeo a IDs canónicos, normalización de clases y reconstrucción de instancias con connected components por color/subclase.
+  - UrbanSyn: decodificación semántica de máscara de un canal/RGB triplicado; panoptic con ID de instancia R/G y clase B; extracción de máscaras, labels, cajas y áreas.
+  - Conversión de los resultados a targets compatibles con Torchvision Mask R-CNN.
+- Se añadió `tests/test_multidataset_adapters.py` con pruebas sintéticas de ambos decodificadores y del contrato de targets.
+- Se añadió smoke test CPU de DeepLabV3+ ResNet-50 y Mask R-CNN ResNet-50-FPN: forward, pérdidas y backward con datos sintéticos pequeños. Esto no representa entrenamiento con datasets ni métricas de precisión.
+- Commits: adaptador `2b0f992d384f8ed8478ae3fc79b6e64329dcfd2f`; pruebas `56120e2e5d6dd5619ac7e47db53e91f54cff0eb5`; corrección regex de subclases A2D2 `74a795fdbb69c244aee5d7447082d23ce7f73536`.
+- GitHub Actions Python tests push run `44973434410` y PR run `44973436510` iniciados para validar el HEAD de la rama; ambos estaban en progreso al registrar esta entrada. No declarar PASS hasta consultar conclusión/logs.
+- Alcance aún incompleto: los decodificadores están implementados, pero faltan loaders de archivos/manifiestos/splits y pruebas sobre muestras remotas reales A2D2/UrbanSyn; verificar mapeo completo de clases, oclusiones/fragmentación y licencia UrbanSyn. SHIFT sigue fuera de métricas por desalineación FPS.
+- `RUN_TRAINING=False`; no se descargaron datasets completos, no se ejecutó entrenamiento real y no hay checkpoints ni métricas experimentales.
+- PR #3 se mantiene abierta y en draft, sin fusionar.
