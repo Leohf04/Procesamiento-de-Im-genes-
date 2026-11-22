@@ -109,7 +109,7 @@ def a2d2_inventory() -> tuple[list[dict], str]:
                 label_name = filename.replace("_camera_frontcenter_", "_label_frontcenter_")
                 mask_key = seq_prefix + "label/cam_front_center/" + label_name
                 try:
-                    s3.head_object(Bucket=bucket, Key=mask_key)
+                    mask_head = s3.head_object(Bucket=bucket, Key=mask_key)
                 except Exception:
                     continue
                 sample_id = f"{group_id}/{filename}"
@@ -119,6 +119,11 @@ def a2d2_inventory() -> tuple[list[dict], str]:
                     "source": f"s3://{bucket}/{seq_prefix}",
                     "assets": {"rgb": f"s3://{bucket}/{image_key}",
                                "semantic": f"s3://{bucket}/{mask_key}"},
+                    "asset_metadata": {
+                        "rgb": {"size": int(obj["Size"]), "etag": obj.get("ETag", "").strip('"')},
+                        "semantic": {"size": int(mask_head["ContentLength"]),
+                                     "etag": mask_head.get("ETag", "").strip('"')},
+                    },
                 })
     if not records:
         raise RuntimeError("No complete A2D2 front-camera RGB/semantic pairs found")
