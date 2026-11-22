@@ -14,6 +14,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from src.urban_ontology import load_urban_ontology, semantic_name_to_id, instance_name_to_id, source_semantic_map, source_instance_map
+
 
 TASKS = {
     "semantic": ("semantic_pixels", ("a2d2", "urbansyn")),
@@ -74,7 +76,8 @@ def attach_annotation_stats(manifest: list[dict], annotation_rows: list[dict]) -
 
 
 def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
-                           max_samples: int, per_class_cap: int | None = None) -> tuple[list[dict], dict]:
+                           max_samples: int, per_class_cap: int | None = None,
+                           expected_classes: set[str] | None = None) -> tuple[list[dict], dict]:
     """Greedy deterministic multilabel balancing by sample presence/count.
 
     Selection is confined to the supplied split. The objective first covers
@@ -125,13 +128,15 @@ def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
         for label, value in counts.items():
             selected_presence[label] += 1
             selected_counts[label] += value
+    expected = set(expected_classes) if expected_classes is not None else set(available)
     summary = {
         "available_samples": len(records),
         "selected_samples": len(selected),
         "available_samples_per_class": dict(sorted(available.items())),
         "selected_samples_per_class": dict(sorted(selected_presence.items())),
         "selected_annotation_counts_per_class": dict(sorted(selected_counts.items())),
-        "uncovered_classes": sorted(set(available) - set(selected_presence)),
+        "unavailable_classes": sorted(expected - set(available)),
+        "uncovered_classes": sorted(expected - set(selected_presence)),
         "seed": seed,
         "selection": "deterministic greedy multilabel; split-preserving",
     }
@@ -155,6 +160,21 @@ def build_plan(manifest_dir: Path, annotation_dir: Path, output_dir: Path, *,
         "plans": {},
         "warning": "No cross-domain concatenation: dataset manifests remain separate. Experimental hash splits are not official splits."
     }
+    ontology = load_urban_ontology()
+    semantic_names = semantic_name_to_id(ontology)
+    instance_names = instance_name_to_id(ontology)
+    expected_by_dataset = {
+        "a2d2": {
+            "semantic": {name for name, class_id in semantic_names.items()
+                         if class_id in set(source_semantic_map("a2d2", ontology).values())},
+            "instances": {name for name, class_id in instance_names.items()
+                          if class_id in set(source_instance_map("a2d2", ontology).values())},
+        },
+        "urbansyn": {
+            "semantic": {name for name, class_id in semantic_names.items() if class_id != 19},
+            "instances": set(instance_names),
+        },
+    }
     for dataset in ("a2d2", "urbansyn"):
         report["plans"][dataset] = {}
         for split in ("train", "val", "test"):
@@ -175,14 +195,16 @@ def build_plan(manifest_dir: Path, annotation_dir: Path, output_dir: Path, *,
                 if split == "train":
                     selected, summary = greedy_balanced_select(
                         enriched, count_key=count_key, seed=seed,
-                        max_samples=max_samples_per_split, per_class_cap=per_class_cap
+                        max_samples=max_samples_per_split, per_class_cap=per_class_cap,
+                        expected_classes=expected_by_dataset[dataset][task]
                     )
                 else:
                     # Keep validation and test complete and in manifest order.
                     selected = enriched
                     _, summary = greedy_balanced_select(
                         enriched, count_key=count_key, seed=seed,
-                        max_samples=len(enriched), per_class_cap=None
+                        max_samples=len(enriched), per_class_cap=None,
+                        expected_classes=expected_by_dataset[dataset][task]
                     )
                     summary["selection"] = "complete split; no downsampling or reordering"
                 out_path = output_dir / f"{dataset}_{task}_{split}.jsonl"
