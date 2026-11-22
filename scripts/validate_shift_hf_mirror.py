@@ -272,18 +272,18 @@ def main() -> int:
         and abs(float(rgb.get("fps", 0)) - float(semantic.get("fps", 0))) < 0.01
     )
     report["temporal_alignment_status"] = (
-        "PENDING_FPS_MISMATCH"
-        if report["sample_dimensions_match"] and report["sample_frame_count_match"]
-        and not report["sample_fps_match"]
-        else "PENDING_FRAME_PAIR_VERIFICATION"
+        report.get("pts_alignment", {}).get("status", "PTS_PROBE_UNAVAILABLE")
     )
     video_id = PurePosixPath(rgb.get("name", "")).stem
     report["sample_sequence_metadata"] = next(
         (row for row in rows if row.get("video") == video_id), None
     )
     report["result"] = (
-        "PASS_DECODED_SAMPLE_ALIGNMENT_PENDING"
-        if report["sample_dimensions_match"] and report["sample_frame_count_match"]
+        "PASS_PTS_CANDIDATE_VISUAL_REVIEW_REQUIRED"
+        if report["temporal_alignment_status"] == "PTS_ALIGNMENT_CANDIDATE_REQUIRES_VISUAL_SPOTCHECK"
+        else "PASS_DECODED_SAMPLE_BUT_TEMPORAL_ALIGNMENT_REJECTED"
+        if report["samples"].get("rgb", {}).get("status") == "PASS_VIDEO_FRAME"
+        and report["samples"].get("semantic", {}).get("status") == "PASS_VIDEO_FRAME"
         else "PARTIAL_MIRROR_METADATA_ONLY"
     )
     report["note"] = (
