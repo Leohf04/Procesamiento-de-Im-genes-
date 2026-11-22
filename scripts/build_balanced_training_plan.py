@@ -91,9 +91,10 @@ def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
         if sample_id in seen:
             raise ValueError(f"Duplicate sample in split: {sample_id}")
         seen.add(sample_id)
-        counts = {str(k): int(v) for k, v in row.get(count_key, {}).items() if int(v) > 0}
-        if any(value < 0 for value in counts.values()):
+        raw_counts = {str(k): int(v) for k, v in row.get(count_key, {}).items()}
+        if any(value < 0 for value in raw_counts.values()):
             raise ValueError(f"Negative class count in {sample_id}")
+        counts = {label: value for label, value in raw_counts.items() if value > 0}
         normalized.append((row, counts))
         for label, value in counts.items():
             available[label] += 1
