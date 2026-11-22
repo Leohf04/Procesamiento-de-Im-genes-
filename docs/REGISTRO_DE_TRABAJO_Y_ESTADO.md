@@ -1731,3 +1731,13 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Advertencia metodológica: el cap 200 es un parámetro inicial de experimento, no prueba de distribución perfectamente equilibrada. Deben revisarse las distribuciones y el tamaño final de cada subconjunto al inspeccionar el siguiente artifact; no usar val/test para calcular pesos ni seleccionar muestras.
 - Pendiente al cierre: añadir/confirmar CI verde del HEAD final; revisar el run de indexación provocado por el cambio de planificador/workflow y auditar su nuevo artifact; validar loaders con una pequeña materialización local de manifests. No se inicia entrenamiento y `RUN_TRAINING=False`.
 - Se mantiene PR #3 abierta, en draft y sin fusionar.
+
+
+#### Revisión de CI y ejecución remota tras la integración — 2026-11-22
+
+- HEAD final de esta intervención: `b4c71ca119dc7ae9a063ed4643ca0a2eaa791d9a`. La rama y PR #3 apuntan al mismo SHA; PR #3 sigue abierta, draft y sin fusionar.
+- El workflow de indexación provocado por el cambio de planificador (`45066893040`, SHA `aaf54668`) terminó failure antes de iniciar el job en un runner: la API de GitHub informa `runner_id=0`, `runner_name` vacío y `steps=[]`. No se generó artifact. Esto no demuestra un error del indexador ni del planificador; tampoco permite validar el nuevo cap. La ejecución previa de indexación `45038801547` y su artifact `14770171764` permanecen válidos para la configuración anterior sin cap.
+- CI Python del HEAD final (`45066964661`) también terminó failure en 1 segundo con `runner_id=0`, `runner_name` vacío y `steps=[]`; los intentos anteriores de CI de esta secuencia presentan el mismo patrón. El probe BDD100K (`45066964670`) también falla sin runner asignado. Los endpoints de logs devuelven 404 y la API no expone pasos ni salida de tests. Se registra como bloqueo de infraestructura/ejecución de GitHub Actions, no como pruebas aprobadas ni como fallo de código confirmado.
+- Por tanto, las nuevas pruebas de alineamiento y cap están añadidas pero **no ejecutadas con éxito** en CI. Se requiere reintentar cuando GitHub Actions asigne runners y revisar el primer error real si aparece.
+- El artifact del workflow de indexación con cap 200 no existe todavía. No se ha inspeccionado una nueva selección train ni se puede informar su tamaño/distribución. No repetir indexación completa hasta resolver la asignación de runners o ejecutar el planificador sobre los índices ya almacenados de forma controlada.
+- La documentación de balanceo y este registro se actualizaron en la rama. No se inició entrenamiento, `RUN_TRAINING=False`; no hay checkpoints ni métricas experimentales nuevas.
