@@ -1683,3 +1683,21 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - HEAD final observado: `246a656d2e878f21ecaeabfc511f2b8f8413f647`; PR #3 permanece abierta, draft, merged=false y apunta a este HEAD.
 - No se inició entrenamiento ni se habilitó `RUN_TRAINING`; continúa `False`. No hay checkpoints ni métricas experimentales nuevas.
 - Próximo paso: verificar CI del HEAD final y workflow `45038801547`; si termina correctamente, descargar e inspeccionar íntegramente el artifact (índices JSONL, manifiestos, plan, IDs y cobertura/clases ausentes). Si falla, revisar el nuevo log y corregir antes de avanzar.
+
+#### Integración de balanceo en loaders y estado de cierre de fase — 2026-11-22
+
+- Se consultó el registro antes de auditar rama, PR y Actions. La rama sigue siendo `urban-models-and-benchmark`; PR #3 permanece `open`, `draft=true`, `merged=false`.
+- La corrección del import del planificador está incorporada en la rama. La prueba CLI dedicada también está añadida.
+- Se integraron las utilidades de balanceo en `src/urban_training.py` mediante `build_urban_train_loader`:
+  - tarea semántica: agrega conteos de píxeles exclusivamente de filas train y devuelve pesos para `CrossEntropyLoss`; el muestreo de imágenes se mantiene uniforme;
+  - tarea de instancias: crea `WeightedRandomSampler` reproducible y aplica `detection_collate_fn`;
+  - valida longitud del índice vs dataset, estado de anotación y rechaza explícitamente filas declaradas como val/test.
+- Se añadió `tests/test_urban_training_loader.py` para probar pesos semánticos, sampler/collate de instancias y rechazo de estadísticas de evaluación/desalineadas. Se documentó la interfaz en `docs/PLAN_BALANCEO_Y_ONTOLOGIA.md`.
+- Commits de integración: `9919b366` (helper inicial), `51a669fa` (tests), `c74c0f5b` (limpieza de semilla), `39114682` (fixture de instancias), `39a748a4` (documentación). HEAD de la rama al último commit registrado en GitHub: `39a748a42481f068497d3d9bf9ad17a2e8ed5ad1`.
+- CI Python del HEAD previo `39114682` está en curso en runs `45040642573` (push) y `45040637665` (PR); ambos estaban instalando PyTorch CPU al cierre. El run del HEAD documental `39a748a4`, `45040654800`, estaba pendiente. No se declara todavía que las nuevas pruebas hayan pasado.
+- Workflow de indexación ampliada `45038801547` (SHA `2a9bcd05e9e39014ad7117a1b2e415774159bae8`) continúa `in_progress`. Ya completó preparación de manifiestos; el indexador per-image sigue ejecutándose. El planificador y upload permanecen pendientes; no hay artifact. El endpoint de logs no estuvo disponible (404) mientras el job continúa activo.
+- La corrección de import ya fue incorporada en el SHA del workflow activo, pero el resultado real del planificador solo podrá confirmarse cuando la indexación termine. No reiniciar una segunda indexación pesada en paralelo sin necesidad.
+- **No se cierra aún la fase de datos/balanceo**: falta que el run publique artifact, descargarlo y auditar seis índices JSONL, seis manifiestos de tarea, plan JSON, conteos, IDs, clases ausentes/no cubiertas y splits. También falta CI verde del HEAD actual.
+- El helper de loaders no está conectado a un entrenamiento de producción ni a rutas locales reales. Su prueba es sintética; falta validación con los IDs y rutas reales de los manifiestos después de descargar el artifact y materializar datos autorizados. A2D2 y UrbanSyn deben seguir separados.
+- No se inició entrenamiento, no hay checkpoints ni métricas de modelos; `RUN_TRAINING=False`.
+- Próxima acción: esperar/consultar los runs de CI y el workflow `45038801547`. Si el workflow termina success, descargar y auditar el artifact. Si el planificador falla, inspeccionar el log final y corregir. No habilitar entrenamiento ni declarar fase cerrada antes de completar esa auditoría.
