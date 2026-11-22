@@ -1623,3 +1623,15 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Conclusión: indexación no terminada; no es posible auditar la salida de 1.000 muestras, clases ausentes/cobertura ni plan real. No se han inferido resultados a partir de manifiestos solamente.
 - No se modificó código ni se inició entrenamiento. `RUN_TRAINING=False` se mantiene.
 - Próximo paso: reconsultar estos dos workflows; cuando finalice el de 1.000 muestras, descargar y auditar el artifact antes de integrar sampler/pesos.
+
+
+#### Revisión posterior de indexación — 2026-11-22
+
+- Se volvió a consultar el registro antes de auditar HEAD, PR #3 y Actions.
+- HEAD actual al iniciar: `852ac3d11f4fe57345d78cb5c44ae9fe8bc93006`; PR #3 continúa `open`, `draft=true`, `merged=false`, y su head SHA coincide con la rama.
+- CI Python del HEAD actual: push `45007764725` y pull_request `45007768141` terminaron `success`; probe BDD100K `45007764701` terminó `success`.
+- Indexación ampliada `45005700564` (SHA `c08ea9a363098880e577f9104cc4fd3f32c72efa`) sigue `in_progress`: manifiestos generados; paso `Index per-image annotations` aún en curso; plan y upload pendientes; sin artifacts. No hay base para auditar las 1.000 muestras todavía.
+- Smoke de 100 muestras `45005695816` terminó `failure`. Su indexación per-image sí completó las 600 filas (100 por split × A2D2/UrbanSyn) y generó estadísticas de cobertura en el log, pero el paso `Build class-aware training manifests` falló con `ModuleNotFoundError: No module named 'src'` al importar `src.urban_ontology` desde `scripts/build_balanced_training_plan.py`. El upload quedó skipped, por lo que no existe artifact inspeccionable. Las estadísticas del log son diagnósticas y no constituyen un plan balanceado publicado.
+- El run de 100 filas es un SHA previo y no demuestra que el error persista en el run de 1.000 filas; comprobar el resultado de este último. No modificar el código a partir de una suposición antes de revisar el SHA y logs del run actual.
+- No se inició entrenamiento; `RUN_TRAINING=False`. No se generaron checkpoints ni métricas de modelos.
+- Próximo paso: reconsultar run `45005700564`; si termina, descargar artifact y auditar integridad/cobertura/clases ausentes/plan. Si falla en el mismo import, corregir path de import en el planificador y repetir la indexación.
