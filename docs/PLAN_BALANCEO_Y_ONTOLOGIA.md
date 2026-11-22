@@ -1,7 +1,7 @@
 # Ontología común y plan de balanceo
 
 **Versión:** `urban-v1`  
-**Estado:** definición de taxonomía y planificador implementados; índices de anotaciones por muestra todavía pendientes. No habilita entrenamiento.
+**Estado:** índices remotos completos y auditados; planificador con selección train limitada por clase; validación estricta de sample_id en loaders. No habilita entrenamiento hasta validar CI y materialización local.
 
 ## Roles de las fuentes
 
@@ -119,3 +119,27 @@ criterion = torch.nn.CrossEntropyLoss(weight=class_weights, ignore_index=255)
 ```
 
 Para instancias, usar `task="instances"`; el loader aplica `WeightedRandomSampler` y devuelve `None` como pesos de pérdida. El cálculo de pesos y sampler sigue separado por dataset/dominio.
+
+
+## Actualización de selección balanceada con límite por clase — 2026-11-22
+
+Se reforzó el planificador para que el límite de clase tenga efecto real sobre el tamaño del conjunto train:
+
+- `--per-class-cap` ahora tiene valor predeterminado 200; `0` desactiva explícitamente el límite.
+- Una muestra se acepta solo si todas las clases presentes en ella permanecen por debajo del límite después de seleccionarla. El algoritmo termina si ninguna muestra restante cumple esa condición; por tanto puede devolver menos filas que `--max-samples-per-split`.
+- El límite se aplica exclusivamente al split train. Validation y test se conservan completos y en el orden del manifiesto original.
+- El resumen registra `per_class_cap` y `unselected_samples`; el informe conserva las coberturas disponibles/no cubiertas.
+- El límite es una política experimental de control de dominancia por presencia de clase, no garantiza igualdad exacta de frecuencias ni balance de número de objetos/píxeles. Se debe comparar la distribución resultante antes de entrenar y ajustar el parámetro si elimina demasiada diversidad.
+
+El workflow remoto acepta `per_class_cap` como input manual (default 200) y lo transmite al planificador.
+
+## Validación de identidad de filas en loaders — 2026-11-22
+
+`build_urban_train_loader` ahora exige que el dataset exponga `records` con `sample_id`. Compara la lista ordenada de IDs con la del índice de anotaciones y rechaza IDs vacíos, duplicados o diferencias de orden. La comprobación evita la asociación posicional incorrecta observada entre los manifiestos semántico y de instancias de train.
+
+Se añadieron pruebas para:
+- mismo conjunto de IDs con orden diferente;
+- IDs duplicados;
+- identidad y orden correctos para loaders semánticos y de instancias.
+
+**Pendiente:** CI del nuevo HEAD, inspección del artifact generado con el límite 200 y prueba con una materialización pequeña de datos reales. No ejecutar entrenamiento hasta completar estas comprobaciones.
