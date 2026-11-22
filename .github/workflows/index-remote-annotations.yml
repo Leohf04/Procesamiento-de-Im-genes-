@@ -22,6 +22,10 @@ on:
         description: Maximum samples in each dataset split
         required: true
         default: "1000"
+      per_class_cap:
+        description: Maximum selected train samples containing each class (0 disables cap)
+        required: true
+        default: "200"
 
 permissions:
   contents: read
@@ -56,7 +60,8 @@ jobs:
             --manifests-dir artifacts/manifests \
             --annotation-index-dir artifacts/annotation_index \
             --output-dir artifacts/balanced --seed "${{ inputs.seed || '2026' }}" \
-            --max-samples-per-split "${{ inputs.max_per_split || '1000' }}"
+            --max-samples-per-split "${{ inputs.max_per_split || '1000' }}" \
+            --per-class-cap "${{ inputs.per_class_cap || '200' }}"
       - name: Upload indexes, reports, and balanced manifests
         uses: actions/upload-artifact@v4
         with:
