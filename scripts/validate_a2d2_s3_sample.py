@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Bounded anonymous S3 preflight for A2D2 semantic/instance label PNGs.
 
-A2D2 stores RGB frames under camera/cam_front_center/ and pixel labels under
-label/cam_front_center/. The label basename uses _label_frontcenter_ rather
-than _camera_frontcenter_. This script downloads at most one image+mask pair
-per annotation root, to a temporary directory, and never downloads archives.
+RGB images live in camera_lidar_semantic/<sequence>/camera/cam_front_center/.
+Semantic masks live in the matching label/cam_front_center/ directory and use
+_label_frontcenter_ in the filename. The instance-labelled mirror is inspected
+separately, pairing its label file with the RGB frame from the semantic root.
 """
 from __future__ import annotations
 
@@ -22,8 +22,9 @@ from PIL import Image
 
 BUCKET = "audi-autonomous-driving-dataset"
 REGION = "eu-central-1"
-ROOTS = ("camera_lidar_semantic/", "camera_lidar_semantic_instance/")
-MAX_SEQUENCES_PER_ROOT = 8
+SEMANTIC_ROOT = "camera_lidar_semantic/"
+INSTANCE_ROOT = "camera_lidar_semantic_instance/"
+MAX_SEQUENCES = 12
 MAX_SAMPLE_BYTES = 80 * 1024 * 1024
 
 
@@ -35,19 +36,62 @@ def sha256(path: str) -> str:
     return digest.hexdigest()
 
 
-def image_to_label_key(image_key: str, sequence_prefix: str) -> str:
+def label_key_for(image_key: str, sequence_prefix: str) -> str:
     filename = image_key.rsplit("/", 1)[-1]
     label_name = re.sub(r"_camera_frontcenter_", "_label_frontcenter_", filename)
     return sequence_prefix + "label/cam_front_center/" + label_name
 
 
-def image_info(path: str) -> dict:
+def describe_image(path: str) -> dict:
     with Image.open(path) as image:
         image.load()
         return {
             "format": image.format, "mode": image.mode,
             "width": image.width, "height": image.height,
         }
+
+
+def list_sequences(s3, prefix: str) -> list[str]:
+    response = s3.list_objects_v2(
+        Bucket=BUCKET, Prefix=prefix, Delimiter="/", MaxKeys=100
+    )
+    return [item["Prefix"] for item in response.get("CommonPrefixes", [])]
+
+
+def find_label_for_sequence(s3, sequence_prefix: str, image_key: str):
+    key = label_key_for(image_key, sequence_prefix)
+    try:
+        s3.head_object(Bucket=BUCKET, Key=key)
+        return key
+    except Exception:
+        return None
+
+
+def download_pair(s3, image_key: str, mask_key: str, tmp: str, tag: str) -> dict:
+    image_path = os.path.join(tmp, f"{tag}_image.png")
+    mask_path = os.path.join(tmp, f"{tag}_mask.png")
+    for key, target in ((image_key, image_path), (mask_key, mask_path)):
+        head = s3.head_object(Bucket=BUCKET, Key=key)
+        size = int(head["ContentLength"])
+        if size > MAX_SAMPLE_BYTES:
+            raise RuntimeError(f"Refusing oversized sample ({size} bytes): {key}")
+        s3.download_file(BUCKET, key, target)
+    image_meta, mask_meta = describe_image(image_path), describe_image(mask_path)
+    with Image.open(mask_path) as mask:
+        unique_colors = len(set(mask.convert("RGB").getdata()))
+    return {
+        "image_key": image_key, "mask_key": mask_key,
+        "image_bytes": os.path.getsize(image_path),
+        "image_sha256": sha256(image_path),
+        "mask_bytes": os.path.getsize(mask_path),
+        "mask_sha256": sha256(mask_path),
+        "image": image_meta, "mask": mask_meta,
+        "dimensions_match": (
+            image_meta["width"] == mask_meta["width"]
+            and image_meta["height"] == mask_meta["height"]
+        ),
+        "unique_mask_colors": unique_colors,
+    }
 
 
 def main() -> int:
@@ -57,8 +101,9 @@ def main() -> int:
     )
     report = {
         "bucket": BUCKET, "region": REGION, "anonymous_access": False,
-        "roots": {}, "status": "FAIL",
-        "note": "PASS confirms one decodable RGB/mask pair per available root, not full-dataset coverage or official metric equivalence.",
+        "semantic": {"sample": None}, "instance": {"sample": None},
+        "class_list_candidates": [], "status": "FAIL",
+        "note": "A readable mask pair is a sample-level check, not full-dataset coverage or official metric equivalence.",
     }
     root_listing = s3.list_objects_v2(Bucket=BUCKET, Delimiter="/", MaxKeys=100)
     report["anonymous_access"] = True
@@ -66,65 +111,83 @@ def main() -> int:
         item["Prefix"] for item in root_listing.get("CommonPrefixes", [])
     ]
 
-    with tempfile.TemporaryDirectory(prefix="a2d2-preflight-") as tmp:
-        for root_prefix in ROOTS:
-            root_sequences = s3.list_objects_v2(
-                Bucket=BUCKET, Prefix=root_prefix, Delimiter="/", MaxKeys=100
+    # Look for the official class map at common extracted-mirror locations.
+    for key in (
+        "class_list.json",
+        SEMANTIC_ROOT + "class_list.json",
+        SEMANTIC_ROOT + "20180807_145028/class_list.json",
+    ):
+        try:
+            head = s3.head_object(Bucket=BUCKET, Key=key)
+            report["class_list_candidates"].append(
+                {"key": key, "bytes": int(head["ContentLength"])}
             )
-            sequences = [x["Prefix"] for x in root_sequences.get("CommonPrefixes", [])]
-            result = {"sequence_prefixes_seen": len(sequences), "sample": None}
-            for sequence_prefix in sequences[:MAX_SEQUENCES_PER_ROOT]:
-                camera_prefix = sequence_prefix + "camera/cam_front_center/"
-                label_prefix = sequence_prefix + "label/cam_front_center/"
-                camera_response = s3.list_objects_v2(
-                    Bucket=BUCKET, Prefix=camera_prefix, MaxKeys=1000
-                )
-                label_response = s3.list_objects_v2(
-                    Bucket=BUCKET, Prefix=label_prefix, MaxKeys=1000
-                )
-                label_keys = {x["Key"] for x in label_response.get("Contents", [])}
-                candidates = [
-                    x["Key"] for x in camera_response.get("Contents", [])
-                    if x["Key"].lower().endswith(".png")
-                ]
-                pair = next(
-                    ((key, image_to_label_key(key, sequence_prefix))
-                     for key in candidates
-                     if image_to_label_key(key, sequence_prefix) in label_keys),
-                    None,
-                )
-                if pair:
-                    image_key, mask_key = pair
-                    image_path = os.path.join(tmp, "image.png")
-                    mask_path = os.path.join(tmp, "mask.png")
-                    for key, target in ((image_key, image_path), (mask_key, mask_path)):
-                        head = s3.head_object(Bucket=BUCKET, Key=key)
-                        size = int(head["ContentLength"])
-                        if size > MAX_SAMPLE_BYTES:
-                            raise RuntimeError(f"Refusing oversized sample ({size} bytes): {key}")
-                        s3.download_file(BUCKET, key, target)
-                    image_meta = image_info(image_path)
-                    mask_meta = image_info(mask_path)
-                    with Image.open(mask_path) as mask:
-                        colors = len(set(mask.convert("RGB").getdata()))
-                    result["sample"] = {
-                        "image_key": image_key, "mask_key": mask_key,
-                        "image_bytes": os.path.getsize(image_path),
-                        "image_sha256": sha256(image_path),
-                        "mask_bytes": os.path.getsize(mask_path),
-                        "mask_sha256": sha256(mask_path),
-                        "image": image_meta, "mask": mask_meta,
-                        "dimensions_match": (
-                            image_meta["width"] == mask_meta["width"]
-                            and image_meta["height"] == mask_meta["height"]
-                        ),
-                        "unique_mask_colors": colors,
-                    }
-                    break
-            report["roots"][root_prefix] = result
+        except Exception:
+            continue
 
-    semantic = report["roots"].get("camera_lidar_semantic/", {}).get("sample")
-    instance = report["roots"].get("camera_lidar_semantic_instance/", {}).get("sample")
+    semantic_sequences = list_sequences(s3, SEMANTIC_ROOT)
+    semantic_image = None
+    semantic_sequence = None
+    with tempfile.TemporaryDirectory(prefix="a2d2-preflight-") as tmp:
+        for sequence_prefix in semantic_sequences[:MAX_SEQUENCES]:
+            camera_prefix = sequence_prefix + "camera/cam_front_center/"
+            camera_response = s3.list_objects_v2(
+                Bucket=BUCKET, Prefix=camera_prefix, MaxKeys=1000
+            )
+            images = [
+                item["Key"] for item in camera_response.get("Contents", [])
+                if item["Key"].lower().endswith(".png")
+            ]
+            for image_key in images:
+                mask_key = find_label_for_sequence(s3, sequence_prefix, image_key)
+                if mask_key:
+                    semantic_image, semantic_sequence = image_key, sequence_prefix
+                    report["semantic"]["sample"] = download_pair(
+                        s3, image_key, mask_key, tmp, "semantic"
+                    )
+                    break
+            if semantic_image:
+                break
+
+        instance_sequences = list_sequences(s3, INSTANCE_ROOT)
+        instance_diagnostics = []
+        if semantic_image and semantic_sequence:
+            frame_name = semantic_image.rsplit("/", 1)[-1]
+            matching_sequence = INSTANCE_ROOT + semantic_sequence[len(SEMANTIC_ROOT):]
+            instance_mask_key = label_key_for(
+                semantic_image, matching_sequence
+            )
+            try:
+                s3.head_object(Bucket=BUCKET, Key=instance_mask_key)
+                report["instance"]["sample"] = download_pair(
+                    s3, semantic_image, instance_mask_key, tmp, "instance"
+                )
+            except Exception:
+                # Explore label paths in a bounded number of sequences to
+                # distinguish absent annotations from a filename/layout mismatch.
+                for sequence_prefix in instance_sequences[:MAX_SEQUENCES]:
+                    label_prefix = sequence_prefix + "label/cam_front_center/"
+                    labels = s3.list_objects_v2(
+                        Bucket=BUCKET, Prefix=label_prefix, MaxKeys=1000
+                    ).get("Contents", [])
+                    pngs = [x["Key"] for x in labels if x["Key"].lower().endswith(".png")]
+                    instance_diagnostics.append({
+                        "sequence": sequence_prefix,
+                        "label_png_count": len(pngs),
+                        "first_label_keys": pngs[:3],
+                    })
+                    match = next((key for key in pngs if key.rsplit("/", 1)[-1]
+                                  == re.sub(r"_camera_frontcenter_", "_label_frontcenter_", frame_name)), None)
+                    if match:
+                        report["instance"]["sample"] = download_pair(
+                            s3, semantic_image, match, tmp, "instance"
+                        )
+                        break
+        report["instance"]["sequence_prefixes_seen"] = len(instance_sequences)
+        report["instance"]["diagnostics"] = instance_diagnostics[:MAX_SEQUENCES]
+
+    semantic = report["semantic"]["sample"]
+    instance = report["instance"]["sample"]
     report["status"] = (
         "PASS_SEMANTIC_SAMPLE" if semantic and semantic["dimensions_match"]
         else "INCOMPLETE_SEMANTIC_SAMPLE"
@@ -133,7 +196,10 @@ def main() -> int:
         "SAMPLE_DECODED_PENDING_INSTANCE_ID_ANALYSIS"
         if instance and instance["dimensions_match"] else "NOT_CONFIRMED"
     )
-    report["class_mapping_status"] = "PENDING_CLASS_LIST_JSON_AND_COLOR_MAP"
+    report["class_mapping_status"] = (
+        "CLASS_LIST_FOUND_PENDING_PARSE"
+        if report["class_list_candidates"] else "PENDING_CLASS_LIST_LOCATION"
+    )
     with open("a2d2_s3_preflight_report.json", "w", encoding="utf-8") as handle:
         json.dump(report, handle, indent=2)
     print(json.dumps(report, indent=2))
