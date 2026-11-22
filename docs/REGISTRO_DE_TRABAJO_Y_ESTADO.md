@@ -1281,3 +1281,16 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - No se han creado aún manifiestos train/val ni descargado subconjuntos para producción. Faltan validación multi-muestra ampliada, revisión de oclusiones, versionado de la ontología completa y licencia UrbanSyn. SHIFT permanece fuera de métricas por desalineación 10/25 FPS.
 - `RUN_TRAINING=False`; no se inicia entrenamiento de producción ni se generan checkpoints/métricas de precisión.
 - PR #3 debe permanecer abierta y draft, sin fusionar.
+
+
+### Cierre de validación con muestras reales — 2026-11-22
+
+- UrbanSyn preflight [44974144391](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974144391) terminó **success**: mirror con 7,539 IDs y 7,539 pares completos en las cuatro modalidades; descargó únicamente dos muestras completas (0001 y 0002). Los decodificadores reales pasaron en ambas; panoptic generó 5 y 17 instancias respectivamente y arrays de máscaras/cajas con dimensiones consistentes. No equivale a validar la ontología canónica completa.
+- A2D2 preflight [44974096279](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974096279) terminó **success**: muestra real 1920×1208, class list 55 entradas, decodificación semántica y reconstrucción de 66 componentes por connected components. Se verificaron labels 3,5,6,7; masks [66,1208,1920], boxes [66,4]. Una sola muestra: ampliar a varias secuencias y revisar fragmentación/oclusiones.
+- Los workflows descargaron solo muestras acotadas en runners temporales; no se bajaron datasets completos ni se almacenaron en el teléfono.
+- El preflight UrbanSyn registra 7,539 IDs completos en su índice remoto. Esto es cobertura del inventario de archivos del mirror, no prueba de calidad de anotaciones de todas las muestras.
+- Se corrigió el estado pendiente de UrbanSyn en la documentación de estrategia.
+- CI de Python para HEAD anterior al último cambio documental estaba en cola/en progreso (runs [44974186367](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974186367) y [44974181660](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974181660)); revisar el HEAD actual tras el registro.
+- Siguiente bloque: ampliar A2D2 a múltiples muestras; verificar y versionar la ontología fuente→canónica de UrbanSyn/A2D2; determinar splits oficiales antes de generar manifiestos train/val; calcular tamaño del subset y preparar descarga remota a Colab/Drive. La discrepancia de licencia UrbanSyn y la sincronización SHIFT (10/25 FPS) siguen abiertas.
+- RUN_TRAINING=False; no se inicia entrenamiento ni se crean checkpoints/métricas de precisión.
+- PR #3 permanece abierta, draft y sin fusionar.
