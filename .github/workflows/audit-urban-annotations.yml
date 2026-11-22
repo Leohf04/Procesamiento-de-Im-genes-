@@ -15,9 +15,9 @@ on:
         required: true
         default: "44992977292"
       samples_per_split:
-        description: Samples to download and inspect per split and dataset (1-50)
+        description: Samples to download and inspect per split and dataset (1-50; expanded audit)
         required: true
-        default: "8"
+        default: "12"
         type: string
 
 permissions:
@@ -27,7 +27,7 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
         with:
