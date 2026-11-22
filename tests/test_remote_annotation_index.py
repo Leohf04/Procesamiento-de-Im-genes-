@@ -22,9 +22,9 @@ def test_urbansyn_synthetic_semantic_and_panoptic_masks():
 def test_a2d2_synthetic_rgb_mask():
     colors={(0,0,0):"road",(1,2,3):"Car 1",(4,5,6):"Pedestrian 1",(7,8,9):"Bicycle 1"}
     rgb=np.zeros((8,8,3),dtype=np.uint8)
-    rgb[0:4,0:4]=(1,2,3); rgb[4:6,0:2]=(4,5,6); rgb[4:6,4:6]=(7,8,9)
+    rgb[0:4,0:4]=(1,2,3); rgb[4:7,0:3]=(4,5,6); rgb[4:7,4:7]=(7,8,9)
     result=summarize_a2d2_mask(rgb,colors,{"road":0,"car":13,"person":11,"bicycle":18},{"car":3,"person":1,"bicycle":8})
-    assert result["semantic_pixels"] == {"bicycle":4,"car":16,"person":4,"road":40}
+    assert result["semantic_pixels"] == {"bicycle":9,"car":16,"person":9,"road":30}
     assert result["instance_counts"] == {"bicycle":1,"car":1,"person":1}
 
 def test_a2d2_static_classes_are_preserved_by_shared_normalizer():
