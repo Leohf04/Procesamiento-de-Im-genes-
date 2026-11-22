@@ -1270,3 +1270,14 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - La rama HEAD es `bd0569bca8b2504a68f572a0569ae41fb6de0daf`. PR #3 comprobada abierta, draft y sin merge.
 - Alcance pendiente antes de entrenamiento de producción: ejecutar adaptadores sobre varias muestras reales remotas A2D2/UrbanSyn; versionar mapeo de las 19 clases UrbanSyn y revisar las 55 clases A2D2; construir manifiestos oficiales train/val sin fuga; inspeccionar fragmentación/oclusiones; resolver discrepancia de licencia UrbanSyn. SHIFT permanece fuera de métricas por alineación temporal 10/25 FPS no resuelta.
 - `RUN_TRAINING=False`. No se ha iniciado entrenamiento de producción, no hay checkpoints ni métricas de precisión. Los smoke tests usan datos sintéticos pequeños y prueban únicamente el contrato de modelo/gradientes.
+
+
+### Validación de adaptadores con muestras reales — 2026-11-22
+
+- Se revisó este registro antes de comenzar. Se ampliaron los workflows remotos existentes para ejecutar los decodificadores de producción sobre muestras reales de los orígenes oficiales; sin descargar conjuntos completos.
+- A2D2 workflow [44974096279](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974096279): **success**. Una muestra frontal real de 1920×1208 pasó `decode_a2d2_semantic` y `decode_a2d2_instances`. Se leyó class_list de 55 entradas; IDs canónicos observados 2,3,5,6,7,12 e ignore 255; 66 componentes reconstruidos; labels 3,5,6,7; arrays masks [66,1208,1920] y boxes [66,4]. Esto es una muestra, no validación de todo A2D2 ni de oclusiones.
+- UrbanSyn workflow [44974144391](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974144391): ampliado para ejecutar semseg y panoptic adapters en dos muestras remotas completas, incluyendo validación de tamaños y arrays de máscaras/cajas. Estaba en curso al escribir esta entrada; verificar conclusión antes de afirmar PASS.
+- Se corrigió el sys.path de scripts de preflight para importar módulos de la raíz. Los fallos iniciales de esos nuevos workflows fueron import errors, no errores de decodificación.
+- No se han creado aún manifiestos train/val ni descargado subconjuntos para producción. Faltan validación multi-muestra ampliada, revisión de oclusiones, versionado de la ontología completa y licencia UrbanSyn. SHIFT permanece fuera de métricas por desalineación 10/25 FPS.
+- `RUN_TRAINING=False`; no se inicia entrenamiento de producción ni se generan checkpoints/métricas de precisión.
+- PR #3 debe permanecer abierta y draft, sin fusionar.
