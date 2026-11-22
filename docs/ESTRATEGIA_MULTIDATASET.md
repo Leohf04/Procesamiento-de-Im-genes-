@@ -140,3 +140,29 @@ Se guardará por muestra el dataset de origen, split, secuencia, frame, condici�
 - A2D2 puede aportar semántica, lane markings y subclases de instancias en dominio real diurno.
 - UrbanSyn aporta entrenamiento/validación sintética semántica y panoptic/cajas 2D de clases dinámicas.
 - SHIFT espejo puede aportar evaluación sintética de lluvia/niebla/hora solo tras resolver el desfase FPS; hasta entonces se conserva como candidato.
+
+
+## 11. Estado de implementación de adaptadores y smoke tests (2026-11-22)
+
+Se añadió `src/data_adapters.py` con decodificadores puros y explícitos:
+
+- A2D2: lectura de `class_list.json` (`#RRGGBB -> nombre`), conversión de máscara RGB a IDs canónicos, alias de clases y extracción de instancias mediante componentes conectados para subclases como `Car 1` y `Pedestrian 2`. Las subclases no se interpretan como IDs globales; componentes pequeños se filtran con un umbral configurable.
+- UrbanSyn: lectura de máscara semántica de un canal o RGB triplicado, con mapeo fuente→canónico explícito; decodificación panoptic conforme a `instance_id = R*256 + G` y `class_id = B`; generación de máscaras, etiquetas, cajas XYXY, áreas y targets Torchvision.
+- El mapeo UrbanSyn fuente→canónico se proporciona explícitamente en la llamada. No se inventa una correspondencia de IDs ni se asume que coincida con A2D2.
+- Los decodificadores no descargan datos ni guardan imágenes derivadas en el repositorio.
+
+Se añadió `tests/test_multidataset_adapters.py` con pruebas sintéticas para color map/ignore, componentes de instancia, semántica RGB triplicada, panoptic RG+B y contrato de targets.
+
+También se incorporó un smoke test de entrenamiento en CPU que construye los modelos reales DeepLabV3+ ResNet-50 y Mask R-CNN ResNet-50-FPN, ejecuta forward, calcula pérdidas y backward con etiquetas/targets sintéticos pequeños. Esto comprueba compatibilidad estructural y gradientes, **no** calidad predictiva ni entrenamiento con datasets.
+
+### Límites pendientes antes de declarar adaptadores de dataset listos para entrenamiento
+
+- Ejecutar los decodificadores sobre varias muestras remotas reales A2D2 y UrbanSyn, no solo fixtures sintéticos.
+- Revisar el mapa completo de 55 clases A2D2 y acordar la ontología definitiva; la tabla canónica actual es una base explícita, no una equivalencia validada para todas las clases.
+- Confirmar los nombres/IDs de clases UrbanSyn con su metadata oficial y construir el mapeo de clases versionado.
+- Implementar loaders de archivos, manifiestos, splits reproducibles y control de muestras corruptas/ausentes.
+- Verificar fragmentación/oclusiones A2D2: componentes desconectados pueden dividir un objeto parcialmente oculto en varias máscaras.
+- Resolver la discrepancia de licencia de UrbanSyn antes de uso/publicación externa.
+- SHIFT continúa excluido de métricas mientras no se resuelva la alineación temporal RGB/semseg (10 frente a 25 FPS).
+
+**Estado de entrenamiento:** no iniciar todavía entrenamiento de producción. El smoke test no sustituye el preflight de datos reales. `RUN_TRAINING=False` permanece vigente.
