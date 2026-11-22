@@ -14,7 +14,6 @@ import json
 import os
 import re
 import tempfile
-import tarfile
 from pathlib import PurePosixPath
 
 import cv2
@@ -55,33 +54,46 @@ def get_range(path: str, start: int, end: int) -> tuple[bytes, dict]:
 
 
 def extract_first_video(path: str, target_dir: str, kind: str) -> dict:
-    header_bytes, header_meta = get_range(path, 0, 511)
-    if len(header_bytes) != 512:
-        return {"status": "INCOMPLETE_TAR_HEADER", "transfer": header_meta}
-    header = header_bytes
-    name = header[0:100].split(b"\0", 1)[0].decode("utf-8", "replace")
-    size_field = header[124:136].strip(b"\0 ")
-    try:
-        member_size = int(size_field or b"0", 8)
-    except ValueError:
-        return {"status": "INVALID_TAR_HEADER", "name": name}
-    if not name.lower().endswith(".mp4"):
-        return {"status": "FIRST_MEMBER_NOT_MP4", "name": name}
+    # Tar archives begin with a directory member "./"; scan a bounded prefix
+    # until the first MP4 header is found.
+    prefix, prefix_meta = get_range(path, 0, 4 * 1024 * 1024 - 1)
+    offset = 0
+    selected = None
+    while offset + 512 <= len(prefix):
+        header = prefix[offset:offset + 512]
+        if header == b"\\0" * 512:
+            break
+        name = header[0:100].split(b"\\0", 1)[0].decode("utf-8", "replace")
+        size_field = header[124:136].strip(b"\\0 ")
+        try:
+            member_size = int(size_field or b"0", 8)
+        except ValueError:
+            break
+        member_start = offset + 512
+        padded_size = ((member_size + 511) // 512) * 512
+        next_offset = member_start + padded_size
+        if name.lower().endswith(".mp4"):
+            selected = (name, member_size, member_start, next_offset)
+            break
+        if next_offset <= offset:
+            break
+        offset = next_offset
+    if selected is None:
+        return {"status": "NO_MP4_IN_BOUNDED_PREFIX",
+                "prefix_bytes": len(prefix), "transfer": prefix_meta}
+    name, member_size, member_start, next_offset = selected
     if member_size <= 0 or member_size > MAX_MEMBER_BYTES:
         return {"status": "FIRST_VIDEO_EXCEEDS_SAMPLE_LIMIT",
                 "name": name, "member_bytes": member_size,
                 "max_member_bytes": MAX_MEMBER_BYTES}
-
-    padded_size = ((member_size + 511) // 512) * 512
-    total_bytes = 512 + padded_size
-    archive_prefix, transfer = get_range(path, 0, total_bytes - 1)
-    if len(archive_prefix) < total_bytes:
+    archive_prefix, transfer = get_range(path, 0, next_offset - 1)
+    if len(archive_prefix) < next_offset:
         return {"status": "INCOMPLETE_VIDEO_MEMBER", "name": name,
                 "member_bytes": member_size, "bytes_read": len(archive_prefix),
                 "transfer": transfer}
     video_path = os.path.join(target_dir, f"{kind}.mp4")
     with open(video_path, "wb") as handle:
-        handle.write(archive_prefix[512:512 + member_size])
+        handle.write(archive_prefix[member_start:member_start + member_size])
     capture = cv2.VideoCapture(video_path)
     ok, frame = capture.read()
     fps = capture.get(cv2.CAP_PROP_FPS)
@@ -99,7 +111,6 @@ def extract_first_video(path: str, target_dir: str, kind: str) -> dict:
         "sampled_unique_colors": len({tuple(int(v) for v in row) for row in sampled}),
         "transfer": transfer,
     }
-
 
 def main() -> int:
     api = HfApi()
