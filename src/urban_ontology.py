@@ -47,13 +47,19 @@ def instance_name_to_id(ontology: dict | None = None) -> dict[str, int]:
 
 def source_semantic_map(dataset: str, ontology: dict | None = None) -> dict[int, int] | dict[str, int]:
     ontology = ontology or load_urban_ontology()
-    key = ("urbansyn_train_id_to_semantic_id" if dataset.lower() == "urbansyn"
+    normalized = dataset.lower()
+    if normalized not in {"urbansyn", "a2d2"}:
+        raise ValueError(f"Unsupported dataset: {dataset}")
+    key = ("urbansyn_train_id_to_semantic_id" if normalized == "urbansyn"
            else "a2d2_normalized_name_to_semantic_id")
     return ontology["semantic"]["sources"][key]
 
 
 def source_instance_map(dataset: str, ontology: dict | None = None) -> dict[int, int] | dict[str, int]:
     ontology = ontology or load_urban_ontology()
-    key = ("urbansyn_train_id_to_instance_id" if dataset.lower() == "urbansyn"
+    normalized = dataset.lower()
+    if normalized not in {"urbansyn", "a2d2"}:
+        raise ValueError(f"Unsupported dataset: {dataset}")
+    key = ("urbansyn_train_id_to_instance_id" if normalized == "urbansyn"
            else "a2d2_normalized_name_to_instance_id")
     return ontology["instances"]["sources"][key]
