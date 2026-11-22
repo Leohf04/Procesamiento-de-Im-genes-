@@ -4,25 +4,32 @@
 
 Separar tres mediciones que no deben mezclarse: (1) calidad semántica, (2) calidad de detección/instancias y (3) rendimiento. Cada resultado debe indicar dataset, split, checkpoint, resolución, umbral y hardware.
 
-## Datos y particiones
+## Estrategia de datasets activa
 
-- **BDD100K 10K** es el dataset principal para segmentación semántica e instancias. Usar los splits oficiales train/val y emparejar imágenes y máscaras por nombre.
-- Semántica: `images/10k/{train,val}` + `labels/sem_seg/masks/{train,val}`; IDs 0–18 y 255 ignore.
-- Instancias: `images/10k/{train,val}` + `labels/ins_seg/bitmasks/{train,val}`; PNG RGBA oficial, ocho categorías. No convertir a RGB o escala de grises.
-- Detección 2D: usar 100K images + Detection 2020 Labels (10 categorías oficiales: bike, bus, car, motor, person, rider, traffic light, traffic sign, train, truck); loader/entrenador Faster R-CNN y validación Box AP50 implementados.
-- Carriles: usar directamente las máscaras oficiales monocanal empaquetadas; loader/entrenador multi-cabeza implementados para categoría (8 clases), dirección (2) y estilo (2), ignorando píxeles de fondo. No usar el conversor binario legado.
-- Mantener los splits oficiales y no mezclar secuencias/frames de un mismo vídeo entre train y validation.
-- **Cityscapes** queda como flujo legado opcional; no es requisito de BDD100K.
-- **COCO val2017** puede conservarse como benchmark auxiliar, no como sustituto de BDD100K.
-- No usar validation para ajustar umbrales y luego reportarlo como test.
+La combinación activa es **A2D2 + UrbanSyn + SHIFT**. La matriz de cobertura, el mapeo conceptual, las licencias, las métricas y las puertas de validación están en [docs/ESTRATEGIA_MULTIDATASET.md](ESTRATEGIA_MULTIDATASET.md). Ese documento prevalece sobre las secciones históricas BDD100K/Cityscapes que se conservan más abajo como referencia técnica.
 
-## Preparación reproducible desde Google Drive
+- **A2D2:** escenas reales; semántica e instancias/detección solo después de decodificar los archivos oficiales. No se han confirmado atributos por imagen para estratificar clima/hora.
+- **UrbanSyn:** semántica 19 clases, panoptic de objetos dinámicos y cajas 2D. Sintético; no tiene clase dedicada de carriles ni condiciones ambientales reales.
+- **SHIFT:** RGB, semseg, cajas 2D e instance segmentation 2D; complemento de domain shift sintético. Acceso a sus endpoints pendiente de prueba.
+- No concatenar datasets ni comparar métricas de clases distintas sin un adaptador explícito. Mantener resultados separados por fuente y dominio.
+- Mantener splits oficiales y separar por secuencia/escena para evitar fuga temporal. No ajustar umbrales en validation y reportarlos como test.
+- No etiquetar como evaluación real de lluvia/noche/niebla una corrupción artificial. Los aumentos se informan por separado.
+
+## Cobertura de tareas
+
+- Semántica: DeepLabV3+; IDs mapeados a una taxonomía común tras validar los tres esquemas.
+- Instancias: Mask R-CNN; UrbanSyn panoptic se convierte en instancias individuales; SHIFT/A2D2 requieren adaptadores validados.
+- Detección: cajas 2D UrbanSyn/SHIFT. Cajas 3D A2D2 no se consideran 2D nativas; proyectarlas solo con calibración comprobada.
+- Carriles y señales: evaluar únicamente cuando la fuente tenga etiquetas explícitas. UrbanSyn tiene clase semántica traffic sign, pero no lane-marking ni cajas/instancias para señales según la ficha consultada.
+- Robustez: SHIFT para domain shifts sintéticos; A2D2 para dominio real general. No afirmar estratos reales día/noche/lluvia/niebla sin metadata comprobada.
+
+## Preparación heredada BDD100K desde Google Drive (no activa)
 
 La preparación automatizada está descrita en [docs/DATASETS_GITHUB_ACTIONS.md](DATASETS_GITHUB_ACTIONS.md). El workflow manual descarga temporalmente desde Google Drive el JSON de un split y un lote acotado (hasta 4.000 imágenes), valida las imágenes y genera máscaras binarias de carriles heredadas. Ese resultado binario se conserva solo por compatibilidad y no se usa en el nuevo entrenamiento multi-tarea; el flujo nuevo requiere las máscaras oficiales empaquetadas. El siguiente lote se reanuda con `next_offset`. No almacena imágenes ni anotaciones en GitHub. Cityscapes permanece deshabilitado hasta que el usuario tenga registro y acceso autorizado. La preparación no sustituye el entrenamiento y no demuestra que la partición BDD100K esté libre de fuga temporal: los splits deben organizarse por secuencia/video.
 
 ## Entrenamiento
 
-### DeepLabV3+ semántico BDD100K (19 clases)
+### Referencia heredada: DeepLabV3+ semántico BDD100K (no ejecutar como flujo activo)
 
 ```bash
 python scripts/train_urban_segmentation.py --task bdd100k-semantic --images-dir data/bdd100k/images/10k/train --masks-dir data/bdd100k/labels/sem_seg/masks/train --val-images-dir data/bdd100k/images/10k/val --val-masks-dir data/bdd100k/labels/sem_seg/masks/val --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_bdd100k_semantic.pt
@@ -30,7 +37,7 @@ python scripts/train_urban_segmentation.py --task bdd100k-semantic --images-dir 
 
 Clases de salida (19): road, sidewalk, building, wall, fence, pole, traffic light, traffic sign, vegetation, terrain, sky, person, rider, car, truck, bus, train, motorcycle y bicycle. El ID 255 se ignora.
 
-### Mask R-CNN por instancias BDD100K
+### Referencia heredada: Mask R-CNN por instancias BDD100K
 
 ```bash
 python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k --images-dir data/bdd100k/images/10k/train --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/train --val-images-dir data/bdd100k/images/10k/val --val-bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val --epochs 20 --batch-size 2 --output data/processed/maskrcnn_bdd100k.pt
@@ -58,7 +65,7 @@ La muestra GitHub alternativa usada para el smoke test de Torchvision contiene s
 
 El notebook de Colab ejecuta esta auditoría y exige un informe aprobado antes de permitir `MODEL="instance"` con `RUN_TRAINING=True`. El entrenamiento guarda `.last.pt` (estado de modelo/optimizador/scheduler) y el checkpoint de evaluación; la reanudación es por época. Tras completar el entrenamiento, ejecutar el evaluador BDD100K de instancias sobre el split val oficial. No iniciar el entrenamiento mientras no se tenga acceso autorizado a las bitmasks oficiales.
 
-### Carriles BDD100K: categoría, dirección y estilo
+### Referencia heredada: carriles BDD100K
 
 Entrenar con las máscaras oficiales `labels/lane/masks/{train,val}`, no con polígonos rasterizados a una máscara binaria:
 
