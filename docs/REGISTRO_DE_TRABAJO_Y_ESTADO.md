@@ -1558,3 +1558,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - CI Python de ese SHA detectó una expectativa errónea en una prueba sintética: las regiones person/bicycle eran de 4 px, inferiores al umbral intencional de 8 px de componentes A2D2. Se amplió la fixture a 9 px y se corrigieron los conteos esperados en commit `700454d6d17cab49b6c634d43743da2d2eb94343`. CI push `45002804361` y PR `45002798404` quedaron en curso/pendientes al cierre; verificar resultados sobre el HEAD final.
 - CI anterior PR `45002668197` terminó failure únicamente por esa expectativa de área mínima: 64 passed, 1 failed. Compileall y CLIs pasaron. No hay evidencia de entrenamiento ni de descarga de imágenes RGB.
 - HEAD al redactar este addendum: `700454d6d17cab49b6c634d43743da2d2eb94343`. PR #3 permanece abierta, draft y sin fusionar. `RUN_TRAINING=False`.
+
+
+#### Estado al cierre de la intervención — 2026-11-22
+
+- Se corrigió la fixture A2D2 para respetar el umbral real de 8 px de componentes; el commit de prueba es `700454d6`. El run PR anterior `45002668197` falló solo en esa expectativa (64 passed, 1 failed), no en compileall ni CLIs.
+- La actualización de este registro y de `docs/PLAN_BALANCEO_Y_ONTOLOGIA.md` generó HEAD `8ef74fabe3859eb798ec9bb9d60cb05a02277f2d`; PR #3 continúa abierta, draft, merged=false y apunta al HEAD.
+- CI de Python para el SHA actual push `45002871645` está en curso; la ejecución PR del SHA intermedio se canceló por el push documental siguiente. Verificar el run del HEAD después de esta actualización.
+- Workflow de indexación remoto `45002662737` sigue en curso sobre SHA `a724ecaa5ff422ad331e9f4b58b01f28f2dd7e82`: manifiestos de 100 muestras por split/dataset generados correctamente; el paso de indexación per-image está en curso. Aún no hay artifact final ni balanceo real validado. El run anterior `45002573760` falló por import path; esa corrección ya está en el SHA del run actual.
+- No entrenamiento, no checkpoint ni descarga de fotografías RGB. El indexador descarga solo máscaras/anotaciones en el runner temporal. `RUN_TRAINING=False`.
