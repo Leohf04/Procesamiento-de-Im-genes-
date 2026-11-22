@@ -162,6 +162,7 @@ def main() -> None:
     report["result"] = "PASS"
     print(json.dumps(report, indent=2, ensure_ascii=False))
     print("RESULT: UrbanSyn remote sample + project adapters PASSED")
+    print("Validated adapters against", len(report["samples"]), "real remote samples")
 
 
 if __name__ == "__main__":
