@@ -116,3 +116,27 @@ Se guardará por muestra el dataset de origen, split, secuencia, frame, condici�
 - El segundo intento confirmó el espejo y la metadata, pero encontró un directorio TAR inicial `./` antes del primer MP4; el lector se corrigió para saltar miembros de directorio y localizar el primer video.
 - Script actualizado: `scripts/validate_shift_hf_mirror.py`, commit `5f54e40e116a2b4a516ef829d281e151d625da78`.
 - Workflow de la versión corregida: [44971898884](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971898884), pendiente en el momento de actualizar este documento. No afirmar muestra SHIFT aprobada hasta ver su resultado.
+
+
+## 10. Evidencia final de muestra SHIFT y ajuste A2D2 (2026-11-22)
+
+### SHIFT — RGB y semseg decodificados desde el espejo parcial
+
+- Workflow [44972034973](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972034973) terminó success.
+- Se extrajo por HTTP Range el mismo miembro `eba5-a5bd.mp4` desde `img.tar` (16,770,040 bytes) y `semseg.tar` (5,847,998 bytes). Ambos decodificaron a 501 frames y 1280×800.
+- La fila correspondiente de `seq.csv` identifica `small fog` y `sunrise/sunset`.
+- **Precaución temporal:** OpenCV reportó 10 FPS para RGB y 25 FPS para semseg. Aunque coinciden nombre, dimensiones y número de frames, no se ha demostrado todavía que cada índice de frame corresponda temporalmente. El preflight ahora informa esta diferencia explícitamente; SHIFT no se habilita para métricas hasta verificar la sincronización (o definir un emparejamiento por timestamps/frame IDs).
+- El espejo sigue siendo solo `discrete/videos`, 500 secuencias en `val/front`, sin `continuous/`; no es una fuente de entrenamiento. La muestra pequeña sirve para investigar la alineación y el decoder, no para certificar el split completo.
+
+### A2D2 — interpretación de instancias
+
+- El paper oficial de A2D2 indica que 41.277 imágenes contienen etiquetas semánticas y de instancia para 38 categorías; las instancias de participantes se derivan de la semántica y los objetos adyacentes se diferencian mediante subclases como Car 1–4, Pedestrian 1–3 y Bicycle 1–4. Los objetos no adyacentes pueden reutilizar una subclase.
+- La muestra real confirma colores correspondientes a estas subclases y a líneas sólidas, entre otras clases. Por tanto, la carpeta independiente `camera_lidar_semantic_instance` no es necesaria para la primera aproximación: el adaptador puede formar máscaras por subclase y componentes conectados. Se debe probar el caso de objetos fragmentados/oclusiones y no asumir que un ID de subclase es un ID de instancia global.
+- El paper reporta 12.497 frames frontales con cajas 3D. No son cajas 2D nativas; proyectarlas exige calibración y un protocolo aparte.
+- El paper caracteriza la captura como diurna; aunque menciona días soleados, nublados y lluviosos, no hay metadata por imagen verificada para separar esos casos. A2D2 no cubrirá noche en el benchmark por condición.
+
+### Implicación para el proyecto
+
+- A2D2 puede aportar semántica, lane markings y subclases de instancias en dominio real diurno.
+- UrbanSyn aporta entrenamiento/validación sintética semántica y panoptic/cajas 2D de clases dinámicas.
+- SHIFT espejo puede aportar evaluación sintética de lluvia/niebla/hora solo tras resolver el desfase FPS; hasta entonces se conserva como candidato.
