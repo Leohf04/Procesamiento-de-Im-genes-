@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install validation dependencies
-        run: python -m pip install --disable-pip-version-check boto3 pillow
+        run: python -m pip install --disable-pip-version-check boto3 pillow numpy opencv-python-headless
       - name: List public bucket and validate one paired sample
         run: python scripts/validate_a2d2_s3_sample.py
       - name: Upload validation report
