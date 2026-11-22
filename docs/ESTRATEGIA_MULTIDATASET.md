@@ -195,3 +195,20 @@ El workflow [44974144391](https://github.com/Leohf04/Procesamiento-de-Im-genes-/
 - En ambas se ejecutó `decode_urbansyn_panoptic`; la muestra 0001 produjo 5 instancias y la 0002 produjo 17, con arrays de máscara y cajas coherentes con la imagen.
 - Resultado explícito del script: `UrbanSyn remote sample + project adapters PASSED`; 2 muestras reales validadas.
 - Este resultado prueba integridad y ejecución de los adaptadores en esas muestras, pero no valida aún mapeo semántico canónico completo ni equivalencia de instancias/bbox2D del dataset. La licencia sigue en revisión.
+
+
+## 13. Subconjuntos reproducibles — preparación por manifiestos (2026-11-22)
+
+Se incorpora `scripts/prepare_reproducible_subsets.py` para descubrir pares remotos y generar manifiestos JSONL sin descargar imágenes ni máscaras:
+
+```bash
+python scripts/prepare_reproducible_subsets.py --dataset both --seed 2026 --max-per-split 1000 --output data/manifests
+```
+
+- UrbanSyn: indexa por identificador los cuatro recursos RGB/semseg/panoptic/bbox2D y fija el commit SHA del repositorio HF usado. El split determinista 80/10/10 usa el ID de muestra como grupo porque no hay metadata de secuencia verificada en el índice consultado.
+- A2D2: empareja RGB y máscara semántica de cámara frontal desde S3 anónimo. Agrupa por secuencia antes de asignar split para impedir fuga de frames correlacionados. Registra URI, tamaño y ETag de cada objeto.
+- Ambos: usa SHA-256 de `seed:group_id` para asignar train/val/test; el límite por split se aplica después con orden hash estable. La semilla por defecto es 2026 y el máximo por split 1.000.
+- Salidas: `{dataset}_{train,val,test}.jsonl` y `{dataset}_manifest_summary.json`. No contienen payloads del dataset.
+- Estos son **splits experimentales reproducibles**, no splits oficiales. Para A2D2, el índice S3 es mutable: ETag/tamaño permiten detectar cambios, pero no garantizan snapshot inmutable. UrbanSyn queda anclado a commit SHA.
+- No se generan aún manifests de SHIFT: su alineación RGB/semseg sigue sin resolverse.
+- No se habilita entrenamiento. Los manifests deben generarse en el entorno remoto autorizado y pasar auditoría de conteos, clases, dimensiones, integridad y licencias antes de consumirlos. UrbanSyn permanece en revisión de licencia.
