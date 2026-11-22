@@ -14,6 +14,9 @@ import re
 import tempfile
 from collections import Counter
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import boto3
 import numpy as np
