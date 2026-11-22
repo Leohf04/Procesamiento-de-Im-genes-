@@ -200,3 +200,116 @@ def to_torchvision_target(decoded: Mapping, image_id: int = 0):
         "area": torch.as_tensor(decoded["area"], dtype=torch.float32),
         "iscrowd": torch.as_tensor(decoded["iscrowd"], dtype=torch.int64),
     }
+
+
+def _load_rgb_tensor(image_path, size=None, normalize=True):
+    from PIL import Image
+    import torch
+    with Image.open(image_path) as handle:
+        image = handle.convert("RGB")
+        if size is not None:
+            image = image.resize((int(size[1]), int(size[0])), Image.Resampling.BILINEAR)
+        array = np.asarray(image, dtype=np.float32) / 255.0
+    if normalize:
+        mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
+        std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
+        array = (array - mean) / std
+    import torch
+    return torch.from_numpy(array.transpose(2, 0, 1).copy())
+
+
+def _load_mask_array(mask_path, size=None):
+    from PIL import Image
+    with Image.open(mask_path) as handle:
+        mask = handle.copy()
+        if size is not None:
+            mask = mask.resize((int(size[1]), int(size[0])), Image.Resampling.NEAREST)
+        return np.asarray(mask)
+
+
+class _ManifestDataset:
+    """Base class for explicit manifests; each record names local image/label paths."""
+    def __init__(self, records, size=None):
+        self.records = [dict(record) for record in records]
+        self.size = size
+        if not self.records:
+            raise ValueError("Dataset manifest is empty")
+        for index, record in enumerate(self.records):
+            if "image" not in record or not Path(record["image"]).is_file():
+                raise FileNotFoundError(f"Missing image for manifest row {index}: {record.get('image')}")
+    def __len__(self):
+        return len(self.records)
+
+
+class A2D2SemanticDataset(_ManifestDataset):
+    """A2D2 manifest rows: {'image': RGB path, 'semantic': RGB label path}."""
+    def __init__(self, records, color_to_name, canonical_classes=DEFAULT_CANONICAL_CLASSES, size=None):
+        super().__init__(records, size)
+        self.color_to_name, self.canonical_classes = color_to_name, canonical_classes
+        for index, record in enumerate(self.records):
+            if "semantic" not in record or not Path(record["semantic"]).is_file():
+                raise FileNotFoundError(f"Missing A2D2 semantic label in row {index}")
+    def __getitem__(self, index):
+        import torch
+        record = self.records[index]
+        image = _load_rgb_tensor(record["image"], self.size, normalize=True)
+        mask = _load_mask_array(record["semantic"], self.size)
+        target = decode_a2d2_semantic(mask, self.color_to_name, self.canonical_classes)
+        return image, torch.from_numpy(target.astype(np.int64))
+
+
+class A2D2InstanceDataset(_ManifestDataset):
+    """A2D2 manifest rows: {'image': RGB path, 'instance': RGB sub-class mask path}.
+
+    The semantic RGB mask may be supplied as 'instance' because participant
+    subclasses are encoded by color in A2D2's semantic labels.
+    """
+    def __init__(self, records, color_to_name, canonical_classes=DEFAULT_CANONICAL_CLASSES,
+                 size=None, min_component_area=8):
+        super().__init__(records, size)
+        self.color_to_name, self.canonical_classes = color_to_name, canonical_classes
+        self.min_component_area = min_component_area
+        for index, record in enumerate(self.records):
+            if "instance" not in record or not Path(record["instance"]).is_file():
+                raise FileNotFoundError(f"Missing A2D2 instance/subclass label in row {index}")
+    def __getitem__(self, index):
+        record = self.records[index]
+        image = _load_rgb_tensor(record["image"], self.size, normalize=False)
+        mask = _load_mask_array(record["instance"], self.size)
+        decoded = decode_a2d2_instances(mask, self.color_to_name, self.canonical_classes,
+                                        self.min_component_area)
+        return image, to_torchvision_target(decoded, image_id=int(record.get("image_id", index)))
+
+
+class UrbanSynSemanticDataset(_ManifestDataset):
+    """UrbanSyn manifest rows: {'image': RGB path, 'semantic': class-ID mask path}."""
+    def __init__(self, records, source_to_canonical=None, size=None):
+        super().__init__(records, size)
+        self.source_to_canonical = source_to_canonical
+        for index, record in enumerate(self.records):
+            if "semantic" not in record or not Path(record["semantic"]).is_file():
+                raise FileNotFoundError(f"Missing UrbanSyn semantic label in row {index}")
+    def __getitem__(self, index):
+        import torch
+        record = self.records[index]
+        image = _load_rgb_tensor(record["image"], self.size, normalize=True)
+        mask = _load_mask_array(record["semantic"], self.size)
+        target = decode_urbansyn_semantic(mask, self.source_to_canonical)
+        return image, torch.from_numpy(target.astype(np.int64))
+
+
+class UrbanSynInstanceDataset(_ManifestDataset):
+    """UrbanSyn manifest rows: {'image': RGB path, 'panoptic': RGB panoptic path}."""
+    def __init__(self, records, source_to_canonical, size=None, min_instance_area=1):
+        super().__init__(records, size)
+        self.source_to_canonical, self.min_instance_area = source_to_canonical, min_instance_area
+        for index, record in enumerate(self.records):
+            if "panoptic" not in record or not Path(record["panoptic"]).is_file():
+                raise FileNotFoundError(f"Missing UrbanSyn panoptic label in row {index}")
+    def __getitem__(self, index):
+        record = self.records[index]
+        image = _load_rgb_tensor(record["image"], self.size, normalize=False)
+        panoptic = _load_mask_array(record["panoptic"], self.size)
+        decoded = decode_urbansyn_panoptic(panoptic, self.source_to_canonical,
+                                           self.min_instance_area)
+        return image, to_torchvision_target(decoded, image_id=int(record.get("image_id", index)))
