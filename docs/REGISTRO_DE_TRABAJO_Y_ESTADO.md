@@ -1334,3 +1334,5 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 
 - Se añadió workflow `.github/workflows/build-reproducible-subsets.yml` para ejecutar el generador remotamente y publicar un artifact de manifiestos por 30 días. Se dispara al cambiar el script/workflow y admite ejecución manual con semilla y límite configurables.
 - Primera ejecución automática [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162) quedó **queued** al registrar; todavía no hay manifiestos reales generados. CI de tests [44974469066](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469066) también queued.
+
+- Seguimiento al cierre: workflow de generación [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162) pasó de queued a **in_progress**; la etapa de inventario remoto aún no ha terminado. Los manifiestos no están disponibles todavía. La suite de pruebas del HEAD más reciente [44974488452](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974488452) también sigue en ejecución.
