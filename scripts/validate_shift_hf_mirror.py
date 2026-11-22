@@ -16,6 +16,7 @@ import os
 import re
 import tarfile
 import tempfile
+import subprocess
 from pathlib import PurePosixPath
 
 import cv2
@@ -119,6 +120,84 @@ def extract_first_video(path: str, target_dir: str, kind: str) -> dict:
         "first_members": header_diagnostics[:10],
     }
 
+
+def probe_video_timestamps(path: str) -> dict:
+    """Read decoded presentation timestamps, not nominal OpenCV FPS metadata."""
+    command = [
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=avg_frame_rate,r_frame_rate,duration,nb_frames,time_base",
+        "-show_entries", "frame=best_effort_timestamp_time",
+        "-of", "json", path,
+    ]
+    result = subprocess.run(command, check=True, capture_output=True, text=True)
+    payload = json.loads(result.stdout)
+    stream = (payload.get("streams") or [{}])[0]
+    timestamps = [
+        float(frame["best_effort_timestamp_time"])
+        for frame in payload.get("frames", [])
+        if frame.get("best_effort_timestamp_time") is not None
+    ]
+    if not timestamps:
+        raise RuntimeError(f"No frame PTS found in {path}")
+    return {
+        "frame_pts_count": len(timestamps),
+        "first_pts_seconds": timestamps[0],
+        "last_pts_seconds": timestamps[-1],
+        "duration_from_pts_seconds": timestamps[-1] - timestamps[0],
+        "avg_frame_rate": stream.get("avg_frame_rate"),
+        "r_frame_rate": stream.get("r_frame_rate"),
+        "container_duration_seconds": stream.get("duration"),
+        "nb_frames_metadata": stream.get("nb_frames"),
+        "_timestamps": timestamps,
+    }
+
+
+def compare_video_pts(rgb_path: str, semantic_path: str) -> dict:
+    rgb = probe_video_timestamps(rgb_path)
+    sem = probe_video_timestamps(semantic_path)
+    rt, st = rgb.pop("_timestamps"), sem.pop("_timestamps")
+    overlap_start, overlap_end = max(rt[0], st[0]), min(rt[-1], st[-1])
+    overlap = max(0.0, overlap_end - overlap_start)
+    shorter_duration = max(1e-9, min(rt[-1] - rt[0], st[-1] - st[0]))
+    overlap_ratio = overlap / shorter_duration
+    same_index = None
+    if len(rt) == len(st):
+        errors = [abs(a - b) for a, b in zip(rt, st)]
+        same_index = {
+            "median_abs_delta_seconds": float(__import__("numpy").median(errors)),
+            "p95_abs_delta_seconds": float(__import__("numpy").percentile(errors, 95)),
+            "max_abs_delta_seconds": max(errors),
+        }
+    # Nearest semantic timestamp for each RGB frame within shared timeline.
+    import bisect
+    nearest = []
+    for value in rt:
+        if overlap_start <= value <= overlap_end:
+            pos = bisect.bisect_left(st, value)
+            candidates = st[max(0, pos - 1):min(len(st), pos + 1)]
+            if candidates:
+                nearest.append(min(abs(value - candidate) for candidate in candidates))
+    nearest_stats = None
+    if nearest:
+        np = __import__("numpy")
+        nearest_stats = {
+            "matched_rgb_frames": len(nearest),
+            "median_abs_delta_seconds": float(np.median(nearest)),
+            "p95_abs_delta_seconds": float(np.percentile(nearest, 95)),
+            "max_abs_delta_seconds": max(nearest),
+        }
+    return {
+        "rgb": rgb, "semantic": sem,
+        "shared_timeline_overlap_seconds": overlap,
+        "overlap_fraction_of_shorter_stream": overlap_ratio,
+        "same_index_pts_delta": same_index,
+        "nearest_timestamp_delta": nearest_stats,
+        "status": "PTS_ALIGNMENT_CANDIDATE_REQUIRES_VISUAL_SPOTCHECK"
+            if overlap_ratio >= 0.95 and nearest_stats is not None
+            else "NOT_TEMPORALLY_ALIGNED_BY_PTS",
+        "caveat": "Matching PTS is necessary but not sufficient; semantic/RGB content still requires visual frame-pair verification.",
+    }
+
 def main() -> int:
     api = HfApi()
     info = api.dataset_info(REPO, revision=REVISION)
@@ -169,6 +248,10 @@ def main() -> int:
                 report["samples"][kind] = {"status": "FILE_MISSING"}
             else:
                 report["samples"][kind] = extract_first_video(path, tmp, kind)
+        if all(report["samples"].get(k, {}).get("status") == "PASS_VIDEO_FRAME" for k in ("rgb", "semantic")):
+            report["pts_alignment"] = compare_video_pts(
+                os.path.join(tmp, "rgb.mp4"), os.path.join(tmp, "semantic.mp4")
+            )
 
     rgb = report["samples"].get("rgb", {})
     semantic = report["samples"].get("semantic", {})
