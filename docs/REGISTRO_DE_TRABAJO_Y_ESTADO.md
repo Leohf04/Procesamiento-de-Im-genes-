@@ -1635,3 +1635,14 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - El run de 100 filas es un SHA previo y no demuestra que el error persista en el run de 1.000 filas; comprobar el resultado de este último. No modificar el código a partir de una suposición antes de revisar el SHA y logs del run actual.
 - No se inició entrenamiento; `RUN_TRAINING=False`. No se generaron checkpoints ni métricas de modelos.
 - Próximo paso: reconsultar run `45005700564`; si termina, descargar artifact y auditar integridad/cobertura/clases ausentes/plan. Si falla en el mismo import, corregir path de import en el planificador y repetir la indexación.
+
+
+#### Comprobación posterior de indexación ampliada — 2026-11-22
+
+- Se leyó el registro y se volvió a auditar la rama, PR #3 y Actions.
+- HEAD actual al inicio: `416eee08bae9edfebcfffc4fad34caacd455a22d`. PR #3 continúa abierta, draft, sin fusionar y con head SHA coincidente. Los CI Python push/PR sobre este HEAD terminaron success (`45014065989`, `45014069463`); probe BDD100K `45014065984` también success.
+- El workflow de indexación ampliada `45005700564`, ejecutado sobre el SHA antiguo `c08ea9a363098880e577f9104cc4fd3f32c72efa`, continúa `in_progress` en la consulta. Job `index-and-plan`: setup, checkout, Python, dependencias y manifiestos completados; `Index per-image annotations` sigue activo; build plan y upload pendientes. No tiene artifacts. No se puede auditar el resultado de 1.000 muestras.
+- El smoke `45005695816` terminó failure. Sus pasos de indexación per-image completaron correctamente, pero el planificador falló al importar `src.urban_ontology` desde `scripts/build_balanced_training_plan.py`: `ModuleNotFoundError: No module named 'src'`. El upload se omitió y no existe artifact. Esto confirma el fallo de integración en el SHA de ese run; no se presupone que el run de 1.000 tenga el mismo resultado, porque corre sobre otro SHA anterior y aún sigue indexando.
+- El log del smoke contiene estadísticas diagnósticas de 100 muestras por split, pero no se considera una auditoría publicable ni un plan final debido al fallo y ausencia de artifact.
+- No se modificó código en esta intervención. No se inició entrenamiento; `RUN_TRAINING=False`; no hay checkpoints ni métricas de modelo.
+- Próximo paso: revisar de nuevo el run de 1.000. Si finaliza, descargar artifact y auditarlo; si falla al construir el plan, corregir el import path en el SHA vigente y relanzar el workflow. La corrección debe probarse antes de aceptar la indexación ampliada.
