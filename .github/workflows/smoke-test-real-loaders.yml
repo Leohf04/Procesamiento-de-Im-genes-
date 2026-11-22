@@ -1,6 +1,12 @@
 name: Smoke test real urban manifest loaders
 
 on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/smoke_test_real_manifest_loaders.py"
+      - ".github/workflows/smoke-test-real-loaders.yml"
   workflow_dispatch:
     inputs:
       manifest_run_id:
