@@ -20,7 +20,7 @@ DEFAULT_CANONICAL_CLASSES = {
     "traffic light": 10, "traffic sign": 11, "lane marking": 12,
 }
 A2D2_INSTANCE_PATTERN = re.compile(
-    r"^(car|truck|pedestrian|bicycle|cyclist|motor biker|motorcycle)\s+[1-4]$",
+    r"^(car|truck|bus|person|pedestrian|rider|bicycle|cyclist|motor biker|motorcycle)\s+[1-4]$",
     re.IGNORECASE,
 )
 
