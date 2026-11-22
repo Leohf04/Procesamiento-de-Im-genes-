@@ -1741,3 +1741,6 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Por tanto, las nuevas pruebas de alineamiento y cap están añadidas pero **no ejecutadas con éxito** en CI. Se requiere reintentar cuando GitHub Actions asigne runners y revisar el primer error real si aparece.
 - El artifact del workflow de indexación con cap 200 no existe todavía. No se ha inspeccionado una nueva selección train ni se puede informar su tamaño/distribución. No repetir indexación completa hasta resolver la asignación de runners o ejecutar el planificador sobre los índices ya almacenados de forma controlada.
 - La documentación de balanceo y este registro se actualizaron en la rama. No se inició entrenamiento, `RUN_TRAINING=False`; no hay checkpoints ni métricas experimentales nuevas.
+
+
+- **Comprobación final de CI tras actualizar el registro:** los runs `45067044843` (Python tests) y `45067044841` (probe BDD100K), disparados sobre el HEAD `1980184c`, también terminaron failure en 1–2 segundos con `runner_id=0`, `runner_name` vacío y `steps=[]`. Se confirma que GitHub Actions no asignó runner; no se ejecutó pytest ni el probe. Se conserva el bloqueo y no se interpretan como fallos de las pruebas del código.
