@@ -1,12 +1,20 @@
 import pytest
 import torch
-from torch.utils.data import TensorDataset
+from torch.utils.data import Dataset
 
 from src.urban_training import build_urban_train_loader
 
 
+class _DetectionDataset(Dataset):
+    def __len__(self):
+        return 4
+
+    def __getitem__(self, index):
+        return torch.tensor([float(index)]), {"labels": torch.tensor([1])}
+
+
 def _dataset(n=4):
-    return TensorDataset(torch.arange(n).float().unsqueeze(1))
+    return _DetectionDataset()
 
 
 def test_semantic_train_loader_returns_train_only_pixel_weights():
