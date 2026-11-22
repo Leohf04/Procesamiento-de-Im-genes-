@@ -103,7 +103,7 @@ def _pack_instances(mask_list: list[np.ndarray], labels: list[int], height: int,
         "masks": masks,
         "labels": label_array,
         "boxes": _boxes_from_masks(masks),
-        "area": masks.reshape(len(masks), -1).sum(1).astype(np.float32),
+        "area": masks.sum(axis=(1, 2), dtype=np.uint64).astype(np.float32),
         "iscrowd": np.zeros(len(masks), dtype=np.int64),
     }
 
