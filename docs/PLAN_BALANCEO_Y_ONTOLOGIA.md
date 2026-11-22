@@ -72,3 +72,12 @@ El algoritmo es un selector reproducible de cobertura multilabel, no un balancea
 5. Repetir auditoría sobre los índices completos y comprobar no solapamiento entre splits.
 
 `RUN_TRAINING=False` permanece obligatorio hasta cerrar estas puertas.
+
+
+## Indexador remoto per-image añadido — 2026-11-22
+
+Se implementó `scripts/index_remote_annotations.py` y el workflow `.github/workflows/index-remote-annotations.yml`. El indexador obtiene únicamente anotaciones, no imágenes RGB: A2D2 máscaras semánticas RGB desde S3 anónimo; UrbanSyn semseg y panoptic desde la revisión inmutable del manifiesto. Produce las seis filas-por-muestra JSONL que exige el planificador, con píxeles por clase semántica y conteos de instancias por clase. Los errores de origen, dimensión o decodificación detienen el proceso.
+
+El workflow ejecuta por defecto una prueba acotada de 100 muestras por split/dataset (300 por dataset) y genera manifiestos reproducibles, índices y plan balanceado como artifact. Puede ejecutarse manualmente con un máximo mayor (hasta los 1.000 por split del manifiesto configurado). El artifact contiene solo estadísticas y referencias; no imágenes ni máscaras.
+
+**Estado de la prueba al 2026-11-22:** los manifiestos de prueba ya se generaron correctamente; el indexado per-image del run 45002662737 seguía en ejecución al último registro. No declarar el balanceo real finalizado hasta inspeccionar los seis JSONL, los resúmenes de cobertura y el informe balanced_training_plan.json.
