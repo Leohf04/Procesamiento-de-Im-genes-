@@ -212,3 +212,5 @@ python scripts/prepare_reproducible_subsets.py --dataset both --seed 2026 --max-
 - Estos son **splits experimentales reproducibles**, no splits oficiales. Para A2D2, el índice S3 es mutable: ETag/tamaño permiten detectar cambios, pero no garantizan snapshot inmutable. UrbanSyn queda anclado a commit SHA.
 - No se generan aún manifests de SHIFT: su alineación RGB/semseg sigue sin resolverse.
 - No se habilita entrenamiento. Los manifests deben generarse en el entorno remoto autorizado y pasar auditoría de conteos, clases, dimensiones, integridad y licencias antes de consumirlos. UrbanSyn permanece en revisión de licencia.
+
+- Workflow remoto añadido: `.github/workflows/build-reproducible-subsets.yml`. Se dispara al cambiar el generador/workflow o manualmente, construye los manifiestos en GitHub Actions (solo metadatos) y publica un artifact de 30 días; no guarda manifiestos/datos en Git.
