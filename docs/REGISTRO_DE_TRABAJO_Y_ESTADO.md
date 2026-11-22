@@ -1671,3 +1671,15 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Estos números son estadísticas de ejecución impresas en logs, no una auditoría independiente de archivos JSONL ni un plan balanceado. No afirmar que el balanceo esté terminado. Los splits de UrbanSyn son experimentales por sample ID, no garantizan independencia por secuencia.
 - Próxima acción técnica necesaria: corregir el path de importación del planificador (insertar explícitamente la raíz del repositorio en `sys.path` o convertir la ejecución en módulo), añadir prueba que reproduzca la invocación exacta del workflow y relanzar indexación/plan. Mantener entrenamiento desactivado hasta publicar e inspeccionar artifact completo.
 - CI Python actual del HEAD `eff585ef` y probe BDD100K terminaron success (runs `45020490550`, `45020486506`, `45020486542`). `RUN_TRAINING=False`; no hay checkpoints ni métricas de modelos.
+
+#### Corrección del import del planificador y relanzamiento — 2026-11-22
+
+- Se consultó primero el registro vigente y se auditaron HEAD, PR #3 y Actions. HEAD inicial: `4f43c0a3e136880b4e5cc111614b8fd75b49aee4`; PR #3 abierta, draft, no fusionada.
+- Se corrigió `scripts/build_balanced_training_plan.py`: añade la raíz del repositorio a `sys.path` antes de importar `src.urban_ontology`. Esto soporta la invocación exacta del workflow (`python scripts/build_balanced_training_plan.py`) sin depender de variables de entorno ni de ejecución como módulo.
+- Se añadió `tests/test_balanced_training_plan_cli.py`, que ejecuta el script en un subproceso desde la raíz del repositorio con `--help` y comprueba que el import y la CLI terminan correctamente.
+- Commits: corrección `2a9bcd05e9e39014ad7117a1b2e415774159bae8`; prueba `246a656d2e878f21ecaeabfc511f2b8f8413f647`.
+- El push de la corrección disparó automáticamente el workflow ampliado de indexación `45038801547` sobre SHA `2a9bcd05`; en la última consulta estaba `in_progress`. Esto vuelve a ejecutar preparación de manifiestos, indexación remota y construcción del plan. No se debe declarar éxito ni artifact hasta consultar el resultado final.
+- CI Python del SHA final `246a656d`: runs push `45038810303` y pull_request `45038805388`, ambos en cola al cierre. CI del commit de corrección `2a9bcd05` también tenía run `45038804394` en curso; el run duplicado `45038801549` fue cancelado al supersederse.
+- HEAD final observado: `246a656d2e878f21ecaeabfc511f2b8f8413f647`; PR #3 permanece abierta, draft, merged=false y apunta a este HEAD.
+- No se inició entrenamiento ni se habilitó `RUN_TRAINING`; continúa `False`. No hay checkpoints ni métricas experimentales nuevas.
+- Próximo paso: verificar CI del HEAD final y workflow `45038801547`; si termina correctamente, descargar e inspeccionar íntegramente el artifact (índices JSONL, manifiestos, plan, IDs y cobertura/clases ausentes). Si falla, revisar el nuevo log y corregir antes de avanzar.
