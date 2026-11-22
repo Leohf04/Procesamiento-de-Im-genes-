@@ -11,7 +11,10 @@ import json
 import re
 import tempfile
 from collections import Counter
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np
 from PIL import Image
