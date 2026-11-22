@@ -1252,3 +1252,21 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - Alcance aún incompleto: los decodificadores están implementados, pero faltan loaders de archivos/manifiestos/splits y pruebas sobre muestras remotas reales A2D2/UrbanSyn; verificar mapeo completo de clases, oclusiones/fragmentación y licencia UrbanSyn. SHIFT sigue fuera de métricas por desalineación FPS.
 - `RUN_TRAINING=False`; no se descargaron datasets completos, no se ejecutó entrenamiento real y no hay checkpoints ni métricas experimentales.
 - PR #3 se mantiene abierta y en draft, sin fusionar.
+
+
+### Adaptadores A2D2/UrbanSyn y smoke tests de modelos — 2026-11-22 (continuación)
+
+- Se completó `src/data_adapters.py` con:
+  - `load_a2d2_class_list`, `decode_a2d2_semantic`: parseo del mapa RGB de A2D2 y conversión a IDs canónicos con ignore=255.
+  - `decode_a2d2_instances`: detección de subclases participantes (Car 1–4, Pedestrian 1–3, Bicycle 1–4, etc.) y separación de componentes conectados; no se trata el color/subclase como ID global.
+  - `decode_urbansyn_semantic`: máscaras de IDs de un canal o RGB triplicado y mapeo fuente→canónico explícito.
+  - `decode_urbansyn_panoptic`: decodificación de instancia R*256+G y clase B; extrae máscaras, labels, cajas XYXY, área e iscrowd.
+  - `to_torchvision_target` y `detection_collate_fn` para targets y batches variables de Mask R-CNN.
+  - Loaders basados en manifiesto: `A2D2SemanticDataset`, `A2D2InstanceDataset`, `UrbanSynSemanticDataset`, `UrbanSynInstanceDataset`; soportan resize correcto y normalización adecuada para cada arquitectura.
+- Se amplió `tests/test_multidataset_adapters.py`: pruebas de mapeo/ignore A2D2, componentes separados y vacío, semántica UrbanSyn, panoptic, targets Torchvision, loaders con archivos temporales, collate de targets variables y smoke training de DeepLabV3+ y Mask R-CNN con backward.
+- Primera ejecución CI en commit `03c801a` reveló dos defectos (regex de subclase A2D2 y área de cero instancias). Ambos se corrigieron y se añadieron regresiones.
+- Evidencia CI: push run [44973632150](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44973632150) y PR run [44973635321](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44973635321) terminaron success; el log de run 44973632150 registra **45 passed in 12.37s**, incluida la ejecución de smoke test de ambos modelos y loaders. El workflow también pasó la validación remota BDD100K heredada; eso no valida A2D2/UrbanSyn reales.
+- Se añadió concurrencia `cancel-in-progress` al workflow de tests para cancelar ejecuciones duplicadas/superadas. Se añadió prueba específica del collate después de esos 45 tests; el CI del HEAD final `bd0569bca8b2504a68f572a0569ae41fb6de0daf` está en ejecución (push run [44973729238](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44973729238), PR run [44973733099](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44973733099)); no afirmar aún el resultado de esa última prueba.
+- La rama HEAD es `bd0569bca8b2504a68f572a0569ae41fb6de0daf`. PR #3 comprobada abierta, draft y sin merge.
+- Alcance pendiente antes de entrenamiento de producción: ejecutar adaptadores sobre varias muestras reales remotas A2D2/UrbanSyn; versionar mapeo de las 19 clases UrbanSyn y revisar las 55 clases A2D2; construir manifiestos oficiales train/val sin fuga; inspeccionar fragmentación/oclusiones; resolver discrepancia de licencia UrbanSyn. SHIFT permanece fuera de métricas por alineación temporal 10/25 FPS no resuelta.
+- `RUN_TRAINING=False`. No se ha iniciado entrenamiento de producción, no hay checkpoints ni métricas de precisión. Los smoke tests usan datos sintéticos pequeños y prueban únicamente el contrato de modelo/gradientes.
