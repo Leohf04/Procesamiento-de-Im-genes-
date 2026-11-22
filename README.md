@@ -2,9 +2,15 @@
 
 Proyecto académico del Equipo 2 para detectar y segmentar objetos de escenas viales y evaluar modelos de percepción urbana.
 
-## Estado actual
+## Estrategia de datos activa
 
-La rama `urban-models-and-benchmark` incorpora infraestructura para:
+La combinación seleccionada es **A2D2 + UrbanSyn + SHIFT**: A2D2 como dominio real, UrbanSyn para semántica/panoptic/cajas 2D y SHIFT para evaluación sintética de cambios de dominio. La matriz de cobertura, el mapeo de clases, las licencias y las puertas de validación están documentados en [docs/ESTRATEGIA_MULTIDATASET.md](docs/ESTRATEGIA_MULTIDATASET.md).
+
+**No se ha iniciado entrenamiento.** Los preflights anteriores revelaron fallos corregibles en el emparejamiento de archivos; se han corregido los scripts y se ejecutarán de nuevo. El entrenamiento permanece bloqueado hasta validar anotaciones y compatibilidad.
+
+## Estado actual del código
+
+La rama `urban-models-and-benchmark` incorpora infraestructura heredada y adaptadores en evolución para:
 - Entrenar **DeepLabV3+ ResNet-50** en las 19 clases semánticas oficiales de BDD100K.
 - Ajustar **Mask R-CNN** desde pesos COCO a las ocho clases de instancia de BDD100K, decodificando sus bitmasks RGBA.
 - Mantener cargadores Cityscapes heredados y entrenar carriles BDD100K con las máscaras oficiales empaquetadas (categoría, dirección y estilo); el antiguo rasterizador binario queda obsoleto.
@@ -37,9 +43,9 @@ python scripts/verify_setup.py
 pytest -q
 ```
 
-## BDD100K (dataset urbano principal)
+## BDD100K (flujo heredado, no forma parte de la combinación activa)
 
-BDD100K sustituye a Cityscapes como dataset objetivo del flujo remoto. El proyecto ya incluye cargadores para las máscaras semánticas oficiales de 19 clases y las máscaras RGBA oficiales de instancias (8 clases), además de entrenamiento/evaluación semántica y fine-tuning de Mask R-CNN. Las etiquetas deben proceder de los paquetes oficiales y conservar su estructura.
+Los comandos y loaders de esta sección se conservan como referencia histórica. **No se utilizará BDD100K como dataset principal** en la estrategia activa A2D2 + UrbanSyn + SHIFT. No ejecutar estos comandos como flujo actual hasta que se autorice una revisión específica.
 
 Estructura esperada dentro de `/content/datasets/bdd100k`:
 
@@ -238,6 +244,7 @@ tests/                   Pruebas unitarias y de integridad
 
 ## Documentación
 
+- [Estrategia multidataset A2D2 + UrbanSyn + SHIFT](docs/ESTRATEGIA_MULTIDATASET.md)
 - [Guía de Google Colab Free](docs/COLAB_FREE.md)
 - [Registro de trabajo, decisiones y estado actual (documento de continuidad)](docs/REGISTRO_DE_TRABAJO_Y_ESTADO.md)
 
