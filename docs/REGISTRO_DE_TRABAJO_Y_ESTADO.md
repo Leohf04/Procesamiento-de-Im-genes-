@@ -1657,3 +1657,17 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - El workflow piloto de 100 filas `45005695816` terminó `failure`; no es sustituto del run ampliado ni proporciona artifact final.
 - No se ha iniciado entrenamiento; `RUN_TRAINING=False`.
 - Próximo paso: reconsultar el run `45005700564` cuando el usuario vuelva. Solo si termina y publica artifact, descargarlo y auditar filas, IDs, manifiestos, cobertura por clase/split y campos `unavailable_classes`/`uncovered_classes`.
+
+
+#### Resultado definitivo de la indexación ampliada — 2026-11-22
+
+- Se volvió a consultar este registro antes de verificar rama, PR y Actions.
+- HEAD de la rama al iniciar: `eff585ef5023ee66f16845aeb0a8e7b0f70e4ba2`; PR #3 continúa abierta, draft, sin fusionar y con head SHA coincidente.
+- El run ampliado `45005700564` terminó, pero el workflow global concluyó **failure**. Es importante distinguir: el paso `Index per-image annotations` terminó **success**; el paso siguiente `Build class-aware training manifests` falló y el upload fue omitido. No se publicó artifact.
+- El log confirma que se procesaron todos los índices solicitados: A2D2 train/val/test 1000/1000 cada uno; UrbanSyn train 1000/1000, val 751/751 y test 783/783. Total 5.534 filas anotadas (A2D2 3.000 + UrbanSyn 2.534). Esto acredita finalización del indexador per-image, pero no valida integridad de los JSONL mediante artifact descargable ni produce manifiestos balanceados.
+- Error reproducible en el paso del planificador: `ModuleNotFoundError: No module named 'src'` al importar `src.urban_ontology` desde `scripts/build_balanced_training_plan.py`. El mismo fallo aparece en el smoke `45005695816`; ambos runs terminan failure y ambos carecen de artifacts.
+- El log sí emitió resumen de cobertura. A2D2 semantic frame coverage train/val/test: bicycle 225/3/292; car 882/936/880; lane marking 955/990/846; person 267/17/274; sidewalk 648/191/718; sky 994/1000/997; traffic sign 803/623/836; truck 647/852/534. A2D2 instance object counts train/val/test: bicycle 1263/5/1270; car 10383/6454/9299; person 1341/31/786; truck 1880/4440/1395. Las clases de instancia esperadas no observadas en estos índices incluyen bus, motorcycle, rider y train; no asumir cobertura A2D2 de esas clases.
+- UrbanSyn presentó las 19 clases semánticas esperadas en train/val/test. Instancias: ocho clases observadas en los tres splits; conteos de objetos (train/val/test): bicycle 941/730/729; bus 307/222/239; car 5707/4313/4566; motorcycle 578/489/474; person 12865/10125/9773; rider 1230/1030/988; train 60/48/57; truck 367/242/292.
+- Estos números son estadísticas de ejecución impresas en logs, no una auditoría independiente de archivos JSONL ni un plan balanceado. No afirmar que el balanceo esté terminado. Los splits de UrbanSyn son experimentales por sample ID, no garantizan independencia por secuencia.
+- Próxima acción técnica necesaria: corregir el path de importación del planificador (insertar explícitamente la raíz del repositorio en `sys.path` o convertir la ejecución en módulo), añadir prueba que reproduzca la invocación exacta del workflow y relanzar indexación/plan. Mantener entrenamiento desactivado hasta publicar e inspeccionar artifact completo.
+- CI Python actual del HEAD `eff585ef` y probe BDD100K terminaron success (runs `45020490550`, `45020486506`, `45020486542`). `RUN_TRAINING=False`; no hay checkpoints ni métricas de modelos.
