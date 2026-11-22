@@ -1536,3 +1536,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - RUN_TRAINING=False; no se descargaron datasets completos, no se entrenó y no se generaron checkpoints ni métricas de modelos. Se mantiene la licencia conservadora UrbanSyn CC BY-NC-SA 4.0, atribución y no redistribución.
 - Commits de implementación: 5001f421 (config), 87f20fae (loader), 80f1907e (planner), 0a05f901 (tests), 579aa308 (doc); correcciones posteriores 9d823957, aabf0e7f, 8827e768, b1b14ef y 6184489d.
 - HEAD antes de esta actualización del registro: 6184489dd3a796eee71748a1e6d669b0bf2689fd. PR #3 verificada abierta, draft, merged=false y apuntando al HEAD. CI de Python push/PR para ese SHA estaba pendiente/queued (45001424794, 45001429018); los runs intermedios cancelados pertenecen a commits supersedidos. Confirmar el resultado final después del commit de este registro.
+
+
+#### Correcciones de CI y validación final de ontología/planificador — 2026-11-22
+
+- La primera suite de CI para el código nuevo (`45001494752`, SHA `a3677be7`) detectó dos fallos en pruebas nuevas: los IDs fuente UrbanSyn llegaban como strings y una fixture JSONL escribía el literal \\n. Se corrigió `src/urban_ontology.py` para exponer claves UrbanSyn como enteros y se corrigió la escritura de fixtures.
+- CI final de código en SHA `c5a8fd8773183bd98499422ad7cb2526e30c41ae`: Python tests push `45001691687` **success** y PR `45001696004` **success**. Se verificaron pasos: instalación de dependencias, compileall, CLIs, `pytest -q` y validación real de muestras semánticas BDD100K; todos terminaron success.
+- La suite incluye ahora las pruebas nuevas de ontología, planificador, integridad del índice y preservación de validation/test completos. Los runs fallidos anteriores corresponden a la primera versión y quedaron corregidos en el SHA posterior.
+- Estado del código: ontología y planificador listos a nivel de implementación y tests sintéticos; el plan balanceado real sigue bloqueado por falta de índices de anotaciones per-image para ambos datasets. La auditoría 150+150 no contiene esos datos individuales.
+- HEAD antes de este addendum: `c5a8fd8773183bd98499422ad7cb2526e30c41ae`. PR #3 abierta, draft, merged=false. `RUN_TRAINING=False`; sin datasets completos descargados ni entrenamiento.
