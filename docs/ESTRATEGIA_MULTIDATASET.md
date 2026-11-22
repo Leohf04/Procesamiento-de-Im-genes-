@@ -108,3 +108,11 @@ Se guardará por muestra el dataset de origen, split, secuencia, frame, condici�
 - SHIFT es candidato de test sintético con metadata de clima/hora, pero su muestra visual todavía está pendiente.
 - A2D2 no se dará por aprobado para Mask R-CNN hasta probar extracción de instancias a partir de las subclases (y comprobar componentes/objetos).
 - Los datasets completos no se han descargado; no se ha iniciado entrenamiento ni hay métricas de modelos.
+
+
+### Seguimiento del preflight SHIFT por rango — 2026-11-22
+
+- El primer intento del lector de MP4 falló por dependencia OpenCV ausente; se añadió `opencv-python-headless` al workflow.
+- El segundo intento confirmó el espejo y la metadata, pero encontró un directorio TAR inicial `./` antes del primer MP4; el lector se corrigió para saltar miembros de directorio y localizar el primer video.
+- Script actualizado: `scripts/validate_shift_hf_mirror.py`, commit `5f54e40e116a2b4a516ef829d281e151d625da78`.
+- Workflow de la versión corregida: [44971898884](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971898884), pendiente en el momento de actualizar este documento. No afirmar muestra SHIFT aprobada hasta ver su resultado.
