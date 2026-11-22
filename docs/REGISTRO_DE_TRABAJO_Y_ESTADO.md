@@ -1336,3 +1336,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Primera ejecución automática [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162) quedó **queued** al registrar; todavía no hay manifiestos reales generados. CI de tests [44974469066](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469066) también queued.
 
 - Seguimiento al cierre: workflow de generación [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162) pasó de queued a **in_progress**; la etapa de inventario remoto aún no ha terminado. Los manifiestos no están disponibles todavía. La suite de pruebas del HEAD más reciente [44974488452](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974488452) también sigue en ejecución.
+
+
+### Comprobación de finalización de manifiestos — 2026-11-22
+
+- Se consultó el estado real de GitHub Actions. El workflow de generación [44974469162](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974469162) terminó, pero su conclusión fue **cancelled**, no success. El job `manifests` fue cancelado durante el paso `Build remote-reference manifests`; el paso de subir artifacts quedó omitido. Por tanto, **no hay manifiestos generados ni artifact disponible que pueda darse por válido**.
+- La ejecución de tests del HEAD actual [44974517462](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974517462) terminó **success**. Otra ejecución de tests del mismo HEAD [44974521446](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974521446) también terminó success.
+- HEAD de `urban-models-and-benchmark`: `e134e73fe1d3755e9537d0823d1592efaf8519e4`. PR #3 sigue abierta, en draft y sin fusionar.
+- Próximo paso: investigar por qué se canceló el job de manifiestos y relanzar una ejecución controlada; después auditar conteos, duplicados, emparejamiento de recursos y ausencia de fuga entre secuencias. No iniciar entrenamiento mientras no existan manifiestos validados.
+- `RUN_TRAINING=False`; no hay entrenamiento de producción, checkpoints ni métricas experimentales.
