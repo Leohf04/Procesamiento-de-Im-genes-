@@ -1412,3 +1412,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - La ampliación audita A2D2 y UrbanSyn en 12 muestras por split; no es un censo de los manifiestos. El informe anterior de 24 muestras por dataset permanece como evidencia anterior, no debe mezclarse con el resultado nuevo.
 - Estado de entrenamiento: `RUN_TRAINING=False`; no se inicia entrenamiento ni se declaran métricas de modelos. PR #3 permanece abierta, draft y sin fusionar.
 - Próximo paso: verificar el workflow de auditoría ampliada y su artifact; inspeccionar histogramas/cobertura por split, muestras con componentes fragmentados y consistencia de cajas. Después decidir si se amplía el subconjunto A2D2/ontología canónica y probar los loaders con manifiestos reales. Resolver licencia UrbanSyn con proveedor antes de redistribución.
+
+
+### Seguimiento inmediato de ejecuciones — 2026-11-22
+
+- Tras guardar la ampliación de auditoría se verificó que el workflow se disparó correctamente: [44995394741](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44995394741), commit `ff1f39d5aedf116ac9b01eaa597ee8a55d2098f3`, estado **in_progress**. Checkout/setup-python completados; instalación de dependencias en curso; aún no se descargaron manifiestos ni comenzó la auditoría de 12 muestras/split. No hay artifact ampliado todavía.
+- CI del commit `ff1f39d5...`: [44995396960](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44995396960), estado **in_progress** (instalación PyTorch CPU). CI para HEAD de registro `02a7afeee305fa6e9f25d1e3a01cc4ff1907f952`: [44995406185](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44995406185), también **in_progress**; otra ejecución [44995410143](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44995410143) quedó pending. No declarar verde el HEAD actual hasta revisar una ejecución completada sobre él.
+- Probe de archivo BDD100K del HEAD de registro [44995406197](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44995406197) está **in_progress**.
+- PR #3 verificada tras el commit de registro: abierta, draft, merged=false; head `02a7afeee305fa6e9f25d1e3a01cc4ff1907f952`. El campo mergeable temporalmente figura false mientras los checks se ejecutan; no se intentó fusionar.
+- El resultado de auditoría ampliada y el estado final de CI quedan pendientes para la siguiente revisión. No entrenamiento ni descarga completa de datasets.
