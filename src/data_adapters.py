@@ -62,7 +62,9 @@ def normalize_class_name(name: str) -> str | None:
         "motor biker": "rider", "bicycle": "bicycle", "car": "car",
         "truck": "truck", "bus": "bus", "motorcycle": "motorcycle",
         "traffic sign": "traffic sign", "traffic light": "traffic light",
-        "road": "road", "sidewalk": "sidewalk",
+        "road": "road", "sidewalk": "sidewalk", "building": "building",
+        "wall": "wall", "fence": "fence", "pole": "pole",
+        "vegetation": "vegetation", "terrain": "terrain", "sky": "sky",
         "solid line": "lane marking", "dashed line": "lane marking",
         "road marking": "lane marking", "crosswalk": "lane marking",
     }
