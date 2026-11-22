@@ -117,3 +117,16 @@ def test_build_plan_keeps_eval_splits_complete_and_domains_separate(tmp_path):
     assert (output / "a2d2_instances_train.jsonl").is_file()
     assert report["plans"]["a2d2"]["train"]["instances"]["role"] == "complementary_ablation"
     assert report["plans"]["urbansyn"]["train"]["instances"]["role"] == "primary"
+
+
+def test_greedy_balancer_reports_expected_but_absent_classes():
+    rows = [
+        {"sample_id": "one", "instance_counts": {"car": 2}},
+        {"sample_id": "two", "instance_counts": {"truck": 1}},
+    ]
+    _, summary = greedy_balanced_select(
+        rows, count_key="instance_counts", seed=7, max_samples=2,
+        expected_classes={"car", "truck", "bus", "motorcycle"},
+    )
+    assert summary["unavailable_classes"] == ["bus", "motorcycle"]
+    assert summary["uncovered_classes"] == ["bus", "motorcycle"]
