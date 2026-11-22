@@ -1611,3 +1611,15 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - No se declara terminada la indexación per-image ampliada, ni el plan balanceado real, ni la integración de sampler/pesos en loaders. La validación de código/CI está verde, pero no sustituye esas comprobaciones de datos.
 - No se inició entrenamiento; `RUN_TRAINING=False` se mantiene. No hay checkpoints ni métricas experimentales nuevas.
 - Próximo paso: volver a consultar ambos workflows; al finalizar el run 1.000, descargar y auditar el artifact (integridad de filas/IDs, manifiestos, clases presentes/ausentes y cobertura por split). Después integrar sampler/pesos a los loaders multidataset con prueba sintética y smoke sin entrenamiento.
+
+
+#### Nueva comprobación de indexación remota — 2026-11-22
+
+- Se consultó primero el registro de continuidad y después se auditaron rama, PR #3 y GitHub Actions.
+- HEAD al iniciar esta comprobación: `7c43d142d85bf7338c1f3ce9ebce7782a94a15ad`; PR #3 `open`, `draft=true`, `merged=false`, head SHA coincidente.
+- CI Python del HEAD actual: push `45007088775` y pull_request `45007082842` terminaron `success`; probe BDD100K `45007082868` también `success`.
+- El workflow ampliado `45005700564` sigue `in_progress`; job `index-and-plan`. Setup, checkout, Python, dependencias y preparación de manifiestos completados; `Index per-image annotations` sigue `in_progress`; build de planes y upload pendientes. Artifacts: lista vacía.
+- El smoke `45005695816` de 100 muestras también sigue `in_progress` en `Index per-image annotations`, sin artifacts.
+- Conclusión: indexación no terminada; no es posible auditar la salida de 1.000 muestras, clases ausentes/cobertura ni plan real. No se han inferido resultados a partir de manifiestos solamente.
+- No se modificó código ni se inició entrenamiento. `RUN_TRAINING=False` se mantiene.
+- Próximo paso: reconsultar estos dos workflows; cuando finalice el de 1.000 muestras, descargar y auditar el artifact antes de integrar sampler/pesos.
