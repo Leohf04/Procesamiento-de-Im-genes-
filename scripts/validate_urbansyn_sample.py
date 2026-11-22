@@ -16,7 +16,7 @@ from pathlib import PurePosixPath
 import numpy as np
 from PIL import Image
 
-from src.data_adapters import decode_urbansyn_panoptic, decode_urbansyn_semantic, to_torchvision_target
+from src.data_adapters import decode_urbansyn_panoptic, decode_urbansyn_semantic
 from huggingface_hub import HfApi, hf_hub_download
 
 REPO_ID = "UrbanSyn/UrbanSyn"
@@ -132,10 +132,9 @@ def main() -> None:
                 raise ValueError(f"{identifier}: semantic adapter changed spatial dimensions")
             dynamic_map = {class_id: class_id for class_id in DYNAMIC_IDS}
             decoded_panoptic = decode_urbansyn_panoptic(pan, dynamic_map)
-            target = to_torchvision_target(decoded_panoptic, image_id=int(identifier) if identifier.isdigit() else 0)
-            if target["masks"].ndim != 3 or target["boxes"].shape != (len(target["labels"]), 4):
-                raise ValueError(f"{identifier}: invalid Mask R-CNN target shapes")
-            if len(target["labels"]) and (target["masks"].shape[1:] != (rgb_size[1], rgb_size[0])):
+            if decoded_panoptic["masks"].ndim != 3 or decoded_panoptic["boxes"].shape != (len(decoded_panoptic["labels"]), 4):
+                raise ValueError(f"{identifier}: invalid instance target array shapes")
+            if len(decoded_panoptic["labels"]) and decoded_panoptic["masks"].shape[1:] != (rgb_size[1], rgb_size[0]):
                 raise ValueError(f"{identifier}: instance target dimensions mismatch")
             with open(local["bbox"], encoding="utf-8") as f:
                 bbox = json.load(f)
@@ -150,10 +149,10 @@ def main() -> None:
                 "adapter_validation": {
                     "semantic_output_shape": list(decoded_semantic.shape),
                     "semantic_unique_ids": sorted(int(x) for x in np.unique(decoded_semantic)),
-                    "panoptic_instance_count": int(len(target["labels"])),
-                    "mask_tensor_shape": list(target["masks"].shape),
-                    "box_tensor_shape": list(target["boxes"].shape),
-                    "target_labels": sorted(int(x) for x in np.unique(target["labels"].numpy())),
+                    "panoptic_instance_count": int(len(decoded_panoptic["labels"])),
+                    "mask_array_shape": list(decoded_panoptic["masks"].shape),
+                    "box_array_shape": list(decoded_panoptic["boxes"].shape),
+                    "target_labels": sorted(int(x) for x in np.unique(decoded_panoptic["labels"])),
                 },
                 "bbox_json_root": type(bbox).__name__,
                 "bbox_json_keys": sorted(bbox.keys()) if isinstance(bbox, dict) else None,
