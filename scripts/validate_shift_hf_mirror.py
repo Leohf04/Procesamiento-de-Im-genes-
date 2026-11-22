@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 import re
+import tarfile
 import tempfile
 from pathlib import PurePosixPath
 
@@ -54,46 +55,50 @@ def get_range(path: str, start: int, end: int) -> tuple[bytes, dict]:
 
 
 def extract_first_video(path: str, target_dir: str, kind: str) -> dict:
-    # Tar archives begin with a directory member "./"; scan a bounded prefix
-    # until the first MP4 header is found.
+    # Parse only tar headers from a 16 MiB prefix, then range-fetch one MP4.
     prefix, prefix_meta = get_range(path, 0, 16 * 1024 * 1024 - 1)
-    offset = 0
     selected = None
-    while offset + 512 <= len(prefix):
-        header = prefix[offset:offset + 512]
-        if header == b"\\0" * 512:
-            break
-        name = header[0:100].split(b"\\0", 1)[0].decode("utf-8", "replace")
-        size_field = header[124:136].strip(b"\\0 ")
-        try:
-            member_size = int(size_field or b"0", 8)
-        except ValueError:
-            break
-        member_start = offset + 512
-        padded_size = ((member_size + 511) // 512) * 512
-        next_offset = member_start + padded_size
-        if name.lower().endswith(".mp4"):
-            selected = (name, member_size, member_start, next_offset)
-            break
-        if next_offset <= offset:
-            break
-        offset = next_offset
+    header_diagnostics = []
+    try:
+        with tarfile.open(fileobj=io.BytesIO(prefix), mode="r:") as archive:
+            while True:
+                member = archive.next()
+                if member is None:
+                    break
+                header_diagnostics.append({
+                    "name": member.name, "size": member.size,
+                    "type": member.type.decode("ascii", "replace") if isinstance(member.type, bytes) else str(member.type),
+                    "offset_data": member.offset_data,
+                })
+                if member.isfile() and member.name.lower().endswith(".mp4"):
+                    selected = (member.name, member.size, member.offset_data)
+                    break
+    except (tarfile.ReadError, EOFError, OSError) as exc:
+        if selected is None:
+            return {"status": "TAR_HEADER_SCAN_INCOMPLETE",
+                    "prefix_bytes": len(prefix),
+                    "first_members": header_diagnostics[:10],
+                    "parse_error": repr(exc), "transfer": prefix_meta}
     if selected is None:
         return {"status": "NO_MP4_IN_BOUNDED_PREFIX",
-                "prefix_bytes": len(prefix), "transfer": prefix_meta}
-    name, member_size, member_start, next_offset = selected
+                "prefix_bytes": len(prefix),
+                "first_members": header_diagnostics[:10],
+                "transfer": prefix_meta}
+    name, member_size, offset_data = selected
     if member_size <= 0 or member_size > MAX_MEMBER_BYTES:
         return {"status": "FIRST_VIDEO_EXCEEDS_SAMPLE_LIMIT",
                 "name": name, "member_bytes": member_size,
                 "max_member_bytes": MAX_MEMBER_BYTES}
-    archive_prefix, transfer = get_range(path, 0, next_offset - 1)
-    if len(archive_prefix) < next_offset:
+    video_bytes, transfer = get_range(
+        path, offset_data, offset_data + member_size - 1
+    )
+    if len(video_bytes) < member_size:
         return {"status": "INCOMPLETE_VIDEO_MEMBER", "name": name,
-                "member_bytes": member_size, "bytes_read": len(archive_prefix),
+                "member_bytes": member_size, "bytes_read": len(video_bytes),
                 "transfer": transfer}
     video_path = os.path.join(target_dir, f"{kind}.mp4")
     with open(video_path, "wb") as handle:
-        handle.write(archive_prefix[member_start:member_start + member_size])
+        handle.write(video_bytes)
     capture = cv2.VideoCapture(video_path)
     ok, frame = capture.read()
     fps = capture.get(cv2.CAP_PROP_FPS)
@@ -109,7 +114,8 @@ def extract_first_video(path: str, target_dir: str, kind: str) -> dict:
         "frame_width": int(frame.shape[1]), "frame_height": int(frame.shape[0]),
         "fps": fps, "frame_count": int(frame_count),
         "sampled_unique_colors": len({tuple(int(v) for v in row) for row in sampled}),
-        "transfer": transfer,
+        "transfer": transfer, "tar_prefix_transfer": prefix_meta,
+        "first_members": header_diagnostics[:10],
     }
 
 def main() -> int:
