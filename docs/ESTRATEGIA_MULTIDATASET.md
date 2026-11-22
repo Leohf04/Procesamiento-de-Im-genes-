@@ -214,3 +214,39 @@ python scripts/prepare_reproducible_subsets.py --dataset both --seed 2026 --max-
 - No se habilita entrenamiento. Los manifests deben generarse en el entorno remoto autorizado y pasar auditoría de conteos, clases, dimensiones, integridad y licencias antes de consumirlos. UrbanSyn permanece en revisión de licencia.
 
 - Workflow remoto añadido: `.github/workflows/build-reproducible-subsets.yml`. Se dispara al cambiar el generador/workflow o manualmente, construye los manifiestos en GitHub Actions (solo metadatos) y publica un artifact de 30 días; no guarda manifiestos/datos en Git.
+
+
+## 9. Ontología oficial UrbanSyn verificada (2026-11-22)
+
+La página oficial de UrbanSyn y el README publicado por el propio equipo en Hugging Face describen la misma taxonomía semántica basada en las 19 clases de entrenamiento de Cityscapes, más `unlabeled`:
+
+| trainId | Clase fuente oficial | Uso en el proyecto |
+|---:|---|---|
+| 0 | road | infraestructura semántica |
+| 1 | sidewalk | infraestructura semántica |
+| 2 | building | contexto semántico |
+| 3 | wall | contexto semántico |
+| 4 | fence | contexto semántico |
+| 5 | pole | contexto semántico |
+| 6 | traffic light | señalización semántica |
+| 7 | traffic sign | señalización semántica |
+| 8 | vegetation | contexto semántico |
+| 9 | terrain | contexto semántico |
+| 10 | sky | contexto semántico |
+| 11 | person | participante dinámico; panoptic/caja |
+| 12 | rider | participante dinámico; panoptic/caja |
+| 13 | car | vehículo; panoptic/caja |
+| 14 | truck | vehículo; panoptic/caja |
+| 15 | bus | vehículo; panoptic/caja |
+| 16 | train | vehículo; panoptic/caja |
+| 17 | motorcycle | vehículo; panoptic/caja |
+| 18 | bicycle | participante dinámico; panoptic/caja |
+| 19 | unlabeled | ignore, no clase de entrenamiento |
+
+El sitio oficial especifica que panoptic cubre Person, Rider, Car, Truck, Bus, Train, Motorcycle y Bicycle; las cajas 2D cubren objetos dinámicos hasta 110 m y con tamaño superior a 150 píxeles. No hay clase dedicada a carril/lane marking en esta taxonomía. Esta tabla es el mapeo fuente→nombre verificado; la asignación a una ontología reducida del proyecto debe seguir siendo explícita y versionada, sin confundir `rider` con `bicycle`.
+
+### Licencia: criterio operativo
+
+La fuente primaria del proveedor (urbansyn.org) indica **CC BY-NC-SA 4.0** y declara que el dataset se proporciona para investigación y uso comercial sujeto a esos términos; la página del mirror Hugging Face muestra **CC BY-SA 4.0**, sin la cláusula NC. Por discrepancia entre distribuidor y proveedor, se adopta el término más restrictivo **CC BY-NC-SA 4.0** como regla operativa hasta obtener aclaración escrita. El uso académico no comercial del proyecto puede continuar sujeto a atribución y compartir-igual; no redistribuir archivos ni derivados. La licencia no impide validar localmente las muestras ni generar métricas agregadas permitidas por los términos.
+
+Fuentes consultadas: [sitio oficial UrbanSyn](https://urbansyn.org/) y [README del dataset en Hugging Face](https://huggingface.co/datasets/UrbanSyn/UrbanSyn).
