@@ -17,7 +17,7 @@ on:
       samples_per_split:
         description: Samples to download and inspect per split and dataset (1-50; expanded audit)
         required: true
-        default: "12"
+        default: "50"
         type: string
 
 permissions:
@@ -58,7 +58,7 @@ jobs:
         run: |
           python scripts/audit_urban_annotations.py \
             --manifest-dir artifacts/manifests \
-            --samples-per-split "${{ inputs.samples_per_split || '12' }}" \
+            --samples-per-split "${{ inputs.samples_per_split || '50' }}" \
             --output artifacts/annotation_audit_report.json
       - name: Upload audit report
         uses: actions/upload-artifact@v4
