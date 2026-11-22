@@ -21,7 +21,7 @@ on:
       max_per_split:
         description: Maximum samples in each dataset split
         required: true
-        default: "100"
+        default: "1000"
 
 permissions:
   contents: read
@@ -43,7 +43,7 @@ jobs:
         run: |
           python scripts/prepare_reproducible_subsets.py \
             --dataset both --seed "${{ inputs.seed || '2026' }}" \
-            --max-per-split "${{ inputs.max_per_split || '100' }}" \
+            --max-per-split "${{ inputs.max_per_split || '1000' }}" \
             --output artifacts/manifests
       - name: Index per-image annotations
         run: |
@@ -56,7 +56,7 @@ jobs:
             --manifests-dir artifacts/manifests \
             --annotation-index-dir artifacts/annotation_index \
             --output-dir artifacts/balanced --seed "${{ inputs.seed || '2026' }}" \
-            --max-samples-per-split "${{ inputs.max_per_split || '100' }}"
+            --max-samples-per-split "${{ inputs.max_per_split || '1000' }}"
       - name: Upload indexes, reports, and balanced manifests
         uses: actions/upload-artifact@v4
         with:
