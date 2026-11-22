@@ -5,7 +5,7 @@ from src.data_adapters import (
     A2D2InstanceDataset, A2D2SemanticDataset, UrbanSynInstanceDataset,
     UrbanSynSemanticDataset, decode_a2d2_instances, decode_a2d2_semantic,
     decode_urbansyn_panoptic, decode_urbansyn_semantic, load_a2d2_class_list,
-    to_torchvision_target,
+    detection_collate_fn, to_torchvision_target,
 )
 
 
@@ -152,3 +152,13 @@ def test_manifest_datasets_load_a2d2_and_urbansyn(tmp_path):
         {11: 1})
     image, target = us_inst[0]
     assert target["boxes"].tolist() == [[3, 2, 8, 7]]
+
+
+def test_detection_collate_keeps_variable_targets_as_lists():
+    import torch
+    image_a, image_b = torch.zeros(3, 8, 8), torch.zeros(3, 8, 8)
+    target_a, target_b = {"boxes": torch.zeros(0, 4)}, {"boxes": torch.ones(1, 4)}
+    images, targets = detection_collate_fn([(image_a, target_a), (image_b, target_b)])
+    assert len(images) == 2 and len(targets) == 2
+    assert targets[0]["boxes"].shape == (0, 4)
+    assert targets[1]["boxes"].shape == (1, 4)
