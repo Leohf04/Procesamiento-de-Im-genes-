@@ -185,3 +185,13 @@ Se ampliaron los preflights para ejecutar `src/data_adapters.py` sobre las anota
 - El preflight A2D2 ya prueba la conversión de máscara real con los decodificadores, pero todavía solo se valida una muestra frontal. La reconstrucción por componentes puede dividir objetos ocluidos/desconectados.
 - No se cambió la licencia de UrbanSyn: discrepancia oficial/HF permanece en revisión. No redistribuir.
 - No se activó entrenamiento. Los subconjuntos de producción y los manifiestos reproducibles aún no están listos; `RUN_TRAINING=False`.
+
+
+### Resultado final del preflight UrbanSyn (2026-11-22)
+
+El workflow [44974144391](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44974144391) terminó **success**. El mirror lista 7,539 IDs de muestra y los 7,539 tienen RGB, semseg, panoptic y bbox2D asociados por identificador. Se descargaron solo dos muestras completas (IDs 0001 y 0002), no los archivos completos:
+
+- En ambas muestras se ejecutó `decode_urbansyn_semantic` y se comprobaron IDs/shape.
+- En ambas se ejecutó `decode_urbansyn_panoptic`; la muestra 0001 produjo 5 instancias y la 0002 produjo 17, con arrays de máscara y cajas coherentes con la imagen.
+- Resultado explícito del script: `UrbanSyn remote sample + project adapters PASSED`; 2 muestras reales validadas.
+- Este resultado prueba integridad y ejecución de los adaptadores en esas muestras, pero no valida aún mapeo semántico canónico completo ni equivalencia de instancias/bbox2D del dataset. La licencia sigue en revisión.
