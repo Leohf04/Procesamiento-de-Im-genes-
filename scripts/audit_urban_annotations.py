@@ -9,21 +9,14 @@ from __future__ import annotations
 import argparse
 import io
 import json
-import random
-import re
-import tempfile
 from collections import Counter
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import boto3
 import numpy as np
-from botocore import UNSIGNED
-from botocore.config import Config
 from PIL import Image
-from huggingface_hub import hf_hub_download
 
 from src.data_adapters import (
     DEFAULT_CANONICAL_CLASSES, decode_a2d2_instances, decode_a2d2_semantic,
@@ -54,6 +47,10 @@ def color_histogram(rgb: np.ndarray) -> Counter:
 
 
 def audit_a2d2(manifest_dir: Path, samples_per_split: int) -> dict:
+    import boto3
+    from botocore import UNSIGNED
+    from botocore.config import Config
+
     s3 = boto3.client("s3", region_name=A2D2_REGION,
                       config=Config(signature_version=UNSIGNED, retries={"max_attempts": 5}))
     class_list_obj = s3.get_object(Bucket=A2D2_BUCKET, Key="camera_lidar_semantic/class_list.json")
@@ -129,6 +126,8 @@ def _bbox_record_count(value) -> int | None:
 
 
 def audit_urbansyn(manifest_dir: Path, samples_per_split: int) -> dict:
+    from huggingface_hub import hf_hub_download
+
     reports, semantic_hist, panoptic_hist = [], Counter(), Counter()
     bbox_counts, agreement = [], []
     revision = None
