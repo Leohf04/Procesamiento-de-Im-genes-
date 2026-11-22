@@ -42,7 +42,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 14742059955
-          run-id: ${{ inputs.manifest_run_id }}
+          run-id: ${{ inputs.manifest_run_id || '44992977292' }}
           github-token: ${{ github.token }}
           path: artifacts/manifests
           merge-multiple: true
@@ -50,7 +50,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           artifact-ids: 14741878951
-          run-id: ${{ inputs.manifest_run_id }}
+          run-id: ${{ inputs.manifest_run_id || '44992977292' }}
           github-token: ${{ github.token }}
           path: artifacts/manifests
           merge-multiple: true
