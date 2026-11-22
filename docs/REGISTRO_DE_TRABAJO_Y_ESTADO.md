@@ -1646,3 +1646,14 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - El log del smoke contiene estadísticas diagnósticas de 100 muestras por split, pero no se considera una auditoría publicable ni un plan final debido al fallo y ausencia de artifact.
 - No se modificó código en esta intervención. No se inició entrenamiento; `RUN_TRAINING=False`; no hay checkpoints ni métricas de modelo.
 - Próximo paso: revisar de nuevo el run de 1.000. Si finaliza, descargar artifact y auditarlo; si falla al construir el plan, corregir el import path en el SHA vigente y relanzar el workflow. La corrección debe probarse antes de aceptar la indexación ampliada.
+
+
+#### Comprobación de indexación solicitada — 2026-11-22
+
+- Se leyó el registro de continuidad y se verificó la rama, PR #3 y Actions.
+- HEAD observado: `85ec33db4788fa86c0f366d88109552ad268b989`. PR #3 permanece abierta, draft y sin fusionar; su head SHA coincide con la rama.
+- El workflow ampliado `45005700564` (SHA de ejecución `c08ea9a363098880e577f9104cc4fd3f32c72efa`) **no ha terminado**: estado `in_progress`. Job `index-and-plan`; pasos de setup, checkout, Python, dependencias y manifiestos completados; `Index per-image annotations` continúa en curso; construcción del plan y publicación de artifact siguen pendientes.
+- Consulta de artifacts del run 1.000: lista vacía. No se puede auditar todavía la integridad de las 1.000 filas, la cobertura/clases ausentes ni los manifiestos finales.
+- El workflow piloto de 100 filas `45005695816` terminó `failure`; no es sustituto del run ampliado ni proporciona artifact final.
+- No se ha iniciado entrenamiento; `RUN_TRAINING=False`.
+- Próximo paso: reconsultar el run `45005700564` cuando el usuario vuelva. Solo si termina y publica artifact, descargarlo y auditar filas, IDs, manifiestos, cobertura por clase/split y campos `unavailable_classes`/`uncovered_classes`.
