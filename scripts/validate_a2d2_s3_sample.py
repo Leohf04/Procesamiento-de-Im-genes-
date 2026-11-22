@@ -20,7 +20,7 @@ from botocore import UNSIGNED
 from botocore.config import Config
 from PIL import Image
 
-from src.data_adapters import decode_a2d2_instances, decode_a2d2_semantic, load_a2d2_class_list, to_torchvision_target
+from src.data_adapters import decode_a2d2_instances, decode_a2d2_semantic, load_a2d2_class_list
 
 BUCKET = "audi-autonomous-driving-dataset"
 REGION = "eu-central-1"
@@ -221,15 +221,14 @@ def main() -> int:
             instance_decoded = decode_a2d2_instances(
                 semantic_rgb, adapter_class_map, min_component_area=8
             )
-            instance_target = to_torchvision_target(instance_decoded, image_id=0)
             report["adapter_validation"] = {
                 "semantic_shape": list(semantic_ids.shape),
                 "semantic_class_ids": sorted(int(x) for x in __import__("numpy").unique(semantic_ids)),
                 "semantic_ignore_pixels": int((semantic_ids == 255).sum()),
-                "instance_count": int(len(instance_target["labels"])),
-                "instance_labels": sorted(int(x) for x in __import__("numpy").unique(instance_target["labels"].numpy())),
-                "mask_tensor_shape": list(instance_target["masks"].shape),
-                "box_tensor_shape": list(instance_target["boxes"].shape),
+                "instance_count": int(len(instance_decoded["labels"])),
+                "instance_labels": sorted(int(x) for x in __import__("numpy").unique(instance_decoded["labels"])),
+                "mask_array_shape": list(instance_decoded["masks"].shape),
+                "box_array_shape": list(instance_decoded["boxes"].shape),
                 "status": "PASS_REAL_SAMPLE_ADAPTERS",
             }
 
