@@ -6,7 +6,7 @@ Proyecto académico del Equipo 2 para detectar y segmentar objetos de escenas vi
 
 La combinación seleccionada es **A2D2 + UrbanSyn + SHIFT**: A2D2 como dominio real, UrbanSyn para semántica/panoptic/cajas 2D y SHIFT para evaluación sintética de cambios de dominio. La matriz de cobertura, el mapeo de clases, las licencias y las puertas de validación están documentados en [docs/ESTRATEGIA_MULTIDATASET.md](docs/ESTRATEGIA_MULTIDATASET.md).
 
-**No se ha iniciado entrenamiento.** Los preflights anteriores revelaron fallos corregibles en el emparejamiento de archivos; se han corregido los scripts y se ejecutarán de nuevo. El entrenamiento permanece bloqueado hasta validar anotaciones y compatibilidad.
+**No se ha iniciado entrenamiento.** A2D2 y UrbanSyn ya pasaron preflights de muestras pequeñas para semántica; UrbanSyn también validó panoptic y cajas 2D. SHIFT tiene metadata de clima/hora en un espejo parcial, pero su muestra de video RGB/semseg sigue en validación. El entrenamiento permanece bloqueado hasta completar adaptadores y compatibilidad.
 
 ## Estado actual del código
 
