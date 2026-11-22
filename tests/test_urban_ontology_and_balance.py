@@ -80,3 +80,40 @@ def test_greedy_balancer_reports_uncovered_classes():
     )
     assert len(selected) == 1
     assert len(summary["uncovered_classes"]) == 1
+
+def test_build_plan_keeps_eval_splits_complete_and_domains_separate(tmp_path):
+    from scripts.build_balanced_training_plan import build_plan
+
+    manifests = tmp_path / "manifests"
+    annotations = tmp_path / "annotations"
+    output = tmp_path / "output"
+    manifests.mkdir()
+    annotations.mkdir()
+    for dataset in ("a2d2", "urbansyn"):
+        for split in ("train", "val", "test"):
+            rows = [
+                {"dataset": dataset, "sample_id": f"{dataset}-{split}-{i}",
+                 "group_id": f"{dataset}-{split}-{i}", "assets": {"rgb": "remote://rgb"}}
+                for i in range(3)
+            ]
+            with (manifests / f"{dataset}_{split}.jsonl").open("w", encoding="utf-8") as handle:
+                for row in rows:
+                    handle.write(json.dumps(row) + "\\n")
+            with (annotations / f"{dataset}_{split}.annotations.jsonl").open("w", encoding="utf-8") as handle:
+                for i, row in enumerate(rows):
+                    stats = {
+                        "sample_id": row["sample_id"],
+                        "semantic_pixels": {"road": 100, "car": 5 if i == 0 else 0},
+                        "instance_counts": {"car": 1 if i < 2 else 0, "person": 1 if i == 2 else 0},
+                    }
+                    handle.write(json.dumps(stats) + "\\n")
+    report = build_plan(manifests, annotations, output, max_samples_per_split=1)
+    for dataset in ("a2d2", "urbansyn"):
+        for split in ("val", "test"):
+            for task in ("semantic", "instances"):
+                path = output / f"{dataset}_{task}_{split}.jsonl"
+                assert len(path.read_text(encoding="utf-8").splitlines()) == 3
+    assert (output / "urbansyn_instances_train.jsonl").is_file()
+    assert (output / "a2d2_instances_train.jsonl").is_file()
+    assert report["plans"]["a2d2"]["train"]["instances"]["role"] == "complementary_ablation"
+    assert report["plans"]["urbansyn"]["train"]["instances"]["role"] == "primary"
