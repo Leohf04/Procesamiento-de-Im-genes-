@@ -58,12 +58,18 @@ def audit_a2d2(manifest_dir: Path, samples_per_split: int) -> dict:
     color_to_name = load_a2d2_class_list(class_map_raw)
     canonical_hist, source_hist, instance_hist = Counter(), Counter(), Counter()
     unknown_colors, checks = Counter(), []
+    split_stats = {split: {
+        "sampled_frames": 0, "frames_with_instances": 0, "frames_without_instances": 0,
+        "frames_with_class": Counter(), "components_by_class": Counter()
+    } for split in ("train", "val", "test")}
+    class_names_by_id = {int(value): name for name, value in DEFAULT_CANONICAL_CLASSES.items()}
     selected_total = 0
 
     for split in ("train", "val", "test"):
         records = read_jsonl(manifest_dir / f"a2d2_{split}.jsonl")
         chosen = deterministic_sample(records, samples_per_split, 2026)
         for row in chosen:
+            split_stats[split]["sampled_frames"] += 1
             rgb_key = row["assets"]["rgb"].split(f"s3://{A2D2_BUCKET}/", 1)[1]
             mask_key = row["assets"]["semantic"].split(f"s3://{A2D2_BUCKET}/", 1)[1]
             rgb_bytes = s3.get_object(Bucket=A2D2_BUCKET, Key=rgb_key)["Body"].read()
@@ -87,8 +93,16 @@ def audit_a2d2(manifest_dir: Path, samples_per_split: int) -> dict:
                 canonical = normalize_class_name(name)
                 if canonical in DEFAULT_CANONICAL_CLASSES:
                     canonical_hist[canonical] += count
-            for label, count in zip(*np.unique(instances["labels"], return_counts=True)):
-                instance_hist[str(int(label))] += int(count)
+            labels, label_counts = np.unique(instances["labels"], return_counts=True)
+            if len(labels):
+                split_stats[split]["frames_with_instances"] += 1
+            else:
+                split_stats[split]["frames_without_instances"] += 1
+            for label, count in zip(labels, label_counts):
+                label_id = int(label)
+                instance_hist[str(label_id)] += int(count)
+                split_stats[split]["components_by_class"][class_names_by_id.get(label_id, str(label_id))] += int(count)
+                split_stats[split]["frames_with_class"][class_names_by_id.get(label_id, str(label_id))] += 1
             if semantic.shape != mask.shape[:2] or int((semantic != 255).sum()) == 0:
                 raise ValueError(f"A2D2 semantic decoder produced empty/invalid map: {row['sample_id']}")
             checks.append({
@@ -110,6 +124,16 @@ def audit_a2d2(manifest_dir: Path, samples_per_split: int) -> dict:
         "canonical_pixel_counts": dict(sorted(canonical_hist.items())),
         "instance_pixel_counts_by_canonical_id": dict(sorted(instance_hist.items())),
         "unknown_color_pixel_counts": dict(unknown_colors),
+        "per_split_instance_coverage": {
+            split: {
+                "sampled_frames": stats["sampled_frames"],
+                "frames_with_instances": stats["frames_with_instances"],
+                "frames_without_instances": stats["frames_without_instances"],
+                "frames_with_instances_pct": round(100 * stats["frames_with_instances"] / stats["sampled_frames"], 2) if stats["sampled_frames"] else 0.0,
+                "frames_with_class": dict(sorted(stats["frames_with_class"].items())),
+                "components_by_class": dict(sorted(stats["components_by_class"].items())),
+            } for split, stats in split_stats.items()
+        },
         "samples": checks,
         "caveat": "A2D2 instance labels are reconstructed from participant sub-class colors and connected components; occlusion fragmentation remains a known limitation."
     }
@@ -207,7 +231,7 @@ def audit_urbansyn(manifest_dir: Path, samples_per_split: int) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest-dir", type=Path, required=True)
-    parser.add_argument("--samples-per-split", type=int, default=8)
+    parser.add_argument("--samples-per-split", type=int, default=50)
     parser.add_argument("--output", type=Path, default=Path("annotation_audit_report.json"))
     args = parser.parse_args()
     if not 1 <= args.samples_per_split <= 50:
