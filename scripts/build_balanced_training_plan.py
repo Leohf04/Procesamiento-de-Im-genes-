@@ -92,6 +92,8 @@ def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
     """
     if max_samples < 1:
         raise ValueError("max_samples must be >= 1")
+    if per_class_cap is not None and per_class_cap < 1:
+        raise ValueError("per_class_cap must be >= 1 when enabled")
     available = Counter()
     totals = Counter()
     normalized = []
@@ -117,18 +119,32 @@ def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
     selected_counts = Counter()
     target_size = min(max_samples, len(remaining))
     while remaining and len(selected) < target_size:
+        if per_class_cap is None:
+            candidates = remaining
+        else:
+            # A selected image must respect the cap for every class it contains.
+            # Stop when all remaining images would exceed at least one class cap.
+            candidates = [
+                item for item in remaining
+                if item[1] and all(
+                    selected_presence[label] < per_class_cap for label in item[1]
+                )
+            ]
+        if not candidates:
+            break
+
         def score(item):
             row, counts = item
             gains = []
             for label, value in counts.items():
-                if per_class_cap is not None and selected_presence[label] >= per_class_cap:
-                    continue
-                # Rare classes receive greater weight; counts distinguish dense examples.
+                # Rare classes receive greater weight; deficits reduce dominance
+                # as each class approaches its target presence.
                 rarity = 1.0 / max(available[label], 1)
                 deficit = 1.0 / (1 + selected_presence[label])
                 gains.append(rarity * deficit * (1.0 + min(value, 20) / 20.0))
             return (sum(gains), _tie_key(seed, str(row["sample_id"])))
-        best = max(remaining, key=score)
+
+        best = max(candidates, key=score)
         remaining.remove(best)
         row, counts = best
         selected.append(row)
@@ -145,14 +161,21 @@ def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
         "unavailable_classes": sorted(expected - set(available)),
         "uncovered_classes": sorted(expected - set(selected_presence)),
         "seed": seed,
-        "selection": "deterministic greedy multilabel; split-preserving",
+        "selection": (
+            "deterministic greedy multilabel with per-class sample-presence cap; "
+            "split-preserving"
+            if per_class_cap is not None
+            else "deterministic greedy multilabel; split-preserving"
+        ),
+        "per_class_cap": per_class_cap,
+        "unselected_samples": len(records) - len(selected),
     }
     return selected, summary
 
 
 def build_plan(manifest_dir: Path, annotation_dir: Path, output_dir: Path, *,
                seed: int = 2026, max_samples_per_split: int = 1000,
-               per_class_cap: int | None = None) -> dict:
+               per_class_cap: int | None = 200) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     report = {
         "schema_version": 1,
@@ -232,8 +255,8 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/balanced"))
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--max-samples-per-split", type=int, default=1000)
-    parser.add_argument("--per-class-cap", type=int, default=0,
-                        help="Maximum selected samples containing each class; 0 disables the cap.")
+    parser.add_argument("--per-class-cap", type=int, default=200,
+                        help="Maximum selected train samples containing each class (default: 200); 0 disables the cap.")
     args = parser.parse_args()
     report = build_plan(
         args.manifests_dir, args.annotation_index_dir, args.output_dir,
