@@ -21,8 +21,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install bounded preflight dependencies
-        run: python -m pip install --upgrade huggingface_hub requests pillow opencv-python-headless
+      - name: Install ffprobe and bounded preflight dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade huggingface_hub requests pillow opencv-python-headless numpy
       - name: Inspect metadata and bounded archive prefixes
         run: python scripts/validate_shift_hf_mirror.py
       - name: Upload mirror report
