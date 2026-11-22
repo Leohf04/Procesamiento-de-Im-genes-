@@ -99,8 +99,14 @@ def main() -> None:
                 rgb_size = im.size
             with Image.open(local["semantic"]) as im:
                 sem = np.asarray(im)
+                semantic_storage_shape = list(sem.shape)
+                if sem.ndim == 3 and sem.shape[2] == 3 and np.array_equal(sem[:, :, 0], sem[:, :, 1]) and np.array_equal(sem[:, :, 0], sem[:, :, 2]):
+                    sem = sem[:, :, 0]
                 if sem.ndim != 2:
-                    raise ValueError(f"{identifier}: semantic mask is not grayscale: {sem.shape}")
+                    raise ValueError(
+                        f"{identifier}: semantic mask is not a grayscale class-ID image "
+                        f"(or RGB triplicate): {sem.shape}"
+                    )
                 if im.size != rgb_size:
                     raise ValueError(f"{identifier}: RGB/semantic dimensions mismatch")
                 sem_ids = sorted(int(x) for x in np.unique(sem))
@@ -126,6 +132,7 @@ def main() -> None:
                 "sample_id": identifier,
                 "size": list(rgb_size),
                 "semantic_ids": sem_ids,
+                "semantic_storage_shape": semantic_storage_shape,
                 "panoptic_blue_channel_ids": panoptic_class_ids,
                 "bbox_json_root": type(bbox).__name__,
                 "bbox_json_keys": sorted(bbox.keys()) if isinstance(bbox, dict) else None,
