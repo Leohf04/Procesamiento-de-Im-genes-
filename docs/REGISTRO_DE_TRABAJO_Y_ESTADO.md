@@ -1209,3 +1209,15 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - Paper oficial A2D2 consultado: 41.277 imágenes con semántica e instancia para 38 categorías; instancias derivadas de semántica, diferenciando instancias adyacentes con subclases Car 1–4, etc.; no adyacentes pueden reutilizar subclase. 12.497 frames frontales con cajas 3D. El paper indica captura diurna; sin metadata por imagen para estratificar lluvia/noche.
 - A2D2 se utilizará como dominio real diurno, semántica, lane markings y fuente de subclases para reconstruir instancias por componentes conectados. Este último paso requiere pruebas de oclusiones y fragmentación antes de entrenar.
 - UrbanSyn: fuente oficial confirma >7.5k imágenes, semántica de 19 IDs, panoptic y bbox2D solo para objetos dinámicos; RGB 2048×1024; panoptic RG=instance ID y B=class ID. No ofrece clase dedicada de carril. Licencia oficial CC BY-NC-SA 4.0 vs metadatos HF CC BY-SA 4.0.
+
+
+### Cierre de la intervención de adopción multidataset — 2026-11-22
+
+- Se documentó en `docs/ESTRATEGIA_MULTIDATASET.md` y `docs/PROTOCOLO_EXPERIMENTAL.md` la evidencia de las tres fuentes y sus limitaciones.
+- Se ajustó el preflight SHIFT para reportar FPS y estado de alineación temporal por separado. Commit del script: `9c0e866691572ba1c0a2fcd9e5bec644fb70e61f`.
+- Workflow previo de SHIFT [44972034973](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972034973) success, pero el informe muestra 10 FPS RGB frente a 25 FPS semseg. Mismo miembro de archivo, resolución 1280×800 y 501 frames; el CSV indica small fog y sunrise/sunset. No calcular métricas hasta resolver sincronización.
+- Workflow del script con reporte explícito de FPS [44972103974](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972103974) estaba en progreso al cierre.
+- Tests Python más recientes [44972130092](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972130092) y [44972127015](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972127015) estaban en progreso; no declarar CI final aprobado.
+- Último commit de README antes de este registro: `58710c8b16f10b252473cf688d4bc56f0ee0fe16`.
+- PR #3 comprobada: abierta, draft, sin merge; HEAD coincide con la rama.
+- **Entrenamiento sigue desactivado**; no se descargó ningún dataset completo ni se generó checkpoint.
