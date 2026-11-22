@@ -250,3 +250,21 @@ El sitio oficial especifica que panoptic cubre Person, Rider, Car, Truck, Bus, T
 La fuente primaria del proveedor (urbansyn.org) indica **CC BY-NC-SA 4.0** y declara que el dataset se proporciona para investigación y uso comercial sujeto a esos términos; la página del mirror Hugging Face muestra **CC BY-SA 4.0**, sin la cláusula NC. Por discrepancia entre distribuidor y proveedor, se adopta el término más restrictivo **CC BY-NC-SA 4.0** como regla operativa hasta obtener aclaración escrita. El uso académico no comercial del proyecto puede continuar sujeto a atribución y compartir-igual; no redistribuir archivos ni derivados. La licencia no impide validar localmente las muestras ni generar métricas agregadas permitidas por los términos.
 
 Fuentes consultadas: [sitio oficial UrbanSyn](https://urbansyn.org/) y [README del dataset en Hugging Face](https://huggingface.co/datasets/UrbanSyn/UrbanSyn).
+
+
+## 14. Ontología versionada y plan de balanceo — 2026-11-22
+
+La definición operativa posterior a las auditorías queda fijada en `configs/urban_ontology_v1.json` (`urban-v1`), con cargador/validación en `src/urban_ontology.py`. Esta versión sustituye la tabla conceptual provisional de la sección 3 para las nuevas preparaciones:
+
+- Semántica: UrbanSyn trainId 0–18 conserva su significado; 19 (`unlabeled`) pasa a ignore 255. Se añade semantic ID 19 para `lane marking`, disponible desde las variantes A2D2 que correspondan.
+- Instancias: IDs 1–8 = person, rider, car, truck, bus, train, motorcycle, bicycle; background 0.
+- `rider` y `bicycle` no se fusionan. `lane marking` no es una clase de instancia. IDs de instancia son locales por imagen.
+- A2D2 se mapea por nombre normalizado; clases fuente no incluidas quedan en ignore. Su extracción de instancias continúa siendo una aproximación por componentes conectados.
+
+Se añadió `docs/PLAN_BALANCEO_Y_ONTOLOGIA.md` y `scripts/build_balanced_training_plan.py`. El planificador exige estadísticas por imagen (píxeles semánticos y número de instancias por clase), selecciona train con un algoritmo greedy multilabel determinista y conserva validation/test completos, sin mover registros entre splits. Los outputs se mantienen separados por dataset y tarea: UrbanSyn es la fuente primaria de instancias y A2D2 queda como ablation/complemento. No se concatena A2D2 con UrbanSyn automáticamente.
+
+**Bloqueo explícito:** el informe de auditoría de 150 muestras contiene agregados por split, no estadísticas completas por imagen. Por tanto, el planificador y la ontología están implementados y probados con fixtures, pero aún no existe un plan balanceado real ni los índices per-image. Debe generarse ese índice desde las anotaciones remotas antes de invocar el planificador con datos reales. No se deben inventar etiquetas ni asumir que las clases ausentes en la muestra están ausentes del dataset completo.
+
+La definición de ontología no altera retroactivamente los IDs legacy por defecto de `src/data_adapters.py`; la integración de los nuevos mapas en cada experimento debe pasar explícitamente el mapa correspondiente y probarse antes de entrenamiento. Esto evita cambiar silenciosamente la semántica de los pipelines anteriores.
+
+**Entrenamiento:** `RUN_TRAINING=False`; no se descargaron datasets completos ni se inició entrenamiento. UrbanSyn conserva criterio de licencia CC BY-NC-SA 4.0, atribución y no redistribución de imágenes/máscaras/derivados.
