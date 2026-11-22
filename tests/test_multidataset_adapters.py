@@ -2,8 +2,10 @@ import numpy as np
 import pytest
 
 from src.data_adapters import (
-    decode_a2d2_instances, decode_a2d2_semantic, decode_urbansyn_panoptic,
-    decode_urbansyn_semantic, load_a2d2_class_list, to_torchvision_target,
+    A2D2InstanceDataset, A2D2SemanticDataset, UrbanSynInstanceDataset,
+    UrbanSynSemanticDataset, decode_a2d2_instances, decode_a2d2_semantic,
+    decode_urbansyn_panoptic, decode_urbansyn_semantic, load_a2d2_class_list,
+    to_torchvision_target,
 )
 
 
@@ -107,3 +109,46 @@ def test_empty_instance_masks_return_valid_empty_targets():
     assert decoded["masks"].shape == (0, 5, 7)
     assert decoded["boxes"].shape == (0, 4)
     assert decoded["area"].shape == (0,)
+
+
+def test_manifest_datasets_load_a2d2_and_urbansyn(tmp_path):
+    from PIL import Image
+
+    rgb = np.zeros((12, 16, 3), dtype=np.uint8)
+    rgb[..., 0] = 120
+    a2_mask = np.zeros_like(rgb)
+    a2_mask[2:7, 3:8] = (255, 0, 0)
+    pan = np.zeros_like(rgb)
+    pan[2:7, 3:8, 1] = 1
+    pan[2:7, 3:8, 2] = 11
+    sem = np.zeros((12, 16), dtype=np.uint8)
+    sem[2:7, 3:8] = 11
+
+    for name, array in [("rgb.png", rgb), ("a2.png", a2_mask),
+                        ("pan.png", pan), ("sem.png", np.repeat(sem[..., None], 3, axis=2))]:
+        Image.fromarray(array).save(tmp_path / name)
+
+    colors = load_a2d2_class_list({"#ff0000": "Car 1"})
+    a2_sem = A2D2SemanticDataset(
+        [{"image": str(tmp_path / "rgb.png"), "semantic": str(tmp_path / "a2.png")}],
+        colors, size=(8, 10))
+    image, semantic = a2_sem[0]
+    assert image.shape == (3, 8, 10) and semantic.shape == (8, 10)
+
+    a2_inst = A2D2InstanceDataset(
+        [{"image": str(tmp_path / "rgb.png"), "instance": str(tmp_path / "a2.png")}],
+        colors, min_component_area=1)
+    image, target = a2_inst[0]
+    assert image.shape == (3, 12, 16) and target["masks"].shape == (1, 12, 16)
+
+    us_sem = UrbanSynSemanticDataset(
+        [{"image": str(tmp_path / "rgb.png"), "semantic": str(tmp_path / "sem.png")}],
+        {0: 0, 11: 1})
+    image, semantic = us_sem[0]
+    assert semantic.shape == (12, 16) and semantic[3, 4].item() == 1
+
+    us_inst = UrbanSynInstanceDataset(
+        [{"image": str(tmp_path / "rgb.png"), "panoptic": str(tmp_path / "pan.png")}],
+        {11: 1})
+    image, target = us_inst[0]
+    assert target["boxes"].tolist() == [[3, 2, 8, 7]]
