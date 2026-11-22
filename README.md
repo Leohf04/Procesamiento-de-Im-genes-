@@ -10,27 +10,28 @@ La combinación seleccionada es **A2D2 + UrbanSyn + SHIFT**: A2D2 como dominio r
 
 ## Estado actual del código
 
-La rama `urban-models-and-benchmark` incorpora infraestructura heredada y adaptadores en evolución para:
-- Entrenar **DeepLabV3+ ResNet-50** en las 19 clases semánticas oficiales de BDD100K.
-- Ajustar **Mask R-CNN** desde pesos COCO a las ocho clases de instancia de BDD100K, decodificando sus bitmasks RGBA.
-- Mantener cargadores Cityscapes heredados y entrenar carriles BDD100K con las máscaras oficiales empaquetadas (categoría, dirección y estilo); el antiguo rasterizador binario queda obsoleto.
-- Ejecutar segmentación semántica y carriles exportados mediante **ONNX Runtime**.
-- Entrenar Faster R-CNN en las 10 clases oficiales de detección BDD100K, con Box AP50 de validación.
-- Medir latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
+El repositorio conserva código y evaluadores que se desarrollaron inicialmente para BDD100K/Cityscapes, además de:
+- Arquitectura **DeepLabV3+ ResNet-50** para segmentación semántica.
+- **Mask R-CNN** para segmentación por instancias.
+- Pipeline heredado de carriles BDD100K (categoría, dirección y estilo) y detector Faster R-CNN BDD100K.
+- Inferencia semántica/carriles mediante **ONNX Runtime**.
+- Benchmark de latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
 
-**Pruebas automatizadas:** GitHub Actions ejecuta compileall, smoke tests de CLI y `pytest -q` en Python 3.11 / CPU. Consulta el último check del PR para conocer el resultado vigente; una ejecución anterior no demuestra compatibilidad con anotaciones BDD100K reales ni con GPU. Esto no equivale a entrenar modelos ni a medir métricas con datasets reales.
+Estos componentes son una base de código, no una afirmación de que los adaptadores para A2D2, UrbanSyn y SHIFT estén terminados. La migración a la combinación multidataset se hará después de validar formatos y taxonomías.
 
-**Importante:** estos scripts no descargan automáticamente Cityscapes/BDD100K ni entrenan los modelos al instalar el repositorio. Los checkpoints deben generarse localmente con los comandos de abajo. No se han ejecutado entrenamientos ni benchmarks como parte de estos cambios.
+**Pruebas automatizadas:** GitHub Actions ejecuta compileall, smoke tests de CLI y `pytest -q` en Python 3.11 / CPU. Los preflights de datos son workflows separados; un test de código aprobado no certifica por sí solo la compatibilidad de anotaciones reales ni la GPU.
+
+**Importante:** los workflows de preflight descargan únicamente muestras pequeñas en runners remotos y no en el teléfono. No descargar datasets completos ni iniciar entrenamiento hasta que la estrategia multidataset y sus puertas de validación estén aprobadas. No hay todavía checkpoints ni métricas experimentales de A2D2/UrbanSyn/SHIFT.
 
 ## Arquitecturas
 
 | Componente | Arquitectura | Datos / estado |
 |---|---|---|
-| Segmentación semántica | DeepLabV3+ ResNet-50 | Loader/entrenador/evaluador BDD100K 19 clases; requiere datos y checkpoint |
-| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Loader RGBA sin doble normalización; evaluador BDD100K Box AP y Mask AP (protocolo AP interpolado propio, no COCOeval) |
+| Segmentación semántica | DeepLabV3+ ResNet-50 | Arquitectura disponible; adaptador A2D2/UrbanSyn/SHIFT pendiente |
+| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Arquitectura disponible; adaptadores panoptic SHIFT/UrbanSyn/A2D2 y evaluación cruzada pendientes |
 | Carriles | DeepLabV3 multi-cabeza | Categoría (8), dirección (2) y estilo (2) desde bitmasks oficiales; validación mIoU por cabeza y checkpoints reanudables |
 | ONNX | ONNX Runtime | Inferencia semántica/carriles; no produce cajas ni instancias |
-| Detección 2D | Faster R-CNN ResNet-50 FPN | Entrenador BDD100K 10 clases, validación Box AP50 y checkpoints reanudables; requiere datos |
+| Detección 2D | Faster R-CNN ResNet-50 FPN | Código heredado; adaptadores activos UrbanSyn/SHIFT pendientes |
 | Backend `onnx_cv2` | HOG + OpenCV | Modo demostrativo; no es ONNX |
 
 ## Instalación
