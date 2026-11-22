@@ -167,3 +167,21 @@ def test_instance_sampler_is_seeded_and_uses_training_rows_only():
     first = list(make_instance_sampler(rows, ["car", "bus"], seed=17))
     second = list(make_instance_sampler(rows, ["car", "bus"], seed=17))
     assert first == second
+
+
+
+def test_greedy_balancer_enforces_per_class_cap_and_can_reduce_training_set():
+    rows = [
+        {"sample_id": "car-1", "instance_counts": {"car": 2}},
+        {"sample_id": "car-2", "instance_counts": {"car": 3}},
+        {"sample_id": "person-1", "instance_counts": {"person": 1}},
+        {"sample_id": "mixed", "instance_counts": {"car": 1, "person": 1}},
+    ]
+    selected, summary = greedy_balanced_select(
+        rows, count_key="instance_counts", seed=13, max_samples=4,
+        per_class_cap=1, expected_classes={"car", "person"},
+    )
+    assert len(selected) == 2
+    assert summary["selected_samples_per_class"] == {"car": 1, "person": 1}
+    assert summary["unselected_samples"] == 2
+    assert all(value <= 1 for value in summary["selected_samples_per_class"].values())
