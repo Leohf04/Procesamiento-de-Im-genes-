@@ -94,12 +94,25 @@ def a2d2_inventory() -> tuple[list[dict], str]:
         config=Config(signature_version=UNSIGNED, retries={"max_attempts": 5}))
     paginator = s3.get_paginator("list_objects_v2")
     records = []
-    sequences = s3.list_objects_v2(Bucket=bucket, Prefix="camera_lidar_semantic/",
-                                   Delimiter="/", MaxKeys=1000).get("CommonPrefixes", [])
-    for entry in sequences:
+    sequence_pages = s3.get_paginator("list_objects_v2").paginate(
+        Bucket=bucket, Prefix="camera_lidar_semantic/", Delimiter="/")
+    sequences = (entry for page in sequence_pages
+                 for entry in page.get("CommonPrefixes", []))
+    for sequence_index, entry in enumerate(sequences, start=1):
         seq_prefix = entry["Prefix"]
         group_id = seq_prefix.rstrip("/").split("/")[-1]
         camera_prefix = seq_prefix + "camera/cam_front_center/"
+        label_prefix = seq_prefix + "label/cam_front_center/"
+        # List each sequence's masks once. This replaces one S3 HEAD request
+        # per RGB frame, which made the original inventory exceed the job limit.
+        label_objects = {}
+        for page in paginator.paginate(Bucket=bucket, Prefix=label_prefix):
+            for label_obj in page.get("Contents", []):
+                label_name = PurePosixPath(label_obj["Key"]).name
+                if label_name.lower().endswith(".png"):
+                    label_objects[label_name] = label_obj
+        print(f"A2D2 sequence {sequence_index}: {group_id}; "
+              f"{len(label_objects)} semantic masks indexed", flush=True)
         for page in paginator.paginate(Bucket=bucket, Prefix=camera_prefix):
             for obj in page.get("Contents", []):
                 image_key = obj["Key"]
@@ -107,11 +120,10 @@ def a2d2_inventory() -> tuple[list[dict], str]:
                     continue
                 filename = PurePosixPath(image_key).name
                 label_name = filename.replace("_camera_frontcenter_", "_label_frontcenter_")
-                mask_key = seq_prefix + "label/cam_front_center/" + label_name
-                try:
-                    mask_head = s3.head_object(Bucket=bucket, Key=mask_key)
-                except Exception:
+                mask_obj = label_objects.get(label_name)
+                if mask_obj is None:
                     continue
+                mask_key = mask_obj["Key"]
                 sample_id = f"{group_id}/{filename}"
                 records.append({
                     "dataset": "a2d2", "sample_id": sample_id,
@@ -121,8 +133,8 @@ def a2d2_inventory() -> tuple[list[dict], str]:
                                "semantic": f"s3://{bucket}/{mask_key}"},
                     "asset_metadata": {
                         "rgb": {"size": int(obj["Size"]), "etag": obj.get("ETag", "").strip('"')},
-                        "semantic": {"size": int(mask_head["ContentLength"]),
-                                     "etag": mask_head.get("ETag", "").strip('"')},
+                        "semantic": {"size": int(mask_obj["Size"]),
+                                     "etag": mask_obj.get("ETag", "").strip('"')},
                     },
                 })
     if not records:
