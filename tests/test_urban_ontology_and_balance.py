@@ -130,3 +130,40 @@ def test_greedy_balancer_reports_expected_but_absent_classes():
     )
     assert summary["unavailable_classes"] == ["bus", "motorcycle"]
     assert summary["uncovered_classes"] == ["bus", "motorcycle"]
+
+
+def test_semantic_class_weights_are_finite_mean_one_and_zero_missing():
+    import torch
+    from src.class_balancing import semantic_class_weights
+    weights = semantic_class_weights(
+        {"road": 10000, "car": 100, "person": 0},
+        {"road": 0, "car": 1, "person": 2},
+    )
+    assert weights.shape == (3,)
+    assert weights[2].item() == 0
+    assert torch.isfinite(weights).all()
+    assert weights[:2].mean().item() == pytest.approx(1.0)
+
+
+def test_instance_sample_weights_upweight_rare_class_images():
+    from src.class_balancing import instance_sample_weights
+    rows = [
+        {"sample_id": "car-1", "instance_counts": {"car": 3}},
+        {"sample_id": "car-2", "instance_counts": {"car": 2}},
+        {"sample_id": "rare", "instance_counts": {"bus": 1}},
+        {"sample_id": "mixed", "instance_counts": {"car": 1, "bus": 1}},
+    ]
+    weights = instance_sample_weights(rows, ["car", "bus"])
+    assert weights[2] > weights[0]
+    assert sum(weights) / len(weights) == pytest.approx(1.0)
+
+
+def test_instance_sampler_is_seeded_and_uses_training_rows_only():
+    from src.class_balancing import make_instance_sampler
+    rows = [
+        {"sample_id": "a", "instance_counts": {"car": 1}},
+        {"sample_id": "b", "instance_counts": {"bus": 1}},
+    ]
+    first = list(make_instance_sampler(rows, ["car", "bus"], seed=17))
+    second = list(make_instance_sampler(rows, ["car", "bus"], seed=17))
+    assert first == second
