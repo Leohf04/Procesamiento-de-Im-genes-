@@ -131,14 +131,17 @@ def main() -> int:
     class_list_key = next(
         (item["key"] for item in report["class_list_candidates"]), None
     )
+    class_map = {}
     if class_list_key:
         class_list_path = os.path.join(tempfile.gettempdir(), "a2d2_class_list_preflight.json")
         s3.download_file(BUCKET, class_list_key, class_list_path)
         with open(class_list_path, encoding="utf-8") as handle:
             class_list = json.load(handle)
+        class_map = class_list if isinstance(class_list, dict) else {}
         report["class_list"] = {
             "json_type": type(class_list).__name__,
-            "keys": sorted(class_list.keys())[:80] if isinstance(class_list, dict) else None,
+            "class_count": len(class_map),
+            "keys": sorted(class_map.keys())[:80] if isinstance(class_list, dict) else None,
             "sample_entries": (
                 list(class_list.items())[:12] if isinstance(class_list, dict)
                 else class_list[:12] if isinstance(class_list, list) else None
@@ -213,9 +216,23 @@ def main() -> int:
         "PASS_SEMANTIC_SAMPLE" if semantic and semantic["dimensions_match"]
         else "INCOMPLETE_SEMANTIC_SAMPLE"
     )
+    if semantic and class_map:
+        mapped = []
+        for rgb in semantic.get("mask_rgb_colors_sample", []):
+            color_key = "#{:02x}{:02x}{:02x}".format(*rgb)
+            mapped.append({"color": color_key, "class_name": class_map.get(color_key)})
+        report["semantic"]["mask_color_mapping"] = mapped
+        instance_names = [
+            value for value in class_map.values()
+            if re.match(r"^(car|truck|pedestrian|bicycle|cyclist|motor biker|motorcycle)\\s+[1-4]$", str(value), re.I)
+        ]
+        report["semantic"]["instance_subclass_names_found"] = sorted(instance_names)
     report["instance_sample_status"] = (
-        "SAMPLE_DECODED_PENDING_INSTANCE_ID_ANALYSIS"
-        if instance and instance["dimensions_match"] else "NOT_CONFIRMED"
+        "SEPARATE_INSTANCE_MASK_SAMPLE_DECODED_PENDING_ID_ANALYSIS"
+        if instance and instance["dimensions_match"]
+        else "INSTANCE_SUBCLASSES_PRESENT_PENDING_COMPONENT_EXTRACTION"
+        if report.get("semantic", {}).get("instance_subclass_names_found")
+        else "NOT_CONFIRMED"
     )
     report["class_mapping_status"] = (
         "CLASS_LIST_FOUND_PENDING_PARSE"
