@@ -1200,3 +1200,12 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - Último script SHIFT: commit `5f54e40e116a2b4a516ef829d281e151d625da78`. Workflow asociado [44971898884](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971898884) estaba en ejecución al cerrar esta actualización; no declarar resultado hasta consultarlo.
 - El workflow de pruebas de código [44971898853](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44971898853) también estaba en ejecución. Los checks anteriores no sustituyen este resultado final.
 - Entrenamiento permanece desactivado. No se han descargado datasets completos ni se han generado checkpoints.
+
+
+### Validación de video SHIFT y lectura de A2D2 paper — 2026-11-22
+
+- Workflow [44972034973](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972034973) success: se extrajo por HTTP Range el primer video RGB y semseg del espejo SHIFT. Ambos `eba5-a5bd.mp4`, 501 frames, 1280×800; RGB 16,770,040 bytes a 10 FPS y semseg 5,847,998 bytes a 25 FPS. Metadata `seq.csv`: small fog, sunrise/sunset. No usar para métricas hasta resolver desfase FPS/alineación temporal.
+- Se actualizó `scripts/validate_shift_hf_mirror.py` para separar muestra decodificada de alineación temporal; commit `9c0e866691572ba1c0a2fcd9e5bec644fb70e61f`. Workflow de nueva versión pendiente al momento de la actualización.
+- Paper oficial A2D2 consultado: 41.277 imágenes con semántica e instancia para 38 categorías; instancias derivadas de semántica, diferenciando instancias adyacentes con subclases Car 1–4, etc.; no adyacentes pueden reutilizar subclase. 12.497 frames frontales con cajas 3D. El paper indica captura diurna; sin metadata por imagen para estratificar lluvia/noche.
+- A2D2 se utilizará como dominio real diurno, semántica, lane markings y fuente de subclases para reconstruir instancias por componentes conectados. Este último paso requiere pruebas de oclusiones y fragmentación antes de entrenar.
+- UrbanSyn: fuente oficial confirma >7.5k imágenes, semántica de 19 IDs, panoptic y bbox2D solo para objetos dinámicos; RGB 2048×1024; panoptic RG=instance ID y B=class ID. No ofrece clase dedicada de carril. Licencia oficial CC BY-NC-SA 4.0 vs metadatos HF CC BY-SA 4.0.
