@@ -42,7 +42,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: urban-subset-manifests-a2d2-${{ inputs.manifest_run_id }}
-          run-id: ${{ inputs.manifest_run_id }}
+          run-id: ${{ inputs.manifest_run_id || '44992977292' }}
           github-token: ${{ github.token }}
           path: artifacts/manifests
       - name: Download UrbanSyn manifest artifact
@@ -56,7 +56,7 @@ jobs:
         run: |
           python scripts/audit_urban_annotations.py \
             --manifest-dir artifacts/manifests \
-            --samples-per-split "${{ inputs.samples_per_split }}" \
+            --samples-per-split "${{ inputs.samples_per_split || '8' }}" \
             --output artifacts/annotation_audit_report.json
       - name: Upload audit report
         uses: actions/upload-artifact@v4
