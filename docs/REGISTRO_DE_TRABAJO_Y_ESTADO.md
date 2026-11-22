@@ -1221,3 +1221,18 @@ El usuario aprobó utilizar la combinación recomendada para cubrir las tareas d
 - Último commit de README antes de este registro: `58710c8b16f10b252473cf688d4bc56f0ee0fe16`.
 - PR #3 comprobada: abierta, draft, sin merge; HEAD coincide con la rama.
 - **Entrenamiento sigue desactivado**; no se descargó ningún dataset completo ni se generó checkpoint.
+
+
+### Consulta de preparación para descarga y entrenamiento — 2026-11-22
+
+- Se revisó el registro antes de responder y se volvió a consultar GitHub Actions y PR #3.
+- CI Python [44972159537](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972159537) y [44972155622](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972155622) terminaron success en el HEAD previo; esto acredita tests de código existentes, no los adaptadores multidataset (aún pendientes).
+- SHIFT preflight [44972103974](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44972103974) terminó success: extrajo por HTTP Range un video RGB y su semseg desde el espejo. Coinciden nombre, 1280×800 y 501 frames; difieren 10 FPS y 25 FPS. Metadata de secuencia: small fog, sunrise/sunset. Estado correcto: PASS_DECODED_SAMPLE_ALIGNMENT_PENDING; no se debe utilizar en métricas hasta comprobar sincronización.
+- Estado de las fuentes:
+  - A2D2: muestra semántica real aprobada, falta implementar/probar reconstrucción de instancias por subclases/componentes, inspeccionar cobertura y definir split.
+  - UrbanSyn: dos muestras RGB/semseg/panoptic/bbox aprobadas, falta adaptador de máscaras/targets, validar más muestras/splits y aclarar discrepancia de licencia oficial/HF.
+  - SHIFT: muestra de vídeo RGB/semseg decodificada, falta sincronización temporal; espejo parcial de validación, no dataset de entrenamiento.
+- Faltan implementar y probar: adaptadores A2D2 y UrbanSyn; ontología común e ignore map; loaders y splits reproducibles; preflight de cobertura/clases/pares; smoke tests forward/backward de DeepLab y Mask R-CNN con targets reales; estimación de almacenamiento y estrategia de descarga por lotes; revisar licencias y condiciones.
+- Para iniciar entrenamiento, primera descarga acotada solo de los subconjuntos train/val que alimentarán UrbanSyn semántica/panoptic y A2D2 semántica. No descargar SHIFT completo; solo un subconjunto pequeño para evaluación después de corregir alineación. Dataset en almacenamiento temporal de Colab, checkpoints/resultados en Drive.
+- RUN_TRAINING=False se mantiene. No hay checkpoints, métricas ni entrenamiento.
+- PR #3 sigue abierta, draft y sin fusionar.
