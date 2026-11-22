@@ -178,13 +178,30 @@ def main() -> int:
         and rgb.get("frame_width") == semantic.get("frame_width")
         and rgb.get("frame_height") == semantic.get("frame_height")
     )
+    report["sample_frame_count_match"] = (
+        rgb.get("status") == "PASS_VIDEO_FRAME"
+        and semantic.get("status") == "PASS_VIDEO_FRAME"
+        and rgb.get("frame_count") == semantic.get("frame_count")
+    )
+    report["sample_fps_match"] = (
+        rgb.get("status") == "PASS_VIDEO_FRAME"
+        and semantic.get("status") == "PASS_VIDEO_FRAME"
+        and abs(float(rgb.get("fps", 0)) - float(semantic.get("fps", 0))) < 0.01
+    )
+    report["temporal_alignment_status"] = (
+        "PENDING_FPS_MISMATCH"
+        if report["sample_dimensions_match"] and report["sample_frame_count_match"]
+        and not report["sample_fps_match"]
+        else "PENDING_FRAME_PAIR_VERIFICATION"
+    )
     video_id = PurePosixPath(rgb.get("name", "")).stem
     report["sample_sequence_metadata"] = next(
         (row for row in rows if row.get("video") == video_id), None
     )
     report["result"] = (
-        "PASS_RGB_SEMANTIC_VIDEO_SAMPLE"
-        if report["sample_dimensions_match"] else "PARTIAL_MIRROR_METADATA_ONLY"
+        "PASS_DECODED_SAMPLE_ALIGNMENT_PENDING"
+        if report["sample_dimensions_match"] and report["sample_frame_count_match"]
+        else "PARTIAL_MIRROR_METADATA_ONLY"
     )
     report["note"] = (
         "The mirror contains only discrete/videos data (no continuous paths). "
