@@ -1,8 +1,8 @@
 """Remote, bounded UrbanSyn preflight against the public Hugging Face dataset.
 
 Downloads only a few matched files into a temporary directory; never snapshots
-or clones the full 86 GB repository. The report records actual file sizes,
-dimensions, annotation modes/classes and JSON structure.
+or clones the full dataset. UrbanSyn modality filenames have different prefixes
+(rgb_0001, ss_0001, panoptic_0001, bbox2d_0001), so matching uses the numeric ID.
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from huggingface_hub import HfApi, hf_hub_download
 REPO_ID = "UrbanSyn/UrbanSyn"
 REVISION = "main"
 DYNAMIC_IDS = {11, 12, 13, 14, 15, 16, 17, 18}
+MODALITY_PREFIXES = {"rgb": "rgb_", "semantic": "ss_", "panoptic": "panoptic_", "bbox": "bbox2d_"}
 
 
 def modality(path: str) -> str | None:
@@ -31,14 +32,23 @@ def modality(path: str) -> str | None:
     return None
 
 
+def sample_id(path: str, kind: str) -> str:
+    stem = PurePosixPath(path).stem
+    prefix = MODALITY_PREFIXES[kind]
+    if stem.startswith(prefix):
+        return stem[len(prefix):]
+    match = re.search(r"(\d+)$", stem)
+    return match.group(1) if match else stem
+
+
 def index_files(paths: list[str]) -> dict[str, dict[str, str]]:
     index: dict[str, dict[str, str]] = {}
     for path in paths:
         kind = modality(path)
         if not kind:
             continue
-        stem = PurePosixPath(path).stem
-        index.setdefault(stem, {})[kind] = path
+        identifier = sample_id(path, kind)
+        index.setdefault(identifier, {})[kind] = path
     return index
 
 
@@ -53,24 +63,30 @@ def main() -> None:
     info = api.dataset_info(REPO_ID, revision=REVISION, files_metadata=True)
     files = api.list_repo_files(REPO_ID, repo_type="dataset", revision=REVISION)
     indexed = index_files(files)
-    complete = [(stem, record) for stem, record in sorted(indexed.items())
+    complete = [(identifier, record) for identifier, record in sorted(indexed.items())
                 if all(k in record for k in ("rgb", "semantic", "panoptic", "bbox"))]
     if len(complete) < args.samples:
         counts = Counter(k for rec in indexed.values() for k in rec)
         raise RuntimeError(
             f"Insufficient complete RGB/SS/panoptic/bbox2D matches: "
-            f"{len(complete)}; modality counts={dict(counts)}"
+            f"{len(complete)}; modality counts={dict(counts)}; "
+            f"sample index={list(indexed.items())[:3]}"
         )
 
     report = {
         "dataset": REPO_ID, "revision": REVISION,
         "commit": getattr(info, "sha", None),
         "total_repository_files": len(files),
-        "indexed_stems": len(indexed), "complete_stems": len(complete),
-        "samples": [], "license": "cc-by-sa-4.0 (verify current terms before reuse)",
+        "indexed_sample_ids": len(indexed), "complete_sample_ids": len(complete),
+        "samples": [],
+        "license_review": {
+            "huggingface_metadata": "cc-by-sa-4.0",
+            "official_website_terms": "CC BY-NC-SA 4.0",
+            "status": "REVIEW_REQUIRED_CONFLICTING_DECLARATIONS",
+        },
     }
     with tempfile.TemporaryDirectory(prefix="urbansyn-preflight-") as tmp:
-        for stem, record in complete[:args.samples]:
+        for identifier, record in complete[:args.samples]:
             local = {}
             for kind, remote in record.items():
                 local[kind] = hf_hub_download(
@@ -79,30 +95,36 @@ def main() -> None:
                 )
             with Image.open(local["rgb"]) as im:
                 if im.mode != "RGB":
-                    raise ValueError(f"{stem}: RGB mode is {im.mode}")
+                    raise ValueError(f"{identifier}: RGB mode is {im.mode}")
                 rgb_size = im.size
             with Image.open(local["semantic"]) as im:
                 sem = np.asarray(im)
                 if sem.ndim != 2:
-                    raise ValueError(f"{stem}: semantic mask is not grayscale: {sem.shape}")
+                    raise ValueError(f"{identifier}: semantic mask is not grayscale: {sem.shape}")
                 if im.size != rgb_size:
-                    raise ValueError(f"{stem}: RGB/semantic dimensions mismatch")
+                    raise ValueError(f"{identifier}: RGB/semantic dimensions mismatch")
                 sem_ids = sorted(int(x) for x in np.unique(sem))
                 if any(x < 0 or x > 19 for x in sem_ids):
-                    raise ValueError(f"{stem}: unexpected semantic IDs {sem_ids}")
+                    raise ValueError(f"{identifier}: unexpected semantic IDs {sem_ids}")
             with Image.open(local["panoptic"]) as im:
                 pan = np.asarray(im)
                 if pan.ndim != 3 or pan.shape[2] != 3:
-                    raise ValueError(f"{stem}: panoptic mask is not RGB: {pan.shape}")
+                    raise ValueError(f"{identifier}: panoptic mask is not RGB: {pan.shape}")
                 if im.size != rgb_size:
-                    raise ValueError(f"{stem}: RGB/panoptic dimensions mismatch")
+                    raise ValueError(f"{identifier}: RGB/panoptic dimensions mismatch")
                 panoptic_class_ids = sorted(int(x) for x in np.unique(pan[:, :, 2]))
+                observed = set(panoptic_class_ids) - {0}
+                if not observed.issubset(DYNAMIC_IDS):
+                    raise ValueError(
+                        f"{identifier}: unexpected panoptic class IDs {sorted(observed)}"
+                    )
             with open(local["bbox"], encoding="utf-8") as f:
                 bbox = json.load(f)
             if not isinstance(bbox, (dict, list)):
-                raise ValueError(f"{stem}: bbox2D JSON root must be object/list")
+                raise ValueError(f"{identifier}: bbox2D JSON root must be object/list")
             report["samples"].append({
-                "stem": stem, "size": list(rgb_size),
+                "sample_id": identifier,
+                "size": list(rgb_size),
                 "semantic_ids": sem_ids,
                 "panoptic_blue_channel_ids": panoptic_class_ids,
                 "bbox_json_root": type(bbox).__name__,
