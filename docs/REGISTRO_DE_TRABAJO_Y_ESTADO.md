@@ -1123,3 +1123,41 @@ El usuario indicó que no puede acceder a Waymo y pidió probar acceso a Citysca
 - **Precaución técnica:** el estado esperado PASS del script significa únicamente que se logró leer una muestra RGB/semántica con dimensiones coincidentes; no valida el conjunto completo, las instancias, la detección, las condiciones ambientales ni la licencia más allá de la atribución/CC BY-ND 4.0 publicada.
 - No se ha descargado dataset completo, no se modificaron loaders ni pipeline de entrenamiento, no se entrenó ningún modelo y no hay métricas/checkpoints nuevos.
 - Próximo paso: revisar la ejecución `Validate A2D2 anonymous S3 sample` en GitHub Actions y su artifact/logs; si pasa, extender el preflight a las anotaciones de instancia/detección y verificar checksums contra `CHECKSUMS.txt`. Si falla por estructura/timeout, corregir con evidencia de los logs. Mantener PR #3 abierta y en draft; no fusionar.
+
+
+### Adopción de estrategia multidataset A2D2 + UrbanSyn + SHIFT — 2026-11-22
+
+El usuario aprobó utilizar la combinación recomendada para cubrir las tareas del Equipo 2. Esta estrategia sustituye BDD100K como dataset principal activo; BDD100K/Cityscapes quedan como referencias heredadas, no como flujo actual.
+
+#### Decisión y distribución de responsabilidades
+
+- **A2D2:** dominio real principal para semántica y, tras validar el formato, instancias/detección. No hay todavía metadata por imagen verificada para separar de forma fiable día/noche/lluvia/niebla.
+- **UrbanSyn:** fuente sintética principal para entrenar/comparar semántica (19 clases), panoptic instances de clases dinámicas y cajas 2D. No contiene una clase dedicada a carriles ni escenarios meteorológicos reales.
+- **SHIFT (SysCV):** complemento de evaluación de domain shift sintético; el DevKit oficial declara grupos RGB, semseg, detección 2D e instance segmentation 2D. La descarga usa endpoints oficiales seleccionables por vista/split/frecuencia; el servidor debe probarse.
+- Se creó `docs/ESTRATEGIA_MULTIDATASET.md` con distribución de tareas, ontología conceptual, protocolos de split, métricas, licencias y puertas obligatorias antes del entrenamiento.
+- Se actualizó README y protocolo experimental para dejar clara la nueva estrategia; se marcaron las secciones BDD100K como heredadas/no activas.
+
+#### Auditoría de preflights anteriores
+
+- **A2D2:** workflow run `44965195376` falló en la búsqueda de una ruta `/label/` asumida por el script. Sin embargo, confirmó acceso anónimo al bucket y devolvió cuatro raíces: `camera_lidar/`, `camera_lidar_semantic/`, `camera_lidar_semantic_bboxes/` y `camera_lidar_semantic_instance/`. No se descargó ni validó una anotación. Se corrigió el script para inspeccionar las rutas reales de semántica/instancia y sus sidecars JSON, sin asumir que el JSON sea una máscara.
+- **UrbanSyn:** workflow run `44963969661` encontró 7.539 archivos por modalidad, pero cero muestras emparejadas porque el script usaba stems completos distintos (`rgb_0001`, `ss_0001`, `panoptic_0001`, `bbox2d_0001`). Se corrigió el emparejamiento por ID numérico, se añadieron validaciones del canal de clase panoptic y se registró el conflicto de licencia: HF declara CC BY-SA 4.0 y el sitio oficial describe CC BY-NC-SA 4.0. No se había descargado una muestra en esa ejecución.
+- **SHIFT:** se añadieron `scripts/validate_shift_access.py` y `.github/workflows/validate-shift-access.yml`. Comprueban con HTTP HEAD, sin descargar archivos de datos, los endpoints oficiales de RGB, semseg e instance labels para una vista/split acotados. El resultado aún no se ha consultado.
+- La inspección del DevKit SHIFT confirma que el descargador oficial declara CC BY-NC-SA 4.0 y permite seleccionar vista, grupos, split y frecuencia; el script no debe descargar conjuntos completos durante el preflight.
+- La ejecución CI general `44965212000` (push) y el check de PR `44965214601` concluyeron success en el HEAD anterior `56cd28c`. Esto solo valida tests de código existentes, no los datos.
+
+#### Cambios escritos en la rama
+
+- `scripts/validate_urbansyn_sample.py`: emparejamiento por ID numérico; validación de clases dinámicas del canal azul panoptic; licencia marcada como revisión pendiente.
+- `scripts/validate_a2d2_s3_sample.py`: inspección de `camera_lidar_semantic/` y `camera_lidar_semantic_instance/`, descargando como máximo una imagen PNG y su JSON sidecar por raíz para inspección estructural.
+- `scripts/validate_shift_access.py` y workflow: preflight de endpoints sin descarga.
+- `docs/ESTRATEGIA_MULTIDATASET.md`: nuevo plan experimental activo.
+- `README.md` y `docs/PROTOCOLO_EXPERIMENTAL.md`: actualizados para reflejar la combinación y marcar BDD100K como legado.
+- Commits de esta intervención: `c08092aae4e84ad765fb8b0cc72e042e1d5fd5f0` (UrbanSyn), `ca28be1fbf4bc14cb5f138dd6153f317c045ebee` (A2D2), `607e709749c9119bd7a0691271a446ffcf06956f` (SHIFT script), `39ee28bcacda0bceec3e26502f7cdcb5a040a3d8` (SHIFT workflow), `490159c3019d5c9d0b3e6cca7f9c825d88ce3801` (estrategia).
+
+#### Estado operativo y próximos pasos
+
+- No se ha descargado ningún dataset completo.
+- No hay entrenamiento, checkpoints ni métricas experimentales de esta combinación.
+- `RUN_TRAINING=False` permanece obligatorio.
+- Próximo paso: consultar las ejecuciones nuevas de UrbanSyn/A2D2/SHIFT; corregir según logs; después decodificar las etiquetas y construir el mapeo de clases. Solo con los tres preflights y pruebas de adaptadores aprobados se autoriza preparar el entrenamiento.
+- PR #3 debe seguir abierta, en draft y sin fusionar.
