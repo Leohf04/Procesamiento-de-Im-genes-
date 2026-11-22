@@ -24,7 +24,11 @@ permissions:
 jobs:
   manifests:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: [a2d2, urbansyn]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,14 +42,14 @@ jobs:
           MAX_PER_SPLIT: ${{ github.event.inputs.max_per_split || '1000' }}
         run: |
           python scripts/prepare_reproducible_subsets.py \
-            --dataset both \
+            --dataset "${{ matrix.dataset }}" \
             --seed "$SEED" \
             --max-per-split "$MAX_PER_SPLIT" \
             --output artifacts/manifests
       - name: Upload manifests and summaries
         uses: actions/upload-artifact@v4
         with:
-          name: urban-subset-manifests-${{ github.run_id }}
+          name: urban-subset-manifests-${{ matrix.dataset }}-${{ github.run_id }}
           path: artifacts/manifests/
           if-no-files-found: error
           retention-days: 30
