@@ -4,7 +4,8 @@
 Downloads one train sample per dataset into temporary storage, builds semantic
 and instance datasets with the versioned ontology, and exercises
 build_urban_train_loaders with the matching train-only annotation rows.
-No full dataset download, model forward pass, optimization, or checkpoint write.
+No full dataset download, optimization, or checkpoint write. Optional --model-forward
+runs untrained DeepLabV3+ and Mask R-CNN inference on the same two real samples.
 """
 from __future__ import annotations
 
@@ -39,6 +40,7 @@ from src.urban_ontology import (
     source_semantic_map,
 )
 from src.urban_training import build_urban_train_loaders
+from src.models.deeplabv3plus import DeepLabV3Plus
 
 A2D2_BUCKET = "audi-autonomous-driving-dataset"
 A2D2_REGION = "eu-central-1"
@@ -123,12 +125,83 @@ def verify_instance_batch(batch, valid_ids: set[int]) -> dict:
     }
 
 
+
+def run_model_forward_checks(semantic_loaders, instance_loaders, num_semantic_classes: int,
+                             num_instance_classes: int, size: int) -> dict:
+    """Run inference-only forward passes on the already loaded real samples."""
+    import torchvision
+    from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+    from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    results = {"device": str(device), "weights": "random_initialization_no_pretrained_weights",
+               "training_or_backward": False, "deeplabv3plus": {}, "mask_rcnn": {}}
+
+    semantic_model = DeepLabV3Plus(
+        num_classes=num_semantic_classes, pretrained_backbone=False
+    ).to(device).eval()
+    with torch.inference_mode():
+        for dataset_name, (loader, _) in semantic_loaders.items():
+            images, masks = next(iter(loader))
+            logits = semantic_model(images.to(device))["out"]
+            assert tuple(logits.shape) == (1, num_semantic_classes, size, size), tuple(logits.shape)
+            assert torch.isfinite(logits).all()
+            predictions = logits.argmax(dim=1)
+            results["deeplabv3plus"][dataset_name] = {
+                "input_shape": list(images.shape),
+                "logits_shape": list(logits.shape),
+                "prediction_shape": list(predictions.shape),
+                "finite_logits": True,
+            }
+            del images, masks, logits, predictions
+    del semantic_model
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+
+    detector = torchvision.models.detection.maskrcnn_resnet50_fpn(
+        weights=None, weights_backbone=None, min_size=size, max_size=size
+    )
+    box_features = detector.roi_heads.box_predictor.cls_score.in_features
+    detector.roi_heads.box_predictor = FastRCNNPredictor(box_features, num_instance_classes)
+    mask_features = detector.roi_heads.mask_predictor.conv5_mask.in_channels
+    detector.roi_heads.mask_predictor = MaskRCNNPredictor(mask_features, 256, num_instance_classes)
+    detector.to(device).eval()
+
+    with torch.inference_mode():
+        for dataset_name, (loader, _) in instance_loaders.items():
+            images, targets = next(iter(loader))
+            outputs = detector([image.to(device) for image in images])
+            assert len(outputs) == len(images) == 1
+            output = outputs[0]
+            boxes, labels = output["boxes"], output["labels"]
+            scores, masks = output["scores"], output["masks"]
+            assert boxes.ndim == 2 and boxes.shape[1] == 4
+            assert masks.ndim == 4 and masks.shape[1] == 1
+            assert masks.shape[-2:] == (size, size), tuple(masks.shape)
+            assert len(boxes) == len(labels) == len(scores) == len(masks)
+            assert torch.isfinite(boxes).all() and torch.isfinite(scores).all()
+            assert torch.isfinite(masks).all()
+            results["mask_rcnn"][dataset_name] = {
+                "input_shape": list(images[0].shape),
+                "ground_truth_instances": int(len(targets[0]["labels"])),
+                "predicted_boxes_shape": list(boxes.shape),
+                "predicted_masks_shape": list(masks.shape),
+                "predictions_finite": True,
+            }
+            del images, targets, outputs, output, boxes, labels, scores, masks
+    del detector
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    return results
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest-dir", type=Path, required=True)
     parser.add_argument("--annotation-index-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--size", type=int, default=512)
+    parser.add_argument("--model-forward", action="store_true", help="Run inference-only DeepLabV3+ and Mask R-CNN forward passes on the real samples.")
     args = parser.parse_args()
     if args.size < 32:
         parser.error("--size must be >= 32")
@@ -162,6 +235,7 @@ def main() -> None:
         "tasks": {},
         "training_started": False,
         "full_dataset_downloaded": False,
+        "model_forward": {"status": "NOT_REQUESTED"},
     }
 
     s3 = boto3.client(
@@ -279,6 +353,18 @@ def main() -> None:
                 next(iter(loader)), instance_valid
             )
         report["tasks"]["instances"] = instance_results
+
+
+        if args.model_forward:
+            report["model_forward"] = {
+                "status": "PASS",
+                **run_model_forward_checks(
+                    semantic_loaders, instance_loaders,
+                    num_semantic_classes=len(semantic_ids),
+                    num_instance_classes=len(instance_ids) + 1,
+                    size=args.size,
+                ),
+            }
 
     report["status"] = "PASS"
     args.output.parent.mkdir(parents=True, exist_ok=True)
