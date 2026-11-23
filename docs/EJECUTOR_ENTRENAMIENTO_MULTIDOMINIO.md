@@ -91,3 +91,14 @@ Notebook: `notebooks/colab_auditoria_capacidad_incremental.ipynb`.
 - La selección usa prefijo determinista de filas elegibles con instancias, no balanceo estratificado ni muestra estadísticamente representativa. El resultado sirve para dimensionar almacenamiento/lectura, no para métricas de modelo.
 - El siguiente tamaño de lote se decide tras revisar los JSON de entorno, estimaciones, materialización y auditoría. No escalar automáticamente al dataset completo ni iniciar entrenamiento.
 
+
+
+## Preflight de hardware y Drive
+
+Notebook: notebooks/colab_preflight_entorno_entrenamiento.ipynb
+
+Ejecuta el notebook en Colab después de seleccionar GPU (si está disponible). El script scripts/audit_training_runtime.py registra GPU/CUDA/VRAM, RAM y disco, y prueba un checkpoint sintético de escritura/lectura en el Drive montado. No instala dependencias, no descarga datasets ni ejecuta modelos.
+
+El informe queda en MyDrive/ProcesamientoImagenes/auditoria_entorno_entrenamiento/training_runtime_preflight.json.
+
+Puerta de decisión: si GPU_PASS es falso, detenerse; no ejecutar piloto en CPU. DRIVE_IO_PASS solo valida el montaje actual y no sustituye una prueba de recuperación tras reconectar Drive. Incluso con PREFLIGHT_READY=True, falta la prueba de memoria con batch real de cada arquitectura y la autorización expresa del piloto. RUN_TRAINING=False permanece.
