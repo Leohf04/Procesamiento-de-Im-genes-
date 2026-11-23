@@ -77,3 +77,17 @@ Para reanudar, añadir `--resume /RUTA/resultados/SEM-URBANSYN/last.pt`. El hash
 5. Confirmar hiperparámetros, memoria y presupuesto. El materializador puede descargar miles de imágenes/etiquetas al runtime remoto, por lo que no debe lanzarse antes de tener almacenamiento suficiente.
 
 La implementación no se ha ejecutado en datos reales ni en GPU. No hay épocas ni checkpoints experimentales. `RUN_TRAINING=False` permanece y la CLI exige además `--execute`; ninguna de estas medidas sustituye la autorización expresa del piloto. PR #3 permanece draft y sin merge.
+
+
+## Auditoría de capacidad y materialización incremental (sin entrenamiento)
+
+Notebook: `notebooks/colab_auditoria_capacidad_incremental.ipynb`.
+
+- Reconstruye manifests/índices completos desde el artifact de anotaciones verificado; compara IDs y estadísticas para train/val/test. El acceso a test se limita a verificar metadatos; no descarga ni decodifica activos de test.
+- Dry-run de hasta 50 muestras por dataset/split (200 candidatas en total), solo filas con instancias positivas; límite 2 GiB. No descarga activos.
+- Segundo dry-run de 10 muestras por dataset/split (40 muestras); requiere espacio libre de al menos 2× bytes estimados + 1 GiB antes de materializar.
+- Materializa solo esas 40 muestras train/val y comprueba manifiestos/índices locales alineados. Datos temporales en `/content/urban_data_capacity`; solo informes/logs se guardan en Drive.
+- `scripts/audit_urban_materialized_capacity.py` recorre cada elemento de cada dataset local una vez por ruta semántica y una vez por ruta de instancias, valida tensores/targets y mide bytes materializados, espacio libre y RSS pico/tiempo de decodificación. No realiza forward, backward, optimizer.step ni entrenamiento.
+- La selección usa prefijo determinista de filas elegibles con instancias, no balanceo estratificado ni muestra estadísticamente representativa. El resultado sirve para dimensionar almacenamiento/lectura, no para métricas de modelo.
+- El siguiente tamaño de lote se decide tras revisar los JSON de entorno, estimaciones, materialización y auditoría. No escalar automáticamente al dataset completo ni iniciar entrenamiento.
+

@@ -192,3 +192,11 @@ Pendientes obligatorios:
 5. Fijar hiperparámetros y presupuesto antes de ejecutar.
 
 No se inició entrenamiento, no se descargaron datasets, no se generaron checkpoints experimentales y no se cambió `RUN_TRAINING=False`. La autorización previa sigue limitada a los cuatro pasos SGD aislados ya completados; no autoriza el piloto. Mantener PR #3 abierta, draft y sin fusionar.
+
+
+## Fase de capacidad previa a materialización amplia
+
+Tras el smoke PASS de cuatro muestras reales, la siguiente puerta es `notebooks/colab_auditoria_capacidad_incremental.ipynb`. Estima hasta 50 muestras por dataset/split (train/val) sin descarga, estima exactamente 10 por split, exige espacio libre >= 2× la estimación del lote + 1 GiB, materializa 40 muestras y audita decodificación de todas las muestras con las cuatro rutas dataset/tarea. Límite absoluto 2 GiB. No consume activos test, no ejecuta inferencia ni entrenamiento.
+
+El subconjunto de 10 por split se selecciona como prefijo determinista de muestras elegibles con instancias; no es estratificado por clase y no debe usarse como benchmark. La auditoría mide bytes locales, espacio libre, RSS pico y tiempo de decodificación. Si pasa, esos resultados permiten proponer el tamaño de la siguiente etapa; todavía no autorizan materialización completa ni piloto. La disponibilidad de GPU/VRAM se registra, pero una prueba CPU no sustituye un preflight GPU posterior.
+
