@@ -154,3 +154,48 @@ Se recuperó el artifact `14770171764` del run `45038801547` (SHA-256 verificado
 **Dictamen:** cap 200 es demasiado agresivo para train principal; se conserva solo como ablación. La sensibilidad cap 500 retiene aproximadamente 50–56 % y cap 700 70–76 %. Recomendación: baseline con train completo y pesos/sampler ya implementados, sin mezclar dominios; evaluar cap 500/700 solo como ablación. No entrenar todavía. Detalles en [INFORME_AUDITORIA_BALANCEO_CAP200.md](INFORME_AUDITORIA_BALANCEO_CAP200.md).
 
 Notebook reproducible que ejecuta el CLI real en Colab: [colab_generar_plan_cap200.ipynb](../blob/urban-models-and-benchmark/notebooks/colab_generar_plan_cap200.ipynb). La ejecución CLI en Colab queda como confirmación reproducible; la reproducción local de esta auditoría utilizó la misma función de selección del código actual. `RUN_TRAINING=False`.
+
+## Integración multidataset con balanceo independiente — 2026-11-23
+
+Se añadió `build_urban_train_loaders` a `src/urban_training.py` para preparar loaders por dominio en una sola llamada sin concatenar ni compartir estadísticas:
+
+- Recibe un diccionario por dataset (`a2d2`, `urbansyn`), y cada entrada debe aportar su propio objeto Dataset, sus filas del índice de anotaciones y su propio `class_to_id`.
+- Internamente invoca `build_urban_train_loader` por separado. En semántica, suma píxeles únicamente dentro del dominio y calcula sus propios pesos; en instancias, calcula frecuencias y `WeightedRandomSampler` únicamente dentro del dominio.
+- Rechaza reutilizar el mismo objeto Dataset para dos dominios y detecta etiquetas de dataset ajenas cuando los manifiestos/filas las incluyen.
+- Cada loader mantiene las validaciones existentes: longitud, IDs no vacíos/únicos, alineación exacta y orden de `sample_id`, `split=train` cuando el campo está presente y `annotation_status=ok`.
+- Los índices actuales separan train/val/test por archivo, aunque una fila no tenga campo `split`; el llamador debe cargar exclusivamente el JSONL `{dataset}_train.annotations.jsonl` para construir el loader. No se deben concatenar índices de splits.
+- `class_to_id` se suministra por entrada para permitir el mapeo específico del dominio/tarea. En la ontología común, usar `semantic_name_to_id` para semántica e `instance_name_to_id` para instancias; no usar el mapa de una tarea en la otra.
+
+Ejemplo de interfaz (después de materializar y validar localmente cada manifiesto train):
+
+```python
+from src.urban_training import build_urban_train_loaders
+from src.urban_ontology import load_urban_ontology, semantic_name_to_id
+
+ontology = load_urban_ontology()
+semantic_ids = semantic_name_to_id(ontology)
+loaders = build_urban_train_loaders(
+    {
+        "a2d2": {
+            "dataset": a2d2_train_dataset,
+            "annotation_rows": a2d2_train_annotation_rows,
+            "class_to_id": semantic_ids,
+        },
+        "urbansyn": {
+            "dataset": urbansyn_train_dataset,
+            "annotation_rows": urbansyn_train_annotation_rows,
+            "class_to_id": semantic_ids,
+        },
+    },
+    task="semantic",
+    batch_size=4,
+    seed=2026,
+)
+(a2d2_loader, a2d2_weights) = loaders["a2d2"]
+(urbansyn_loader, urbansyn_weights) = loaders["urbansyn"]
+```
+
+Para instancias, usar `task="instances"` y `instance_name_to_id(ontology)` en cada entrada. Los pesos semánticos se conectan a la pérdida del modelo correspondiente; el sampler de instancias pertenece al loader de su dominio. No se debe combinar ambos loaders ni sus estadísticas salvo que se diseñe y documente un experimento explícito de dominio mixto.
+
+Se añadieron pruebas sintéticas que comprueban pesos semánticos diferentes ante distribuciones opuestas, samplers de instancias calculados con frecuencias locales, rechazo de filas etiquetadas con otro dominio y rechazo de reutilizar el mismo Dataset. Estas pruebas están añadidas al repositorio, pero su ejecución CI queda pendiente de recuperar runners. No se materializaron datasets ni se entrenaron modelos.
+
