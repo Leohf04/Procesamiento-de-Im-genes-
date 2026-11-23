@@ -268,3 +268,8 @@ Se añadió `docs/PLAN_BALANCEO_Y_ONTOLOGIA.md` y `scripts/build_balanced_traini
 La definición de ontología no altera retroactivamente los IDs legacy por defecto de `src/data_adapters.py`; la integración de los nuevos mapas en cada experimento debe pasar explícitamente el mapa correspondiente y probarse antes de entrenamiento. Esto evita cambiar silenciosamente la semántica de los pipelines anteriores.
 
 **Entrenamiento:** `RUN_TRAINING=False`; no se descargaron datasets completos ni se inició entrenamiento. UrbanSyn conserva criterio de licencia CC BY-NC-SA 4.0, atribución y no redistribución de imágenes/máscaras/derivados.
+
+
+## Protocolo experimental versionado — 2026-11-23
+
+El diseño operativo de entrenamiento, matriz de experimentos, hiperparámetros iniciales, métricas, checkpoints, reanudación y puertas de autorización queda centralizado en [docs/PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md](PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md). La matriz mantiene A2D2 y UrbanSyn separados y prioriza UrbanSyn para instancias; A2D2 instancias es complementario por sus componentes conectados reconstruidos. El documento es una propuesta técnica, no una orden de ejecución: `RUN_TRAINING=False` sigue vigente y se requiere autorización expresa para piloto y entrenamiento completo.
