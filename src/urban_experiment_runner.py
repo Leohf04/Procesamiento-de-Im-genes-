@@ -60,8 +60,26 @@ def _restore_rng(s):
     if torch.cuda.is_available() and "cuda" in s: torch.cuda.set_rng_state_all(s["cuda"])
 
 
+def _loader_rng_state(loader):
+    state={}
+    generator=getattr(loader,"generator",None)
+    if generator is not None: state["loader_generator"]=generator.get_state()
+    sampler_generator=getattr(getattr(loader,"sampler",None),"generator",None)
+    if sampler_generator is not None: state["sampler_generator"]=sampler_generator.get_state()
+    return state
+
+
+def _restore_loader_rng(loader,state):
+    generator=getattr(loader,"generator",None)
+    if generator is not None and "loader_generator" in state:
+        generator.set_state(state["loader_generator"])
+    sampler_generator=getattr(getattr(loader,"sampler",None),"generator",None)
+    if sampler_generator is not None and "sampler_generator" in state:
+        sampler_generator.set_state(state["sampler_generator"])
+
+
 def load_checkpoint(path, model, optimizer, scheduler=None, scaler=None,
-                    expected_config_hash=None, map_location="cpu"):
+                    expected_config_hash=None, map_location="cpu", train_loader=None):
     try: state=torch.load(path,map_location=map_location,weights_only=False)
     except TypeError: state=torch.load(path,map_location=map_location)
     if state.get("format_version")!=1: raise ValueError("Unsupported checkpoint format")
@@ -70,7 +88,9 @@ def load_checkpoint(path, model, optimizer, scheduler=None, scaler=None,
     model.load_state_dict(state["model"]); optimizer.load_state_dict(state["optimizer"])
     if scheduler is not None and state.get("scheduler") is not None: scheduler.load_state_dict(state["scheduler"])
     if scaler is not None and state.get("scaler") is not None: scaler.load_state_dict(state["scaler"])
-    _restore_rng(state["rng"]); return state
+    _restore_rng(state["rng"])
+    if train_loader is not None: _restore_loader_rng(train_loader,state.get("loader_rng",{}))
+    return state
 
 
 def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_index,
@@ -140,7 +160,7 @@ def run_experiment(*, model, train_loader, validation_loader, task: str, optimiz
     metrics_file=out/"metrics.jsonl"; last=out/"last.pt"; best=out/"best.pt"
     start=steps=bad=0; best_metric=None
     if resume_from:
-        state=load_checkpoint(resume_from,model,optimizer,scheduler,scaler,cfg_hash,device)
+        state=load_checkpoint(resume_from,model,optimizer,scheduler,scaler,cfg_hash,device,train_loader=train_loader)
         start=int(state["epoch"]); steps=int(state["global_step"]); bad=int(state["bad_epochs"]); best_metric=state["best_metric"]
     meta={"experiment_id":config["experiment_id"],"dataset":config["dataset"],"task":task,
           "seed":seed,"config_hash":cfg_hash,"device":str(device),"torch":torch.__version__}
@@ -175,7 +195,7 @@ def run_experiment(*, model, train_loader, validation_loader, task: str, optimiz
             "scheduler":scheduler.state_dict() if scheduler else None,
             "scaler":scaler.state_dict() if scaler else None,"epoch":epoch+1,
             "global_step":steps,"best_metric":best_metric,"bad_epochs":bad,
-            "rng":_rng_state(),"config_hash":cfg_hash,"metadata":meta}
+            "rng":_rng_state(),"loader_rng":_loader_rng_state(train_loader),"config_hash":cfg_hash,"metadata":meta}
         _atomic_save(payload,last)
         if improved: _atomic_save(payload,best)
         if bad>=patience or time.monotonic()-started>=max_seconds: break
