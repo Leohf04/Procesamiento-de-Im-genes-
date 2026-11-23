@@ -235,3 +235,8 @@ La opción `--learning-step` del script `scripts/smoke_test_urban_training_integ
 ## Protocolo de entrenamiento experimental — 2026-11-23
 
 El baseline recomendado (train completo por dataset, pesos semánticos y sampler de instancias calculados solo desde train, sin mezclar dominios) se concreta en [docs/PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md](PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md). Cap200 queda como ablación, no train principal. El protocolo exige val/test completos, métricas específicas por tarea, checkpoints restaurables y puertas previas de CI, materialización, evaluación y recursos. No habilita ejecución; mantener `RUN_TRAINING=False` hasta autorización expresa.
+
+
+## Protocolo de entrenamiento experimental multidominio
+
+El diseño por fases, la matriz de cuatro experimentos, las reglas de split, los hiperparámetros piloto propuestos, las métricas, los checkpoints reanudables y las puertas de aceptación están documentados en [docs/PROTOCOLO_ENTRENAMIENTO_MULTIDOMINIO.md](PROTOCOLO_ENTRENAMIENTO_MULTIDOMINIO.md). Es una especificación propuesta, no un runner implementado ni una autorización de ejecución. `RUN_TRAINING=False` permanece obligatorio; antes del piloto deben implementarse/revisarse el runner reproducible, validarse Mask AP y el entorno de cómputo, y obtener autorización expresa.
