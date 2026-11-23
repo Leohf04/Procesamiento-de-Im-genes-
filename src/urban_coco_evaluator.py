@@ -49,7 +49,7 @@ def evaluate_coco_instance_segmentation(model, loader, device, categories):
             rle=mask_utils.encode(np.asfortranarray(binary))
             rle["counts"]=rle["counts"].decode("ascii")
             segm_results.append({"image_id":image_id,"category_id":label,"score":float(score),"segmentation":rle})
-    if not images: raise RuntimeError("COCO validation loader produced no images")
+    if not images: raise RuntimeError("COCO validation loader produced no images")\n    if not annotations: raise RuntimeError("COCO Mask AP undefined: validation split has zero ground-truth instances")
     base={"images":images,"categories":[{"id":k,"name":str(categories[k])} for k in category_ids]}
     coco_gt=COCO(); coco_gt.dataset={**base,"annotations":annotations}
     with redirect_stdout(StringIO()): coco_gt.createIndex()
