@@ -167,7 +167,7 @@ No hay ejecuciones de este protocolo todavía. Añadir aquí una entrada por cad
 
 Se implementaron estos componentes:
 
-- `src/urban_experiment_runner.py`: loops semántico/instancias, mIoU/IoU/mean accuracy/pixel accuracy/soporte/matriz de confusión semántica, scheduler, early stopping, límite temporal por época, AMP opcional en CUDA, clipping, métricas JSONL, checkpoints last/best atómicos y restauración de optimizer/scheduler/scaler/RNG con hash de configuración.
+- `src/urban_experiment_runner.py`: loops semántico/instancias, mIoU/IoU/mean accuracy/pixel accuracy/soporte/matriz de confusión semántica, scheduler, early stopping, límite temporal por época, AMP opcional en CUDA, clipping, métricas JSONL, checkpoints last/best atómicos y restauración de optimizer/scheduler/scaler/RNG global y generadores DataLoader/sampler con hash de configuración; el loop registra también los componentes de loss de Mask R-CNN por época.
 - `scripts/materialize_urban_experiment_data.py`: materializa en el runtime remoto únicamente train y validation A2D2/UrbanSyn desde manifests/índices completos. Verifica IDs únicos y concordancia; no accede a test.
 - `scripts/urban_experiment_factory.py`: construye datasets, loaders train/validation, DeepLabV3+ o Mask R-CNN y optimizador para un dominio/tarea.
 - `src/urban_coco_evaluator.py`: Box AP y Mask AP mediante `pycocotools.COCOeval`, con soporte/AP por clase. Se añadió prueba sintética `tests/test_urban_coco_evaluator.py`.
