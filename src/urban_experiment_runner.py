@@ -29,7 +29,7 @@ def semantic_metrics(confusion) -> dict:
     acc=torch.where(support>0,tp/support,torch.nan)
     total=support.sum()
     return {"miou": float(torch.nanmean(iou)) if bool(torch.isfinite(iou).any()) else None,
-            "pixel_accuracy": float(tp.sum()/total) if total>0 else None,
+            "pixel_accuracy": float(tp.sum()/total) if total>0 else None,\n            "mean_accuracy": float(torch.nanmean(acc)) if bool(torch.isfinite(acc).any()) else None,
             "iou_per_class":[None if not torch.isfinite(x) else float(x) for x in iou],
             "accuracy_per_class":[None if not torch.isfinite(x) else float(x) for x in acc],
             "support_per_class":[int(x) for x in support],
