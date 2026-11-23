@@ -2285,3 +2285,27 @@ Tras el primer motor se completaron componentes adicionales:
 - Pendiente: el usuario debe volver a ejecutar únicamente la celda 7 en el mismo runtime donde la celda 6 materializó los datos. Si el runtime se reinició, ejecutar de nuevo el notebook en orden para reconstruir los datos temporales. Compartir `urban_real_data_preflight_smoke.json` y logs si aparece otro error.
 - Estado auditado antes de la corrección: HEAD `a7e6cf8f85aa5c3bf9d84c12bc63d5ef01e03848`; PR #3 abierta, draft y sin fusionar; último run Actions visible `45248530874` terminó failure sin que ello constituya evidencia sobre este error de Colab.
 - `RUN_TRAINING=False`; no descargar dataset completo ni iniciar piloto hasta que el smoke de cuatro combinaciones termine PASS y se autorice expresamente.
+
+
+### Preflight completo con datos reales: PASS — 2026-11-23
+
+- El usuario ejecutó las celdas 4, 5, 6 y 7 de `notebooks/colab_preflight_datos_reales.ipynb` y compartió los resultados JSON/salidas. Se registra como evidencia aportada por el usuario; no se afirma que el agente haya ejecutado Colab.
+- **Celda 4 — integridad manifests/índices:** PASS en los seis pares dataset/split. A2D2 train/val/test: 1000 filas cada uno; UrbanSyn train 1000, val 751, test 783. En los seis: IDs únicos, `ids_match=true`, `stats_match=true`, `task_manifests_match=true`. Esto valida concordancia de metadatos/índices, no descarga ni inspección de imágenes del split test.
+- **Celda 5 — dry-run:** `PREFLIGHT_PASS`, `dry_run=true`, splits train/val, `test_touched=false`, `training_started=false`, 1 muestra por cada uno de los cuatro pares train/val, `require_instances=true`. Estimación remota 12,980,207 bytes (0.012 GiB), 10 activos; debajo del límite configurado de 2 GiB. Se identificaron 2 activos por muestra A2D2 (RGB/semantic) y 3 por muestra UrbanSyn (RGB/semantic/panoptic). Output previsto `/content/urban_data_preflight`.
+- **Celda 6 — materialización real:** PASS, `dry_run=false`; materializadas 4 muestras en total: A2D2 train 1, val 1; UrbanSyn train 1, val 1. `test_touched=false`, `training_started=false`, `max_samples_per_split=1`, `require_instances=true`. Informe `materialization_report.json`; datos en runtime Colab `/content/urban_data_preflight`, índices locales en `/content/urban_data_preflight/local_annotation_index`. No se descargaron activos de test ni dataset completo.
+- **Celda 7 — smoke de factory/evaluación/checkpoint:** `status=PASS` en las cuatro combinaciones:
+  - A2D2 semantic: batches train/val [1,3,256,256], targets [1,256,256], 26,889 y 15,624 píxeles semánticos válidos; DeepLabV3+ forward [1,20,256,256], logits finitos; checkpoint/resume PASS.
+  - A2D2 instances: train 6 instancias, val 2; cajas [N,4], máscaras [N,256,256], labels válidas; pycocotools.COCOeval PASS, 1 imagen y 2 GT de validación; Box AP/AP50/AP75 y Mask AP/AP50/AP75 = 0.0. Solo clase car tiene soporte (2 GT); las demás clases salen null por cero GT.
+  - UrbanSyn semantic: batches train/val [1,3,256,256], targets [1,256,256], 64,942 y 65,247 píxeles válidos; DeepLabV3+ forward [1,20,256,256], logits finitos; checkpoint/resume PASS.
+  - UrbanSyn instances: train 32 instancias, val 18; cajas [N,4], máscaras [N,256,256], labels válidas; pycocotools.COCOeval PASS, 1 imagen y 18 GT de validación; Box AP/AP50/AP75 y Mask AP/AP50/AP75 = 0.0. Clases person (12 GT) y car (6 GT) tienen soporte; otras clases null por cero GT.
+- Los AP=0.0 son coherentes con inferencia de modelos no entrenados/pesos aleatorios y una sola imagen de validación por experimento. Confirman ejecución técnica del evaluador y estructura de targets, no calidad ni rendimiento predictivo. Los AP por clase con `null` significan que esa muestra no contiene GT para esa clase, no AP cero.
+- Seguridad del experimento: dispositivo CPU, resolución smoke 256; `training_started=false`, `optimizer_steps=0`, `backward_calls=0`, `test_split_touched=false`. Checkpoint round-trip PASS en las cuatro tareas. No se entrenó ni se guardó checkpoint de entrenamiento.
+- Informes en Drive del usuario:
+  - `MyDrive/ProcesamientoImagenes/preflight_datos_reales/materialization_preflight.json`
+  - `MyDrive/ProcesamientoImagenes/preflight_datos_reales/materialization_report.json`
+  - `MyDrive/ProcesamientoImagenes/preflight_datos_reales/urban_real_data_preflight_smoke.json`
+  - stdout/stderr del smoke en el mismo directorio.
+- Dictamen: se cierra PASS la puerta de preflight de datos reales, integración factory/loaders, forward semántico, evaluación COCO y checkpoint/resume con muestras mínimas. No equivale a validación de entrenamiento, calidad del modelo, métricas fiables ni escalabilidad de memoria/tiempo a dataset completo.
+- Próxima fase permitida: diseñar y ejecutar una auditoría de capacidad/almacenamiento y materialización incremental controlada de un subconjunto mayor de train/val, con límites explícitos y sin test; revisar memoria/VRAM y coste de cómputo. Antes de entrenar, revisar configuración final del piloto y solicitar autorización explícita. No activar `RUN_TRAINING` por este PASS.
+- Auditoría GitHub al registrar: HEAD `af8a9f71a67aa03790a4f06b3780917f46337a08`; PR #3 `open=true`, `draft=true`, `merged=false`. Actions más recientes visibles para ese HEAD: Python tests run `45249418927` failure (y otro run `45249408008` failure); BDD probe `45249406181` failure. No se lanzaron reruns; el PASS de esta fase procede de Colab y no cambia el estado de CI.
+- `RUN_TRAINING=False`; PR #3 permanece abierta, draft y sin fusionar.
