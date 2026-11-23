@@ -11,7 +11,7 @@ class Tiny(nn.Module):
 
 def make_loaders():
     ds=TensorDataset(torch.randn(4,1,4,4),torch.randint(0,2,(4,4,4)))
-    return DataLoader(ds,batch_size=2),DataLoader(ds,batch_size=2)
+    return DataLoader(ds,batch_size=2,generator=torch.Generator().manual_seed(17)),DataLoader(ds,batch_size=2)
 
 def test_confusion_ignore_and_absent_class():
     cm=semantic_confusion_matrix(torch.tensor([[[0,1,1,0]]]),torch.tensor([[[0,1,0,255]]]),2)
@@ -28,6 +28,11 @@ def test_runner_saves_metrics_and_checkpoints(tmp_path):
     assert r["status"]=="completed" and r["epochs_completed"]==2
     assert (tmp_path/"last.pt").is_file() and (tmp_path/"best.pt").is_file()
     assert len([json.loads(x) for x in (tmp_path/"metrics.jsonl").read_text().splitlines()])==2
+    saved=torch.load(tmp_path/"last.pt",map_location="cpu",weights_only=False)
+    assert "loader_generator" in saved["loader_rng"]
+    tr.generator.manual_seed(999)
+    load_checkpoint(tmp_path/"last.pt",model,opt,expected_config_hash=r["config_hash"],train_loader=tr)
+    assert torch.equal(tr.generator.get_state(),saved["loader_rng"]["loader_generator"])
 
 def test_resume_rejects_config_hash_mismatch(tmp_path):
     tr,va=make_loaders(); model=Tiny(); opt=torch.optim.SGD(model.parameters(),lr=.01)
