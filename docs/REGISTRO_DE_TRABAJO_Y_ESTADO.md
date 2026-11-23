@@ -2449,3 +2449,12 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - Actions automáticos sobre el nuevo HEAD: runs `45266228739` y `45266220415`, ambos `failure`. No se hicieron reruns ni se infiere causa.
 - La auditoría GPU de memoria aún no se ha ejecutado. La corrección resuelve el error de formato de la celda; no es todavía evidencia de que las seis pruebas de memoria pasen. RUN_TRAINING=False, no se cargan datasets ni se toca test.
 - Próximo paso del usuario: volver a abrir/actualizar el notebook en Colab (recargar la pestaña para obtener la última versión) y ejecutar desde la primera celda. Si Colab conserva la copia anterior, cerrar y volver a abrir el enlace del notebook actualizado.
+
+### Segunda corrección del notebook de auditoría de memoria: serialización de source — 2026-11-23
+
+- El usuario volvió a reportar SyntaxError en la primera celda. El error mostraba instrucciones concatenadas (drivefrom pathlib, import pandas as pddrive.mount).
+- La revisión directa del JSON publicado identificó la causa exacta: cada elemento de cells[].source contenía una línea sin terminador de salto de línea. En Jupyter, los elementos de esa lista se concatenan literalmente; separar cada línea en un elemento no inserta \n automáticamente. Por eso la corrección anterior parecía tener varias entradas pero Colab seguía recibiendo una sola línea.
+- Corregido el notebook convirtiendo el contenido de cada una de las cuatro celdas de código en una cadena con saltos de línea reales explícitos dentro de source. Commit: 75349142448c4de32d3e2669d3ebcbc0ee9ebd1c.
+- Verificación del commit: diff confirma \n dentro del contenido de cada celda; el archivo conserva 9 celdas y no se modificó la lógica de auditoría. El endpoint de runs asociado a este commit no devolvió ejecuciones; no se lanzó ningún rerun.
+- Esta es una corrección del formato del notebook, no una prueba de ejecución en Colab. El usuario debe cerrar la copia abierta, abrir el notebook actualizado desde GitHub/Colab y ejecutar solo la primera celda para comprobar que desapareció el SyntaxError antes de continuar.
+- Sin datasets, sin test, sin forward/backward/optimizer de entrenamiento; RUN_TRAINING=False. PR #3 se mantiene sin fusionar y en draft.
