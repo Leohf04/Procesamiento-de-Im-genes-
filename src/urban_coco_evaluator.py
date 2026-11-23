@@ -29,7 +29,6 @@ def evaluate_coco_instance_segmentation(model, loader, device, categories):
             label=int(label)
             if label not in categories: raise ValueError(f"Unknown GT category id {label}")
             rle=mask_utils.encode(np.asfortranarray(mask))
-            rle["counts"]=rle["counts"].decode("ascii")
             x1,y1,x2,y2=[float(v) for v in box]
             annotations.append({"id":ann_id,"image_id":image_id,"category_id":label,
                 "segmentation":rle,"bbox":[x1,y1,max(0.,x2-x1),max(0.,y2-y1)],
@@ -49,7 +48,8 @@ def evaluate_coco_instance_segmentation(model, loader, device, categories):
             rle=mask_utils.encode(np.asfortranarray(binary))
             rle["counts"]=rle["counts"].decode("ascii")
             segm_results.append({"image_id":image_id,"category_id":label,"score":float(score),"segmentation":rle})
-    if not images: raise RuntimeError("COCO validation loader produced no images")\n    if not annotations: raise RuntimeError("COCO Mask AP undefined: validation split has zero ground-truth instances")
+    if not images: raise RuntimeError("COCO validation loader produced no images")
+    if not annotations: raise RuntimeError("COCO Mask AP undefined: validation split has zero ground-truth instances")
     base={"images":images,"categories":[{"id":k,"name":str(categories[k])} for k in category_ids]}
     coco_gt=COCO(); coco_gt.dataset={**base,"annotations":annotations}
     with redirect_stdout(StringIO()): coco_gt.createIndex()
