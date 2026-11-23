@@ -2387,3 +2387,13 @@ Tras el primer motor se completaron componentes adicionales:
 - PR #3 debe seguir abierta, draft y sin merge. RUN_TRAINING=False.
 
 - Verificación final después de publicar los documentos: HEAD `ce2ed931f66e4dd5d546f14b0bf589e582cd400f`; notebook JSON parseable con 8 celdas y línea GIT_ASKPASS corregida; auditor remoto no contiene llamadas a `optimizer.step()`, `backward()` ni al runner de entrenamiento. Actions automáticos asociados a los commits de documentación: `45258189245`, `45258179926` y `45258179878` para HEAD final, además de `45258170397` y `45258164795` para commits intermedios; todos terminaron `failure`. No se lanzaron reruns y no se atribuye una causa sin inspeccionar evidencia de los jobs. PR #3 continúa `open`, `draft=true`, `merged=false`.
+
+
+### Corrección del preflight por error reportado en Colab — 2026-11-23
+
+- El usuario compartió el informe `training_runtime_preflight.json` del 2026-11-23 20:23 UTC. Entorno: Python 3.13.18, PyTorch `2.14.1+cpu`, CUDA no disponible, cero dispositivos GPU; RAM disponible 12,185,280,512 bytes; Drive con 5,231,751,168 bytes libres. `training_started=false`, `dataset_downloaded=false`, `test_split_touched=false`, `forward_calls=0`, `backward_calls=0`, `optimizer_steps=0`.
+- Diagnóstico GPU: runtime sin CUDA y PyTorch CPU-only; no puede aprobarse preflight para entrenamiento GPU. Debe seleccionarse acelerador GPU en Colab, verificar `nvidia-smi` y volver a ejecutar el notebook desde la primera celda. No instalar PyTorch manualmente sin conocer compatibilidad del runtime.
+- Diagnóstico Drive: el checkpoint sintético se escribió, pero `torch.load(weights_only=True)` rechazó `torch.torch_version.TorchVersion` porque el script guardaba el objeto `torch.__version__` directamente. No es evidencia de fallo de Drive. Corregido a `str(torch.__version__)`; se conserva carga segura `weights_only=True`, sin desactivar protección.
+- Cambiado el dictamen: se publican `drive_status` y `gpu_status` por separado y `status=PASS` exige ambos PASS. Notebook ahora imprime `nvidia-smi`, muestra instrucciones para activar GPU y permite leer el informe incluso si el proceso devuelve código 2; no aborta antes del dictamen.
+- Cambios publicados: auditor corregido en commit `16f26fc0e68fae575abc965c9f5032a0bbcb7f7d`; notebook actualizado en commit `2a2c603bfd1fef446a8fe70faefdbd3570d93c53`. Sintaxis Python del auditor comprobada localmente con `compile()` (PASS); se debe volver a ejecutar en Colab para validar el I/O real.
+- Sin entrenamiento, sin descarga adicional, sin acceso a test. `RUN_TRAINING=False`. PR #3 se mantiene abierta, draft y sin merge.
