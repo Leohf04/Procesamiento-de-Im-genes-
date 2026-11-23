@@ -1786,3 +1786,13 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - El patrón anterior de runs con `runner_id=0`, sin runner y sin steps es compatible con rechazo/provisión bloqueada antes de iniciar el job, pero el conector no aporta la anotación exacta de facturación. No atribuirlo definitivamente sin revisar el estado de presupuesto/uso.
 - Siguiente paso: abrir Billing and licensing → Budgets and alerts y Billing → Overview. Verificar si el presupuesto de GitHub Actions está en USD 0 con `Stop usage when budget limit is reached`, si el estado dice `Usage blocked`, el plan y la fecha de reinicio del ciclo. No añadir método de pago ni elevar presupuesto sin consentimiento explícito. Alternativa sin cargos: esperar al reinicio del ciclo; para CI inmediato habría que valorar runner autohospedado en un equipo/servidor controlado, que requiere instalación y disponibilidad continua.
 - PR #3 se mantiene abierta y draft, sin fusionar. `RUN_TRAINING=False`; no se ha iniciado entrenamiento ni indexación nueva.
+
+
+#### Inspección de presupuestos y alertas — 2026-11-23
+
+- Captura de Billing → Budgets and alerts: aparecen cinco presupuestos a nivel de cuenta (Packages, Actions, Codespaces, All AI Credit SKUs, Git LFS). Cada uno muestra USD 0.00 / USD 0.00 spent, barra al 100% y advertencia. Para Actions el límite configurado visible es USD 0.00.
+- La vista de lista no expone el detalle de configuración del presupuesto, en particular si está activada la opción `Stop usage when budget limit is reached`, ni el estado explícito `Usage blocked`. Por tanto, no se puede afirmar aún que el presupuesto cero esté bloqueando Actions. Es una hipótesis plausible que debe verificarse abriendo la fila `Leohf04 · Actions`.
+- Pasos solicitados al usuario: abrir la fila `Leohf04 · Actions` y compartir la pantalla de detalle donde aparezcan monto, periodo, alertas y acción al alcanzar el límite. No cambiar el presupuesto ni permitir gasto adicional hasta revisar esa configuración y contar con autorización.
+- Auditoría de continuidad: PR #3 sigue listada como abierta; no se ha solicitado cierre ni merge. CI en commit documental previo `66c10689b749590e70aee1cccee44619da4e7fc7`: run `45171580626` Python tests terminó failure; job `pytest` no expone steps/logs en la respuesta del conector. No hay evidencia de ejecución real de pytest ni explicación del fallo.
+- No se dispone en esta llamada de SHA HEAD actual devuelto por API de rama; se conserva como último commit documental confirmado `66c10689b749590e70aee1cccee44619da4e7fc7` hasta la confirmación del commit que actualice este registro.
+- PR #3 debe permanecer abierta y draft, sin fusionar. `RUN_TRAINING=False`. No se ha lanzado entrenamiento ni indexación nueva.
