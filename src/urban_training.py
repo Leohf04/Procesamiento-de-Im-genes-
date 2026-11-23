@@ -101,3 +101,80 @@ def build_urban_train_loader(
         pin_memory=pin_memory, drop_last=drop_last, collate_fn=detection_collate_fn,
     )
     return loader, None
+
+def build_urban_train_loaders(
+    dataset_specs: Mapping[str, Mapping],
+    *,
+    task: str,
+    batch_size: int,
+    num_workers: int = 0,
+    seed: int = 2026,
+    pin_memory: bool = False,
+    drop_last: bool = False,
+):
+    """Build independent train loaders for multiple dataset domains.
+
+    dataset_specs maps each domain name (for example a2d2 or urbansyn) to
+    its own dataset, annotation_rows and class_to_id. Each domain is passed
+    separately through build_urban_train_loader; pixel totals and image
+    frequencies are never pooled across domains. Returns
+    {name: (loader, class_weights)}.
+    """
+    if not dataset_specs:
+        raise ValueError("dataset_specs cannot be empty")
+
+    loaders = {}
+    seen_dataset_objects = set()
+    for dataset_name, spec in dataset_specs.items():
+        if not isinstance(dataset_name, str) or not dataset_name.strip():
+            raise ValueError("Dataset names must be non-empty strings")
+        if not isinstance(spec, Mapping):
+            raise ValueError(f"Dataset spec for {dataset_name!r} must be a mapping")
+        required = {"dataset", "annotation_rows", "class_to_id"}
+        missing = required - set(spec)
+        if missing:
+            raise ValueError(
+                f"Dataset spec for {dataset_name!r} is missing: {sorted(missing)}"
+            )
+
+        dataset = spec["dataset"]
+        if id(dataset) in seen_dataset_objects:
+            raise ValueError(
+                "Each domain must use a distinct dataset object; do not concatenate or reuse datasets"
+            )
+        seen_dataset_objects.add(id(dataset))
+
+        rows = spec["annotation_rows"]
+        records = getattr(dataset, "records", None)
+        if records is not None:
+            tagged = {
+                str(record["dataset"]).strip().lower()
+                for record in records
+                if record.get("dataset") not in (None, "")
+            }
+            if tagged and tagged != {dataset_name.strip().lower()}:
+                raise ValueError(
+                    f"Dataset records for {dataset_name!r} contain foreign dataset tags: {sorted(tagged)}"
+                )
+        row_tags = {
+            str(row["dataset"]).strip().lower()
+            for row in rows
+            if row.get("dataset") not in (None, "")
+        }
+        if row_tags and row_tags != {dataset_name.strip().lower()}:
+            raise ValueError(
+                f"Annotation rows for {dataset_name!r} contain foreign dataset tags: {sorted(row_tags)}"
+            )
+
+        loaders[dataset_name] = build_urban_train_loader(
+            dataset,
+            rows,
+            task=task,
+            class_to_id=spec["class_to_id"],
+            batch_size=batch_size,
+            num_workers=num_workers,
+            seed=seed,
+            pin_memory=pin_memory,
+            drop_last=drop_last,
+        )
+    return loaders
