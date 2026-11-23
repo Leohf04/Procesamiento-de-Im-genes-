@@ -2209,3 +2209,15 @@ Tras el primer motor se completaron componentes adicionales:
 - Protocolo precisado para indicar que los FP siguen visibles en la matriz de confusión, pero la clase sin GT se excluye del mIoU: commit `7194445aba3c067c3f9a51c2f8fa5cbe28818731`.
 - No se han ejecutado aún los tests tras el fix. Actions no muestra runs ni status asociados al commit de la corrección; no es evidencia de aprobación. El run anterior `45241919444` para SHA `9788cc2...` falló en job pytest; el conector devolvió `steps=null`, sin logs.
 - Estado: no iniciar materialización ni entrenamiento hasta que Colab confirme suite completa verde. `RUN_TRAINING=False`; sin descargas ni entrenamiento. PR #3 permanece abierta, draft y sin fusionar.
+
+
+
+### Segunda validación Colab y corrección de la prueba de orientación — 2026-11-23
+
+- El usuario ejecutó el notebook sobre HEAD `d370146baf9790ef7f984bd8dd277cf786a14b24`: prueba dirigida del balanceador **1 passed**; suite completa **84 passed, 1 failed** en 25.97 s. El fallo quedó en `test_iou_absent_ground_truth_class_is_undefined_even_with_false_positives`: la matriz de confusión de la prueba producía soporte `[4,3]`, no el esperado `[4,0]`. No inició entrenamiento ni descargó datasets.
+- Diagnóstico confirmado por `semantic_confusion_matrix`: las filas representan la clase real (GT) y las columnas la clase predicha; el soporte GT se calcula sumando filas. La implementación de `semantic_metrics` y su cálculo `support=m.sum(1)` son coherentes con esa convención. El test había codificado los tres falsos positivos en la fila GT de clase 1, por lo que la prueba era incorrecta; no se cambia el motor.
+- Corrección de `tests/test_urban_experiment_runner.py`: matriz `[[4,3],[0,0]]`, que representa cuatro predicciones correctas de clase 0 y tres falsos positivos de clase 1, todos sobre GT clase 0. La prueba ahora exige soporte GT `[7,0]`, IoU de clase 1 indefinido, mIoU `4/7` y accuracy de clase 1 indefinida. Se documenta explícitamente la orientación filas=GT/columnas=predicción.
+- Commit de la prueba corregida: `74d151a57d1a54df7962669dcedf83bc46c5cb05`. El motor `src/urban_experiment_runner.py` permanece sin cambios en esta corrección.
+- Auditoría Actions del SHA anterior `d370146...`: run `45242636788`, workflow Python tests, conclusión failure; job `pytest` failure, pero GitHub devolvió `steps=[]`, sin logs. Combined status no devolvió estados. No se lanzó rerun.
+- PR #3 comprobada abierta; su descripción mantiene **Draft intencional. No fusionar todavía**. No se cambió estado ni se fusionó.
+- Pendiente: ejecutar nuevamente la prueba dirigida y la suite completa en Colab sobre el nuevo HEAD que incluya el commit `74d151a...` y la actualización de este registro. No iniciar materialización ni entrenamiento hasta suite completa verde. `RUN_TRAINING=False`; no se descargaron datos ni se inició entrenamiento.
