@@ -2158,3 +2158,25 @@ No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=
 - Ajuste final del motor: se incorporó también `mean_accuracy` semántica, además de pixel accuracy e IoU por clase; commit `c05200ed1d6ae69aa2219aebbf7ea7ed2c307fab`. Enlace de protocolo actualizado: `a1b517452d390ee7c860663cb830e3562879b080`.
 - Auditoría de la rama al cerrar: último commit creado por esta intervención en `urban-models-and-benchmark`: `a1b517452d390ee7c860663cb830e3562879b080` (el registro se actualiza a continuación). La búsqueda confirma PR #3 abierta; su descripción conserva el estado “Draft intencional”. No se solicitó ni ejecutó conversión a ready ni merge. La consulta de runs asociados a los commits de implementación no devolvió ejecuciones PR disponibles; no se afirma que la suite se haya ejecutado ni aprobado. No se lanzaron reruns.
 - Estado final: motor parcial y CLI guardada; suite sintética añadida pero pendiente de ejecución sobre SHA exacto; factory/materializador de datos y COCO Mask AP pendientes; `RUN_TRAINING=False`; sin entrenamiento ni descarga completa.
+
+
+### Ampliación a pipeline de materialización, factory y evaluación COCO — 2026-11-23
+
+Tras el primer motor se completaron componentes adicionales:
+
+- `scripts/materialize_urban_experiment_data.py`: materialización remota de train/validation de A2D2 (S3 oficial) y UrbanSyn (HF, revision de cada fila). Verifica sample IDs únicos/no vacíos, igualdad de IDs manifiesto/índice y `annotation_status=ok`; no toca test. Commit inicial `5b44f53bb8a4a2c5b9edf6a3ea7b29e3d91b746b`, validación de IDs vacíos `b558d1032a68400b43c6e669db094f4e1fdcbb18`.
+- `scripts/urban_experiment_factory.py`: crea datasets/loader de train y validation por dominio y tarea, comprueba no solapamiento de IDs, utiliza los pesos/sampler train-only existentes, instancia DeepLabV3+ o Mask R-CNN y SGD + ReduceLROnPlateau. Corrige la normalización del campo RGB UrbanSyn y el mapeo de categorías COCO. Commit inicial `bc55250e6388eeef7cdbdba325f86fbe18dabcae`, corrección `709b241d1d1e6c6786cb9712d1d35499600e743e`.
+- `src/urban_coco_evaluator.py`: Box AP y Mask AP mediante `pycocotools.COCOeval`, AP@[.50:.95], AP50/AP75 y soporte/AP por clase. Rechaza validación sin GT. Se conserva RLE binario para el uso in-memory de COCOeval. Commits `84f187b940fc1705f795d5d2d5eef198dc4585f5`, `d7255cf5dba5668b5598f0778be8c94fa6bd6995`, `a01e7f4de436fd037c1eb875825bb63d9f1b67c1`.
+- `tests/test_urban_coco_evaluator.py`: prueba sintética de Mask AP/Box AP perfecta; hace skip si pycocotools no está instalado. Commit `f436e4bc1b4dc013b8c997bea153e48d2d508149`.
+- Guía de ejecución actualizada con comandos futuros, rutas/contrato y puertas de aceptación: `docs/EJECUTOR_ENTRENAMIENTO_MULTIDOMINIO.md`, commit `bc14f02e9387ba40147406e5982a889600125718`.
+- Protocolo actualizado para describir componentes implementados y bloqueos restantes: commit `4f178c38b7f2faac62b3e09e7e689dbff75a688d`.
+
+### Estado de verificación y seguridad
+
+- No se ejecutaron las nuevas pruebas, el materializador, la factory, COCOeval ni el motor. El código nuevo está guardado, pero **no está validado aún**; no declarar tests PASS.
+- El siguiente paso de validación es abrir el notebook `notebooks/colab_validacion_completa.ipynb` actualizado desde esta rama y ejecutar la suite completa sobre el HEAD final. Después, y sin optimización, ejecutar materialización/loaders train+validation y la prueba COCOeval; solo tras ello hacer prueba checkpoint/resume.
+- El evaluador COCO tiene prueba sintética escrita, pero no se ha ejecutado ni contrastado con una muestra real. La métrica Mask AP todavía no debe publicarse como resultado experimental.
+- No se ha iniciado materialización ni descarga de datos, no se ha iniciado entrenamiento ni se han creado checkpoints. `RUN_TRAINING=False` continúa intacto. La CLI requiere `run_training=true` y `--execute`, pero eso no sustituye autorización explícita.
+- Auditoría Actions al cierre para SHA de protocolo `4f178c38...`: `fetch_commit_workflow_runs` y combined status no devolvieron runs/checks. No equivale a CI aprobado. No se lanzaron reruns. El run histórico `45240266965` para SHA previo tuvo job pytest failure con `steps=null`; no permite conocer la causa.
+- PR #3 aparece abierta y su descripción mantiene explícitamente “Draft intencional. No fusionar todavía”. No se cambió estado ni se fusionó.
+- Commit del registro de esta auditoría final: pendiente de escritura de este mismo registro.
