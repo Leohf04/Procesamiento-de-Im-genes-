@@ -1837,3 +1837,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Orden de ejecución: montar Drive, clonar rama, instalar dependencias/diagnosticar PyTorch-Torchvision, correr tests dirigidos; si pasan, suite completa; recuperar artifact y generar plan cap200; revisar retención por clase y diversidad antes de aceptar. Si una prueba falla, detener y conservar logs. CPU basta para tests/planificador; GPU no es requisito. Colab Free no garantiza disponibilidad ni sesiones persistentes.
 - No se ejecutó notebook desde aquí, por tanto no se afirma que tests pasen ni que plan cap200 haya sido generado. No se inició entrenamiento, no se descargaron datasets/anotaciones fuente, no se autorizó gasto. `RUN_TRAINING=False`.
 - Se mantiene PR #3 abierta, draft y sin fusionar.
+
+
+#### Diagnóstico de suite completa en Google Colab — 2026-11-23
+
+- El usuario informó que las cuatro pruebas dirigidas de la celda 5.3 terminaron con código 0, pero la suite completa de la celda 5.4 terminó con código 1 y lanzó el RuntimeError de parada previsto.
+- La evidencia compartida contiene únicamente el código de salida y el traceback del RuntimeError; no incluye la salida previa de pytest (resumen de fallos, nombres de tests ni excepciones originales). Por tanto, la causa raíz todavía no está identificada y no se atribuye el fallo a dependencias, CUDA ni a un módulo concreto.
+- Se consultó el registro antes de intervenir y se revisó el PR #3, que continúa listado en el repositorio. Se consultó CI asociado al commit documental a4b6daf1e409fe14369ddfc5a40906792ebd2a62: run Python tests 45193916788 terminó failure; el job pytest 137759177336 no devuelve steps/logs en el conector. Esta ejecución de Actions no aporta evidencia diagnóstica del fallo local de Colab.
+- No se lanzó ningún rerun de Actions, no se modificó código y no se inició entrenamiento ni se ejecutó el plan cap200. Se mantiene RUN_TRAINING=False; PR #3 no debe fusionarse.
+- Próximo paso: obtener la salida real de pytest en Colab con stdout y stderr combinados, conservarla en Google Drive y compartir el resumen de fallos. Hasta entonces, detener el flujo antes de las celdas 5.5–5.7 y no considerar aprobada la suite completa.
