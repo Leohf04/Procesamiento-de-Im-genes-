@@ -9,11 +9,6 @@ import json
 from pathlib import Path
 from urllib.parse import urlparse
 
-import boto3
-from botocore import UNSIGNED
-from botocore.config import Config
-from huggingface_hub import HfApi, hf_hub_download
-
 A2D2_BUCKET = "audi-autonomous-driving-dataset"
 HF_REPO = "UrbanSyn/UrbanSyn"
 SPLITS = ("train", "val")
@@ -133,6 +128,11 @@ def main():
         p.error("--max-samples-per-split must be >= 1")
     if a.max_total_bytes is not None and a.max_total_bytes < 1:
         p.error("--max-total-bytes must be >= 1")
+
+    import boto3
+    from botocore import UNSIGNED
+    from botocore.config import Config
+    from huggingface_hub import HfApi, hf_hub_download
 
     s3 = boto3.client("s3", region_name="eu-central-1",
         config=Config(signature_version=UNSIGNED, retries={"max_attempts": 5}))
