@@ -2273,3 +2273,15 @@ Tras el primer motor se completaron componentes adicionales:
 - PR #3 sigue localizada y abierta en la búsqueda de PRs; conservar draft y sin merge.
 - **Siguiente paso habilitado:** el usuario puede ejecutar ahora `notebooks/colab_preflight_datos_reales.ipynb` en Colab. La primera celda de trabajo remoto verifica artifact, manifests e índices; luego estima tamaños de cuatro muestras train/val y aplica límite 2 GiB antes de descargar. Si preflight PASS, materializa esas cuatro muestras y ejecuta smoke de loaders/forward/COCOeval/checkpoint. Si falla cualquier puerta, detener y compartir stdout/stderr; no ampliar materialización.
 - `RUN_TRAINING=False`; el notebook de preflight no debe llamar backward/optimizer.step ni consumir test. No se ha iniciado entrenamiento ni descargado dataset completo.
+
+
+### Corrección de importación del smoke de datos reales en Colab — 2026-11-23
+
+- El usuario ejecutó la celda 7 del notebook `notebooks/colab_preflight_datos_reales.ipynb`; el proceso terminó antes de crear loaders o modelos con `ModuleNotFoundError: No module named 'scripts'` al importar `scripts.urban_experiment_factory`.
+- Diagnóstico: al invocar un archivo por ruta (`python scripts/smoke_test_urban_experiment_factory.py`), Python coloca `scripts/` como primera entrada de `sys.path`; no garantiza que la raíz del repositorio esté disponible para imports absolutos `scripts.*`/ `src.*`, aunque subprocess use `cwd=WORKDIR`. El error ocurre durante importación y no implica fallo de anotaciones, loaders, COCOeval ni checkpoint.
+- Corrección: el smoke script calcula `REPOSITORY_ROOT = Path(__file__).resolve().parents[1]` e inserta esa ruta al principio de `sys.path` antes de importar `torch`, `scripts.urban_experiment_factory` o `src.urban_experiment_runner`. Esto hace el script autocontenido respecto al directorio de trabajo y evita depender de configuración externa de `PYTHONPATH`.
+- No se modificó el materializador ni el notebook de descarga; no se cambió el alcance de muestras (1 por split en preflight, materialización limitada a train/val y presupuesto 2 GiB). El fallo reportado ocurrió en la celda 7, después de materialización, por lo que no se afirma aún que el smoke real haya pasado.
+- No se inició entrenamiento: el script conserva `training_started=false`, cero backward y cero optimizer steps. No se lanzó rerun de GitHub Actions.
+- Pendiente: el usuario debe volver a ejecutar únicamente la celda 7 en el mismo runtime donde la celda 6 materializó los datos. Si el runtime se reinició, ejecutar de nuevo el notebook en orden para reconstruir los datos temporales. Compartir `urban_real_data_preflight_smoke.json` y logs si aparece otro error.
+- Estado auditado antes de la corrección: HEAD `a7e6cf8f85aa5c3bf9d84c12bc63d5ef01e03848`; PR #3 abierta, draft y sin fusionar; último run Actions visible `45248530874` terminó failure sin que ello constituya evidencia sobre este error de Colab.
+- `RUN_TRAINING=False`; no descargar dataset completo ni iniciar piloto hasta que el smoke de cuatro combinaciones termine PASS y se autorice expresamente.

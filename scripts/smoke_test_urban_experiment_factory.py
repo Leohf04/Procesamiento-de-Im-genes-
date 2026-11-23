@@ -8,7 +8,16 @@ import argparse
 import gc
 import hashlib
 import json
+import sys
 from pathlib import Path
+
+# When executed as `python scripts/smoke_test_urban_experiment_factory.py`,
+# Python puts the scripts/ directory (not the repository root) on sys.path.
+# Add the repository root so absolute imports such as `scripts.*` and `src.*`
+# work consistently in Colab and other subprocess-based environments.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
 
 import torch
 
