@@ -8,6 +8,7 @@ from src.data_adapters import (A2D2SemanticDataset,A2D2InstanceDataset,
 from src.urban_ontology import load_urban_ontology,semantic_name_to_id,instance_name_to_id,source_semantic_map,source_instance_map
 from src.urban_training import build_urban_train_loader
 from src.urban_coco_evaluator import evaluate_coco_instance_segmentation
+from src.urban_experiment_runner import seed_everything
 
 def _jsonl(path):
     with Path(path).open(encoding="utf-8") as f: return [json.loads(x) for x in f if x.strip()]
@@ -16,6 +17,7 @@ def create_experiment(config):
     ds=config["dataset"]; task=config["task"]
     if ds not in {"a2d2","urbansyn"} or task not in {"semantic","instances"}:
         raise ValueError("dataset/task must be a2d2|urbansyn and semantic|instances")
+    seed_everything(int(config.get("seed",2026)))
     root=Path(config["data_dir"]); manifest=root/"local_manifests"; index=Path(config["annotation_index_dir"])
     ontology=load_urban_ontology(); semantic_ids=semantic_name_to_id(ontology); instance_ids=instance_name_to_id(ontology)
     mapping=semantic_ids if task=="semantic" else instance_ids
