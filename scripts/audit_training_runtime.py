@@ -8,7 +8,6 @@ import os
 import platform
 import shutil
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -141,7 +140,7 @@ def main():
     payload = {
         "probe": "drive-checkpoint-io-v1",
         "tensor": expected,
-        "torch_version": torch.__version__,
+        "torch_version": str(torch.__version__),
     }
     try:
         torch.save(payload, temp_path)
@@ -174,10 +173,19 @@ def main():
             except Exception:
                 pass
 
-    report["status"] = (
+    report["gpu_status"] = (
+        "PASS" if report["cuda_available"]
+        and report.get("gpu_allocation_probe", {}).get("status") == "PASS"
+        else "FAIL"
+    )
+    report["drive_status"] = (
         "PASS" if report["drive_checkpoint_io"].get("status") == "PASS"
-        and (not report["cuda_available"]
-             or report.get("gpu_allocation_probe", {}).get("status") == "PASS")
+        else "FAIL"
+    )
+    # This preflight is specifically for GPU training: CPU-only is not ready.
+    report["status"] = (
+        "PASS" if report["drive_status"] == "PASS"
+        and report["gpu_status"] == "PASS"
         else "FAIL"
     )
     report_path = out / "training_runtime_preflight.json"
