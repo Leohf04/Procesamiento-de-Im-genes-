@@ -102,3 +102,8 @@ Ejecuta el notebook en Colab después de seleccionar GPU (si está disponible). 
 El informe queda en MyDrive/ProcesamientoImagenes/auditoria_entorno_entrenamiento/training_runtime_preflight.json.
 
 Puerta de decisión: si GPU_PASS es falso, detenerse; no ejecutar piloto en CPU. DRIVE_IO_PASS solo valida el montaje actual y no sustituye una prueba de recuperación tras reconectar Drive. Incluso con PREFLIGHT_READY=True, falta la prueba de memoria con batch real de cada arquitectura y la autorización expresa del piloto. RUN_TRAINING=False permanece.
+
+
+## Corrección tras primer intento de Colab
+
+El primer resultado mostró PyTorch CPU-only (`2.14.1+cpu`) y ausencia de CUDA; cambia el acelerador a GPU en Colab, reinicia si se solicita y ejecuta todo el notebook desde el principio. No fuerces una instalación de PyTorch manualmente. El auditor ya convierte `torch.__version__` a texto para que `torch.load(weights_only=True)` pueda leer el checkpoint sintético de forma segura. Ahora separa `drive_status` y `gpu_status`, y el estado global solo es PASS cuando ambos pasan. La prueba Drive anterior no demuestra fallo de almacenamiento; fue un problema de tipo serializado.
