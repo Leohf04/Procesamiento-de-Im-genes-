@@ -60,8 +60,7 @@ def read_jsonl(path: Path) -> list[dict]:
     return rows
 
 
-def choose_train_record(manifest_rows: list[dict], annotation_rows: list[dict],
-                        count_key: str) -> tuple[dict, dict]:
+def choose_train_record(manifest_rows: list[dict], annotation_rows: list[dict]) -> tuple[dict, dict]:
     annotations = {str(row["sample_id"]): row for row in annotation_rows}
     candidates = []
     for record in manifest_rows:
@@ -71,7 +70,7 @@ def choose_train_record(manifest_rows: list[dict], annotation_rows: list[dict],
             continue
         if stats.get("annotation_status", "ok") != "ok":
             continue
-        if stats.get(count_key):
+        if stats.get("semantic_pixels") and stats.get("instance_counts"):
             candidates.append((record, stats))
     if not candidates:
         raise RuntimeError(f"No train sample has non-empty {count_key} statistics")
@@ -148,9 +147,7 @@ def main() -> None:
         annotation_rows = read_jsonl(
             args.annotation_index_dir / f"{dataset_name}_train.annotations.jsonl"
         )
-        record, stats = choose_train_record(manifest_rows, annotation_rows, "semantic_pixels")
-        if not stats.get("instance_counts"):
-            record, stats = choose_train_record(manifest_rows, annotation_rows, "instance_counts")
+        record, stats = choose_train_record(manifest_rows, annotation_rows)
         selected[dataset_name] = record
         annotation = dict(stats)
         annotation["dataset"] = dataset_name
