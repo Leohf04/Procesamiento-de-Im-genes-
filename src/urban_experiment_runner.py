@@ -95,7 +95,7 @@ def load_checkpoint(path, model, optimizer, scheduler=None, scaler=None,
 
 def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_index,
                  scaler, amp, max_grad_norm):
-    model.train(); total=0.; batches=0
+    model.train(); total=0.; batches=0; component_totals={}
     for batch in loader:
         optimizer.zero_grad(set_to_none=True)
         if task=="semantic":
@@ -113,6 +113,7 @@ def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_i
                 if any(x.ndim!=0 or not bool(torch.isfinite(x)) for x in losses.values()):
                     raise FloatingPointError("Non-finite detection loss")
                 loss=sum(losses.values())
+                for name,value in losses.items(): component_totals[name]=component_totals.get(name,0.)+float(value.detach().cpu())
         if loss.ndim!=0 or not bool(torch.isfinite(loss)): raise FloatingPointError("Non-finite training loss")
         if scaler is not None and scaler.is_enabled():
             scaler.scale(loss).backward(); scaler.unscale_(optimizer)
@@ -124,7 +125,10 @@ def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_i
             optimizer.step()
         total+=float(loss.detach().cpu()); batches+=1
     if not batches: raise RuntimeError("Training loader yielded zero batches")
-    return total/batches,batches
+    average=total/batches
+    if task=="instances":
+        return {"total":average,"components":{k:v/batches for k,v in component_totals.items()}},batches
+    return average,batches
 
 
 @torch.no_grad()
