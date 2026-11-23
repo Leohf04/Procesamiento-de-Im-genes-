@@ -217,3 +217,16 @@ La prueba deriva los mapas desde src.urban_ontology; no define IDs manuales. Tam
 Ejecución en Colab: completar las secciones 1–7 del notebook colab_generar_plan_cap200.ipynb para descargar/verificar el artifact y reconstruir MANIFEST_DIR/INDEX_DIR; después ejecutar la nueva sección 9. El informe se guarda en MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_loader_integration.json.
 
 Esta prueba no ejecuta modelos, no calcula métricas de calidad, no descarga conjuntos completos y no inicia entrenamiento. Hasta que el informe real indique status=PASS, la integración con datos reales permanece pendiente. Mantener RUN_TRAINING=False.
+
+## Prueba controlada de aprendizaje real (sección 11 de Colab)
+
+La opción `--learning-step` del script `scripts/smoke_test_urban_training_integration.py` permite verificar una actualización real de parámetros con muestras train remotas, sin iniciar un entrenamiento completo.
+
+- Ejecuta exactamente cuatro pasos independientes: DeepLabV3+ en A2D2, DeepLabV3+ en UrbanSyn, Mask R-CNN en A2D2 y Mask R-CNN en UrbanSyn.
+- Cada combinación crea un modelo nuevo con inicialización aleatoria y sin pesos preentrenados/checkpoints. DeepLabV3+ usa CrossEntropy con `ignore_index=255` y pesos semánticos train-only del dominio. Mask R-CNN calcula sus pérdidas de entrenamiento a partir de targets reales.
+- Cada paso ejecuta loss, backward y SGD una sola vez; exige loss finita, gradientes finitos/no nulos y cambio de al menos un parámetro. Registra pérdidas, número de tensores con gradiente, tiempo, memoria máxima CUDA y RSS máximo del proceso.
+- La prueba usa una muestra real por dataset, resize 256×256, y mantiene separados los dominios. Solo descarga los archivos necesarios para esas muestras en un directorio temporal.
+- No recorre épocas, no usa val/test, no guarda checkpoints, no descarga datasets completos ni modifica `RUN_TRAINING=False` en el flujo general. El informe marca `training_started=true` porque sí realiza cuatro actualizaciones controladas, pero `full_training_started=false`.
+- Notebook: `notebooks/colab_generar_plan_cap200.ipynb`, sección 11. Informe Drive: `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_controlled_learning_step.json`; stdout/stderr se guardan junto al informe.
+- Un PASS demuestra compatibilidad del cálculo de pérdidas y del paso de optimizador en esas cuatro muestras/configuraciones. No demuestra convergencia, estabilidad multi-iteración, generalización, calidad predictiva ni que el protocolo completo esté listo para producción. Si falla por memoria/tiempo, conservar el stderr; no aumentar tamaño ni cantidad de pasos a ciegas.
+- La ejecución real en Colab sigue pendiente; los cambios de código/notebook aún no han sido validados por una ejecución de esta sección.
