@@ -1909,3 +1909,14 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Se corrigió `notebooks/colab_generar_plan_cap200.ipynb` (commit `8b36bacade367de7a064330e2cb7cd02d4f1944b`): la celda ahora valida por separado autenticación (`GET /user`), acceso al repo (`GET /repos/{repo}`) y acceso al artifact. Ante 403 muestra un error accionable con el encabezado `X-Accepted-GitHub-Permissions` y explica configurar Fine-grained PAT con Resource owner correcto, seleccionar solo este repositorio, `Actions: Read-only` y `Contents: Read-only`; guardar/reemplazar el secreto Colab `GITHUB_TOKEN`. No imprime el token.
 - La celda mantiene validación de artifact/run y SHA-256 antes de extraer. El usuario debe reemplazar el secreto por el PAT correcto y volver a ejecutar la celda 3. No necesita regenerar artifact, reindexar ni descargar datasets.
 - Estado de Actions auditado: últimos runs continúan con fallos; no se lanzaron reruns. PR #3 sigue abierta, draft y sin merge. No se ha iniciado entrenamiento; `RUN_TRAINING=False`.
+
+
+#### Corrección de SyntaxError en la reconstrucción de manifiestos del notebook cap200 — 2026-11-23
+
+- El usuario reportó un SyntaxError: unexpected character after line continuation character al ejecutar la sección 4 del notebook notebooks/colab_generar_plan_cap200.ipynb, en la línea que ordena el manifiesto base por SHA-256.
+- Causa confirmada al inspeccionar el código publicado: la f-string contenía comillas escapadas literalmente (f\\"2026:...\\":) en lugar de comillas Python normales. No era un error del PAT, del artifact ni de los datos.
+- Corrección aplicada directamente en la celda de reconstrucción: base.sort(key=lambda row: hashlib.sha256(f"2026:{row['sample_id']}".encode('utf-8')).hexdigest()).
+- Notebook corregido y guardado en la rama urban-models-and-benchmark, commit bf61bd84630256f7cb73fde099f87eb5f26dc3b1. La sección 4 ya no contiene los escapes defectuosos.
+- Auditoría al iniciar esta intervención: HEAD 7e1c8dc52374302dd18529a56ac6f4d9b35b6356; PR #3 open/draft/unmerged. Los seis Actions más recientes seguían en failure; el job más reciente consultado (45213945386) figura como completado con failure. No se lanzaron reruns. La corrección del notebook no implica que Actions se hayan recuperado.
+- Próximo paso: volver a abrir/recargar el notebook actualizado desde Colab y ejecutar nuevamente la sección 4 (celda de código posterior al encabezado “4. Reconstruir…”). Si Colab conserva una copia antigua, recargar el notebook desde GitHub. Si el runtime perdió las variables ART, extract u otras variables previas, ejecutar las celdas desde el inicio en orden.
+- No se ha ejecutado todavía la celda corregida en Colab ni el CLI cap200; la validación real queda pendiente. No se inició entrenamiento; RUN_TRAINING=False. Mantener PR #3 abierta, draft y sin fusionar.
