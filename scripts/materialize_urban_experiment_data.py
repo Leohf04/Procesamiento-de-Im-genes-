@@ -39,6 +39,8 @@ def select_rows(rows, limit, annotation_map=None, require_instances=False):
             raise ValueError("annotation_map is required when require_instances=True")
         candidates = [row for row in candidates
                       if annotation_map[str(row["sample_id"])].get("instance_counts")]
+        if not candidates:
+            raise RuntimeError("No samples with positive instance annotations were found.")
     if limit is None:
         return candidates
     if limit < 1:
