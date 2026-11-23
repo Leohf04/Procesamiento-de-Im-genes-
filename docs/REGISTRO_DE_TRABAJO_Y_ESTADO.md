@@ -1920,3 +1920,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Auditoría al iniciar esta intervención: HEAD 7e1c8dc52374302dd18529a56ac6f4d9b35b6356; PR #3 open/draft/unmerged. Los seis Actions más recientes seguían en failure; el job más reciente consultado (45213945386) figura como completado con failure. No se lanzaron reruns. La corrección del notebook no implica que Actions se hayan recuperado.
 - Próximo paso: volver a abrir/recargar el notebook actualizado desde Colab y ejecutar nuevamente la sección 4 (celda de código posterior al encabezado “4. Reconstruir…”). Si Colab conserva una copia antigua, recargar el notebook desde GitHub. Si el runtime perdió las variables ART, extract u otras variables previas, ejecutar las celdas desde el inicio en orden.
 - No se ha ejecutado todavía la celda corregida en Colab ni el CLI cap200; la validación real queda pendiente. No se inició entrenamiento; RUN_TRAINING=False. Mantener PR #3 abierta, draft y sin fusionar.
+
+
+#### Ejecución completada del notebook cap200 en Colab — 2026-11-23
+
+- El usuario confirmó que el notebook `notebooks/colab_generar_plan_cap200.ipynb` llegó al último bloque y compartió la salida: ZIP `/content/drive/MyDrive/ProcesamientoImagenes/balanceo_cap200/plan_balanceado_cap200.zip` (1.081.313 bytes) y resumen `/content/drive/MyDrive/ProcesamientoImagenes/balanceo_cap200/audit_summary.json`.
+- El bloque final imprimió explícitamente `RUN_TRAINING sigue False; no se inició entrenamiento.` Esto confirma que no se lanzó entrenamiento y que el empaquetado/copia a Drive terminó. La salida por sí sola todavía no permite validar los conteos de selección, cap, cobertura de clases, sensibilidad ni preservación de val/test; falta revisar el contenido de `audit_summary.json`.
+- Próximo paso: solicitar al usuario que abra `audit_summary.json` desde Google Drive y comparta su contenido completo (o descargue/adjunte el JSON/ZIP). No pedir el PAT ni datasets. Tras revisar, contrastar resultados reales del CLI con la auditoría local anterior y emitir dictamen sobre cap200 y alternativas.
+- Auditoría GitHub al registrar: HEAD de `urban-models-and-benchmark` `489df6aca8dd38b224339af226978b0e64a1a885`; PR #3 sigue `open`, `draft=true`, `merged=false`. Los seis Actions más recientes consultados continúan en `failure`; no se lanzaron reruns. La ejecución de Colab es evidencia independiente y no cambia ese estado de CI.
+- No iniciar entrenamiento hasta revisar el JSON y decidir el protocolo. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
