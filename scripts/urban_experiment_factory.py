@@ -75,7 +75,7 @@ def create_experiment(config):
     scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode="max",patience=1)
     evaluator=None
     if task=="instances":
-        evaluator=lambda m,l,d:evaluate_coco_instance_segmentation(m,l,d,instance_ids)
+        evaluator=lambda m,l,d:evaluate_coco_instance_segmentation(m,l,d,{v:k for k,v in instance_ids.items()})
     return {"model":model,"train_loader":train_loader,"validation_loader":val_loader,
         "optimizer":optimizer,"scheduler":scheduler,"class_weights":weights,"task":task,
         "detection_evaluator":evaluator}
