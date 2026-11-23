@@ -2188,3 +2188,13 @@ Tras el primer motor se completaron componentes adicionales:
 - Commits correctivos: factory `9d520bccff5e2ad1a0312305d5a581dfbffde92e`; COCO evaluator `e9b0b60eda375c8a50b942df99ceea21f9b8ec60`; motor semántico `71b14cf99879c78a5bf1e77d9f953fbf73051325`. No se han ejecutado tests ni un linter tras estas correcciones.
 - Se revisó de nuevo el código fuente remoto y no se detectan ya los errores textuales de integración mencionados; sigue pendiente validación ejecutable, especialmente pycocotools/COCOeval real y factory con manifests descargados.
 - Último HEAD antes de esta actualización del registro: `e9b0b60eda375c8a50b942df99ceea21f9b8ec60`. Actions/status asociados no se han considerado aprobados; no se lanzaron reruns.
+
+
+#### Cierre de reproducibilidad y registro de losses — 2026-11-23
+
+- El factory ahora fija la semilla antes de inicializar los pesos del modelo y comprueba que `num_classes` semántico coincida con `urban-v1`: commit `161e31623b083044a6da711fce2b9d4d73a14360`, ajuste de validación `7543c82e619f4e9a518cba1a70cc64717add0eaa`.
+- Los checkpoints incluyen y restauran los estados de los generadores del DataLoader y del sampler, además de RNG Python/NumPy/PyTorch/CUDA: commit `cd6d5597e751c2712a5a5a473c2aefd99333c83d`. Se amplió la prueba de reanudación para comprobar la restauración del generador: `534f5fc6d3b791627eafea12106aa6e732c4d3c0`.
+- El loop de instancias registra la media por época de cada componente de loss de Mask R-CNN: commit `02edad59bfdae8b556699c19681b2a6190e12df5`; prueba sintética añadida en `3918419920b36f9c686edd842d28798456ee9e99`.
+- Guía y protocolo actualizados: guía `832f6a06e99415de7e9f05b2429a3141c68765d8`; protocolo `47c878b7b980b508522b69ae164efecfaed4e76d`.
+- Aun así, ningún test nuevo se ha ejecutado. No afirmar compilación ni suite aprobada. Próximo paso obligatorio: ejecutar suite completa en Colab sobre el SHA final; revisar errores antes de materializar datos. Luego materialización/loaders train-validation sin entrenamiento, validación COCOeval y prueba de checkpoint/resume.
+- Se mantiene `RUN_TRAINING=False`; no hubo descargas, optimización ni checkpoints. La CLI requiere doble activación, pero no se usará hasta autorización expresa. PR #3 permanece abierta y draft.
