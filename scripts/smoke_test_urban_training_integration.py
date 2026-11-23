@@ -13,6 +13,8 @@ import argparse
 import hashlib
 import json
 import tempfile
+import time
+import resource
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -256,6 +258,8 @@ def run_controlled_learning_steps(semantic_loaders, instance_loaders,
     }
 
     for dataset_name, (loader, class_weights) in semantic_loaders.items():
+        step_started = time.perf_counter()
+        if device.type == "cuda": torch.cuda.reset_peak_memory_stats(device)
         torch.manual_seed(2026)
         model = DeepLabV3Plus(
             num_classes=num_semantic_classes, pretrained_backbone=False
@@ -276,7 +280,10 @@ def run_controlled_learning_steps(semantic_loaders, instance_loaders,
             )
             report["deeplabv3plus"][dataset_name] = {
                 "input_shape": list(images.shape), "target_shape": list(masks.shape),
-                "logits_shape": list(logits.shape), **optimizer_report,
+                "logits_shape": list(logits.shape),
+                "elapsed_seconds": round(time.perf_counter() - step_started, 3),
+                "peak_cuda_memory_mb": (round(torch.cuda.max_memory_allocated(device) / (1024 ** 2), 2) if device.type == "cuda" else None),
+                **optimizer_report,
             }
             report["optimizer_steps_completed"] += 1
         finally:
@@ -286,6 +293,8 @@ def run_controlled_learning_steps(semantic_loaders, instance_loaders,
             if device.type == "cuda": torch.cuda.empty_cache()
 
     for dataset_name, (loader, _) in instance_loaders.items():
+        step_started = time.perf_counter()
+        if device.type == "cuda": torch.cuda.reset_peak_memory_stats(device)
         torch.manual_seed(2026)
         detector = torchvision.models.detection.maskrcnn_resnet50_fpn(
             weights=None, weights_backbone=None, min_size=size, max_size=size
@@ -320,6 +329,8 @@ def run_controlled_learning_steps(semantic_loaders, instance_loaders,
                 "ground_truth_instances": int(len(targets[0]["labels"])),
                 "loss_components": {name: float(value.detach().cpu())
                                     for name, value in losses.items()},
+                "elapsed_seconds": round(time.perf_counter() - step_started, 3),
+                "peak_cuda_memory_mb": (round(torch.cuda.max_memory_allocated(device) / (1024 ** 2), 2) if device.type == "cuda" else None),
                 **optimizer_report,
             }
             report["optimizer_steps_completed"] += 1
@@ -331,6 +342,7 @@ def run_controlled_learning_steps(semantic_loaders, instance_loaders,
 
     if report["optimizer_steps_completed"] != report["optimizer_steps_expected"]:
         raise RuntimeError("No se completaron los cuatro pasos de optimizador.")
+    report["process_max_rss_mb"] = round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 2)
     report["status"] = "PASS"
     return report
 
