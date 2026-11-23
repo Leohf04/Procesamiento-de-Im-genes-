@@ -1,6 +1,6 @@
 # Protocolo de entrenamiento experimental multidominio (urban-v1)
 
-**Estado: DISEÑO PROPUESTO — NO EJECUTABLE / NO AUTORIZA ENTRENAMIENTO.**  
+**Estado: motor de entrenamiento parcial implementado; pipeline end-to-end aún bloqueado / no autoriza entrenamiento.**  
 **Control de seguridad:** `RUN_TRAINING=False`. No cambiarlo hasta cerrar las puertas de preparación y recibir autorización explícita para iniciar el piloto.
 
 ## 1. Objetivo y alcance
@@ -161,3 +161,14 @@ Detener y conservar logs/checkpoint ante OOM, loss no finita, corrupción de dat
 ## 12. Registro de ejecución
 
 No hay ejecuciones de este protocolo todavía. Añadir aquí una entrada por cada piloto/confirmatorio con: ID, commit, config hash, manifest hashes, seed, hardware, inicio/fin, epochs/steps, best epoch, métricas validation/test, checkpoint hashes, logs, incidencias y decisión de aceptación.
+
+
+## 13. Implementación del motor de ejecución — 2026-11-23
+
+Se añadió `src/urban_experiment_runner.py` y la CLI protegida `scripts/run_urban_experiment.py`. El motor implementa loops independientes por tarea/dominio, pérdida finita, validación semántica con mIoU/IoU/soporte/matriz de confusión, early stopping, límite temporal por época, scheduler, AMP opcional en CUDA, clipping opcional, métricas JSONL y checkpoints atómicos last/best con optimizer/scheduler/scaler/RNG y hash de configuración. La reanudación rechaza una configuración cuyo hash no coincide.
+
+La CLI requiere `run_training: true` en el archivo de configuración **y** `--execute`; recibe una factory Python para construir los objetos concretos y solo pasa train/validation. No acepta un test loader. Se añadieron pruebas sintéticas en `tests/test_urban_experiment_runner.py` y la guía `docs/EJECUTOR_ENTRENAMIENTO_MULTIDOMINIO.md`.
+
+**Bloqueos explícitos:** aún no hay factory real para materializar los manifests completos A2D2/UrbanSyn y construir los cuatro experimentos; tampoco se ha implementado ni validado el evaluador COCO Mask AP. Por tanto, el motor rechaza Mask R-CNN si no recibe un evaluador que devuelva `mask_ap` finito. No se debe proporcionar AP de cajas bajo ese nombre. Faltan integración real train/validation, prueba de checkpoint/resume con esos loaders, validación de COCOeval y pruebas GPU/almacenamiento.
+
+No se ejecutó el motor ni sus pruebas en esta intervención; no se inició entrenamiento, no se descargaron datasets, no se crearon checkpoints experimentales y no se cambió `RUN_TRAINING=False`. Esta implementación es un motor reutilizable parcial, no el pipeline listo para piloto. La autorización anterior sigue limitada a los cuatro pasos SGD controlados ya ejecutados; el piloto requiere autorización separada. Mantener PR #3 abierta, draft y sin fusionar.
