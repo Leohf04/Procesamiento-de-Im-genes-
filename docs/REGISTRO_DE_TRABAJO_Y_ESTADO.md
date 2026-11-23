@@ -2037,3 +2037,30 @@ No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=
 - El smoke test todavía no ha pasado: el nuevo comando debe ejecutarse en Colab y cualquier error posterior se diagnosticará con su stderr real. La prueba sigue limitada a una muestra por dataset; no descarga datasets completos, no hace forward de modelos y no entrena.
 - Auditoría antes del cambio: HEAD previo `58a83f6bb6f2b64fc67478d41f77c2a0872f2418`; PR #3 confirmada `open`, `draft=true`, `merged=false`. Actions run `45231711166` (Python tests) falló en 2 segundos antes de ejecutar steps, con `runner_id=0`, `runner_name=""`, `steps=[]`; no es un resultado de pytest. No se lanzaron reruns.
 - No se descargaron datasets completos ni se inició entrenamiento. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
+
+
+#### Smoke test real de loaders aprobado y siguiente validación de forward — 2026-11-23
+
+- El usuario ejecutó la sección 9 del notebook en Colab y compartió el informe completo. Resultado explícito: `status=PASS`, `RESULT: REAL MULTIDATASET TRAIN-LOADER INTEGRATION PASSED`, `training_started=false`, `full_dataset_downloaded=false`.
+- Muestras train usadas:
+  - A2D2: `20181108_091945/20181108091945_camera_frontcenter_000006064.png`; manifiesto train de 1.000 filas; `annotation_status=ok`.
+  - UrbanSyn: `4696`; manifiesto train de 1.000 filas; `annotation_status=ok`.
+- Semántica, ambos datasets: imagen `[1,3,512,512]`, máscara `[1,512,512]`, 20 pesos de clase. IDs observados A2D2 `[10,13,14,19,255]`; UrbanSyn `[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,18,255]`.
+- Instancias: A2D2 5 objetos, cajas `[5,4]`, máscaras `[5,512,512]`, labels observadas `[3,4]`; UrbanSyn 20 objetos, cajas `[20,4]`, máscaras `[20,512,512]`, labels `[1,2,3,4]`. El informe confirma uso de los loaders y sampler de instancias en la prueba.
+- La advertencia HF Hub fue por solicitudes no autenticadas y límites de tasa potencialmente menores; no invalidó la descarga ni el resultado. El script usó muestras remotas temporales y eliminó el directorio temporal al terminar.
+- Alcance: queda validada la integración real de manifiestos, una muestra por dataset, decodificadores, tensores, targets y balanceo/sampler. No se validó todavía ningún forward de modelo, precisión, calidad predictiva ni entrenamiento.
+
+##### Implementación de forward pass real, sin entrenamiento
+
+- Se amplió `scripts/smoke_test_urban_training_integration.py` con opción `--model-forward`: reutiliza los loaders y las mismas muestras deterministas, ejecuta DeepLabV3+ con 20 logits semánticos y Mask R-CNN con 9 salidas de clase (background + 8 clases de instancia), en modo `eval()` y `torch.inference_mode()`.
+- Ambos modelos se inicializan sin pesos preentrenados ni checkpoints. Se validan dimensiones y valores finitos de logits/cajas/máscaras. No se llama a `train()`, backward, optimizer, ni escritura de checkpoint; las predicciones no son métricas de calidad y no deben interpretarse como modelo entrenado.
+- Se añadió sección 10 a `notebooks/colab_generar_plan_cap200.ipynb`, que vuelve a descargar solo una muestra por dataset y guarda `urban_model_forward_real_samples.json` en Drive. No se descargan datasets completos.
+- Commits: script `413b4580aaa274b9d7a574e0b4e11b71bbd5ba88`; notebook `58bb19d1a36e76270600a2ec41a48cc340a2fc5b`.
+- La ejecución de sección 10 en Colab queda pendiente. Si falla, compartir stdout/stderr completo; si pasa, inspeccionar el JSON antes de proponer entrenamiento.
+
+##### Auditoría tras los cambios
+
+- HEAD rama: `58bb19d1a36e76270600a2ec41a48cc340a2fc5b`.
+- PR #3: `open`, `draft=true`, `merged=false`.
+- Actions run más reciente observado: `45234787373`, evento pull_request, status `queued` al consultar. No se lanzó rerun. No se considera CI aprobado.
+- La intervención no descargó datasets completos ni inició entrenamiento. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
