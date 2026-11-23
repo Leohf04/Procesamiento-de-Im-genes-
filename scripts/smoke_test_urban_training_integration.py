@@ -231,11 +231,17 @@ def _optimizer_step(model, loss: torch.Tensor, model_name: str, learning_rate: f
     changed = not torch.equal(before, after)
     if not changed:
         raise RuntimeError(f"{model_name}: el optimizador no modificó el parámetro inspeccionado")
+    updated_finite = all(
+        bool(torch.isfinite(parameter.detach()).all())
+        for parameter in model.parameters() if parameter.requires_grad
+    )
+    if not updated_finite:
+        raise RuntimeError(f"{model_name}: el paso del optimizador produjo parámetros NaN/Inf")
     return {
         "loss": float(loss.detach().cpu()),
         "optimizer": "SGD",
         "learning_rate": learning_rate,
-        "parameter_updated": True,
+        "parameter_updated": True, "finite_parameters_after_step": True,
         **gradient_report,
     }
 
