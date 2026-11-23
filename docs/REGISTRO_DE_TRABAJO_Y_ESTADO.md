@@ -497,7 +497,6 @@ La asignación de GPU quedó resuelta en esta sesión: Colab Free entregó una T
 ## 14. Sustitución de Cityscapes por BDD100K — 2026-11-21
 
 El usuario confirmó que no puede acceder a Cityscapes por no disponer de correo institucional y pidió adaptar el proyecto para prescindir de él, además de verificar BDD100K.
-
 ### Investigación verificada sobre BDD100K
 
 - La documentación oficial del toolkit BDD100K identifica descargas oficiales para:
@@ -997,8 +996,7 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
   - separación entre stems de train y val;
   - recuento de instancias por cada una de las ocho clases.
   Por defecto bloquea el preflight si falta alguna clase en train; la ausencia en val se reporta, pero no bloquea por sí sola.
-- Se añadieron pruebas sintéticas `tests/test_bdd100k_instance_preflight.py` para conteo de instancia, rechazo de máscaras no RGBA y emparejamiento incompleto.
-- Se actualizó `scripts/train_maskrcnn_cityscapes.py` para validar también el orden/nombre de clases del checkpoint al reanudar y corregir el mensaje de dimensiones de clase (9 salidas: fondo + 8 clases). La reanudación continúa siendo por época; no promete restaurar aleatoriedad de lotes a mitad de época.
+- Se añadieron pruebas sintéticas `tests/test_bdd100k_instance_preflight.py` para conteo de instancia, rechazo de máscaras no RGBA y emparejamiento incompleto.- Se actualizó `scripts/train_maskrcnn_cityscapes.py` para validar también el orden/nombre de clases del checkpoint al reanudar y corregir el mensaje de dimensiones de clase (9 salidas: fondo + 8 clases). La reanudación continúa siendo por época; no promete restaurar aleatoriedad de lotes a mitad de época.
 - Se actualizó el notebook Colab para mostrar la auditoría oficial y exigir un informe `ready_for_training=true` antes de permitir `MODEL="instance"` con `RUN_TRAINING=True`. La muestra GitHub parcial no pasa por esta ruta.
 - Se documentó el procedimiento en `docs/PROTOCOLO_EXPERIMENTAL.md`. Evaluación BDD100K oficial se ejecuta después del entrenamiento sobre val, con el protocolo interno de AP claramente identificado; no equivale a COCOeval.
 - CI general disparado por estos commits: runs `44963069208`, `44963057605`, `44963053256` y otros asociados a commits intermedios. En la última consulta seguían en ejecución; **no se declara aún que esta modificación haya pasado CI**. Consultar el run más reciente y su conclusión.
@@ -1497,8 +1495,7 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 #### Cobertura de instancias A2D2 en la auditoría ampliada
 
 - Se reanalizó el artifact de 36 muestras A2D2 (12 por split) [14742929447](https://github.com/Leohf04/Procesamiento-de-Im-genes-/actions/runs/44995801143/artifacts/14742929447). Componentes por split: train 180, val 106, test 152. Frames sin componentes: train 0/12, val 1/12, test 0/12. Componentes por etiqueta canónica: train car 11/truck 9/bicycle 2/person 1; val car 10/truck 10; test car 11/bicycle 5/person 5/truck 3.
-- Esta muestra determinista indica cobertura de participantes en los tres splits, pero no demuestra cobertura suficiente de clases raras: no se observaron bus/motorcycle/rider y persona/bicicleta tienen menos componentes. Los conteos son componentes reconstruidos desde subclases y no instancias nativas. Se requiere ponderación/estratificación por clase o ampliar muestra antes de entrenar Mask R-CNN con A2D2.
-- El smoke test independiente de una muestra por split seleccionó un frame train sin participantes (target vacío) aunque el muestreo de 12 frames del audit train no tuvo frames vacíos; esto confirma variación entre muestras, no contradicción del loader.
+- Esta muestra determinista indica cobertura de participantes en los tres splits, pero no demuestra cobertura suficiente de clases raras: no se observaron bus/motorcycle/rider y persona/bicicleta tienen menos componentes. Los conteos son componentes reconstruidos desde subclases y no instancias nativas. Se requiere ponderación/estratificación por clase o ampliar muestra antes de entrenar Mask R-CNN con A2D2.- El smoke test independiente de una muestra por split seleccionó un frame train sin participantes (target vacío) aunque el muestreo de 12 frames del audit train no tuvo frames vacíos; esto confirma variación entre muestras, no contradicción del loader.
 
 
 #### Ampliación de auditoría de cobertura A2D2 — 2026-11-22
@@ -2064,3 +2061,16 @@ No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=
 - PR #3: `open`, `draft=true`, `merged=false`.
 - Actions run más reciente observado: `45234787373`, evento pull_request, status `queued` al consultar. No se lanzó rerun. No se considera CI aprobado.
 - La intervención no descargó datasets completos ni inició entrenamiento. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
+
+#### Forward pass de modelos aprobado con muestras reales — 2026-11-23
+
+- El usuario ejecutó la sección 10 de `notebooks/colab_generar_plan_cap200.ipynb` y compartió el JSON completo. Resultado: `status=PASS`, `model_forward.status=PASS`, `training_started=false`, `full_dataset_downloaded=false`.
+- Muestras utilizadas: A2D2 `20181108_091945/20181108091945_camera_frontcenter_000006064.png` y UrbanSyn `4696`, una por dataset, ambas del manifiesto train de 1.000 filas y `annotation_status=ok`.
+- DeepLabV3+ ejecutó forward para ambos dominios: entrada `[1,3,512,512]`, logits `[1,20,512,512]`, predicción `[1,512,512]`, todos los logits finitos.
+- Mask R-CNN ejecutó forward para ambos dominios: entradas `[3,512,512]`; A2D2 tenía 5 instancias GT y UrbanSyn 20. Cada muestra produjo 100 cajas `[100,4]` y máscaras `[100,1,512,512]`; predicciones finitas.
+- Ejecución en CPU. Los dos modelos se inicializaron con pesos aleatorios, sin pesos preentrenados ni checkpoints; el modo de prueba no ejecutó backward, optimizador, entrenamiento ni guardado de checkpoints. Por ello el PASS confirma compatibilidad de tensores/modelos y el forward de inferencia, pero **no** calidad de predicciones, capacidad de aprendizaje, estabilidad de loss ni métricas de segmentación/detección.
+- Advertencia de Hugging Face: peticiones anónimas con límites de tasa potencialmente menores; no afectó el resultado PASS.
+- Informe guardado por el usuario en Drive: `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_model_forward_real_samples.json`.
+- Se consultó el registro antes de la auditoría remota. PR #3 aparece abierta en la búsqueda de GitHub; se conserva el requisito de mantenerla draft y sin merge. La búsqueda de workflows asociada al SHA conocido `e54150d8b72d9a88f67cbf188efc1d9e0547c69b` muestra el run Python `45234862819` completado con failure; su job `pytest` no expone steps/logs (`steps=null`). Los runs `45234853382` y `45234853305` también aparecen failure sin pasos consultables. No se puede determinar con estos metadatos si el fallo es de runner, código u otra causa; **no equivale a un resultado de pytest**. No se lanzaron reruns.
+- No se inició entrenamiento ni se descargó el dataset completo. Mantener `RUN_TRAINING=False`.
+- Dictamen: quedan aprobados los smoke tests reales de loaders/balanceador y el forward de DeepLabV3+/Mask R-CNN sobre una muestra real de cada dataset. Antes de un experimento de aprendizaje hacen falta una prueba controlada de loss/backward/optimizer y un protocolo de entrenamiento/evaluación por dominio; usar muestras train, mantener val/test intactos y registrar seeds, tiempos, memoria, losses y checkpoints. Esta siguiente prueba requiere autorización expresa del usuario y no debe confundirse con entrenamiento de producción.
