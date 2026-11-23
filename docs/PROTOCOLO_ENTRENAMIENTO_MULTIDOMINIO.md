@@ -200,3 +200,23 @@ Tras el smoke PASS de cuatro muestras reales, la siguiente puerta es `notebooks/
 
 El subconjunto de 10 por split se selecciona como prefijo determinista de muestras elegibles con instancias; no es estratificado por clase y no debe usarse como benchmark. La auditoría mide bytes locales, espacio libre, RSS pico y tiempo de decodificación. Si pasa, esos resultados permiten proponer el tamaño de la siguiente etapa; todavía no autorizan materialización completa ni piloto. La disponibilidad de GPU/VRAM se registra, pero una prueba CPU no sustituye un preflight GPU posterior.
 
+
+
+## 14. Preflight de hardware y almacenamiento persistente — 2026-11-23
+
+Se añadieron scripts/audit_training_runtime.py y notebooks/colab_preflight_entorno_entrenamiento.ipynb para comprobar el entorno real antes de materializar datos de entrenamiento o ejecutar el piloto.
+
+El auditor:
+- Registra commit, Python, PyTorch, CUDA, GPU(s), VRAM total/libre, RAM disponible y almacenamiento libre en /content y en el destino de Drive.
+- Si CUDA está disponible, intenta reservar y tocar 64 MiB de memoria en GPU y luego libera la reserva. Es una prueba de disponibilidad básica, no una medición de memoria de DeepLabV3+/Mask R-CNN ni de un batch de entrenamiento.
+- Escribe un checkpoint sintético pequeño en el Drive montado, lo renombra, lo vuelve a cargar, compara el tensor y SHA-256 y elimina el archivo de prueba.
+- Guarda training_runtime_preflight.json en MyDrive/ProcesamientoImagenes/auditoria_entorno_entrenamiento/.
+- No importa la factory, no descarga datos, no toca test, no ejecuta forward/backward ni optimizer.step y no activa RUN_TRAINING.
+
+Interpretación:
+- DRIVE_IO_PASS solo acredita escritura/lectura en el montaje actual; no demuestra recuperación del archivo tras destruir o reiniciar la VM. Los checkpoints reales deberán guardarse frecuentemente y verificarse después de una reconexión de Drive/sesión.
+- GPU_PASS requiere CUDA disponible y la reserva sintética exitosa. Si el runtime es CPU-only, la puerta GPU sigue cerrada aunque Drive I/O pase.
+- PREFLIGHT_READY permite pasar a una futura prueba de memoria específica por modelo/batch; no autoriza materialización completa ni entrenamiento.
+- El preflight no estima el tiempo de entrenamiento ni garantiza disponibilidad futura de GPU en Colab Free.
+
+Mantener RUN_TRAINING=False, no descargar el dataset completo y no iniciar entrenamiento sin autorización expresa. PR #3 permanece abierta, draft y sin merge.
