@@ -24,13 +24,12 @@ from src.data_adapters import (
     UrbanSynSemanticDataset, DEFAULT_CANONICAL_CLASSES, load_a2d2_class_list,
     detection_collate_fn,
 )
+from src.urban_ontology import (
+    instance_name_to_id, load_urban_ontology, semantic_name_to_id,
+    source_instance_map, source_semantic_map,
+)
 
 SPLITS=("train","val","test")
-URBAN_MAP={
-  0:1, 1:2, 11:3, 12:4, 18:5, 13:6, 14:7, 15:8, 17:9,
-  6:10, 7:11,
-}
-URBAN_DYNAMIC={11:3,12:4,18:5,13:6,14:7,15:8,17:9}
 
 
 def rows(path):
@@ -61,6 +60,11 @@ def main():
     class_raw=json.loads(s3.get_object(Bucket="audi-autonomous-driving-dataset",
         Key="camera_lidar_semantic/class_list.json")["Body"].read())
     color_map=load_a2d2_class_list(class_raw)
+    ontology=load_urban_ontology()
+    semantic_ids=semantic_name_to_id(ontology)
+    instance_ids=instance_name_to_id(ontology)
+    urban_semantic_map=source_semantic_map("urbansyn",ontology)
+    urban_instance_map=source_instance_map("urbansyn",ontology)
     report={"sampled_per_split":1,"datasets":{},"status":"running"}
     with tempfile.TemporaryDirectory(prefix="urban-real-loader-") as tmp:
         root=Path(tmp)
@@ -77,20 +81,20 @@ def main():
                         p=local/f"{key}.png"
                         download_a2d2(s3,row["assets"][key],p)
                         paths[key]=p
-                    sem_records=[{"image":str(paths["rgb"]),"semantic":str(paths["semantic"])}]
-                    inst_records=[{"image":str(paths["rgb"]),"instance":str(paths["semantic"])}]
-                    sem_ds=A2D2SemanticDataset(sem_records,color_map,size=(args.size,args.size))
-                    inst_ds=A2D2InstanceDataset(inst_records,color_map,size=(args.size,args.size),min_component_area=4)
+                    sem_records=[{"sample_id":row["sample_id"],"dataset":dataset,"image":str(paths["rgb"]),"semantic":str(paths["semantic"])}]
+                    inst_records=[{"sample_id":row["sample_id"],"dataset":dataset,"image":str(paths["rgb"]),"instance":str(paths["semantic"])}]
+                    sem_ds=A2D2SemanticDataset(sem_records,color_map,semantic_ids,size=(args.size,args.size))
+                    inst_ds=A2D2InstanceDataset(inst_records,color_map,instance_ids,size=(args.size,args.size),min_component_area=4)
                 else:
                     for key in ("rgb","semantic","panoptic","bbox"):
                         p=hf_hub_download(repo_id="UrbanSyn/UrbanSyn",repo_type="dataset",
                             revision=row["revision"],filename=row["assets"][key],
                             local_dir=str(local/"hf"))
                         paths[key]=Path(p)
-                    sem_records=[{"image":str(paths["rgb"]),"semantic":str(paths["semantic"])}]
-                    inst_records=[{"image":str(paths["rgb"]),"panoptic":str(paths["panoptic"])}]
-                    sem_ds=UrbanSynSemanticDataset(sem_records,URBAN_MAP,size=(args.size,args.size))
-                    inst_ds=UrbanSynInstanceDataset(inst_records,URBAN_DYNAMIC,size=(args.size,args.size),min_instance_area=4)
+                    sem_records=[{"sample_id":row["sample_id"],"dataset":dataset,"image":str(paths["rgb"]),"semantic":str(paths["semantic"])}]
+                    inst_records=[{"sample_id":row["sample_id"],"dataset":dataset,"image":str(paths["rgb"]),"panoptic":str(paths["panoptic"])}]
+                    sem_ds=UrbanSynSemanticDataset(sem_records,urban_semantic_map,size=(args.size,args.size))
+                    inst_ds=UrbanSynInstanceDataset(inst_records,urban_instance_map,size=(args.size,args.size),min_instance_area=4)
                     bbox=json.loads(paths["bbox"].read_text())
                     if isinstance(bbox,list): bbox_count=len(bbox)
                     elif isinstance(bbox,dict):
