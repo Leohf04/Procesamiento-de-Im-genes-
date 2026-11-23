@@ -1,31 +1,79 @@
 # Ejecutor de entrenamiento multidominio
 
-**Motor implementado; todavía no es un pipeline end-to-end listo para lanzar. No iniciar piloto.**
+**Estado: pipeline de ejecución implementado en código, pendiente de validación integral; no iniciar el piloto todavía.**
 
-## Entrega
+## Componentes
 
-- `src/urban_experiment_runner.py`: loops por tarea, loss finita, validación semántica (mIoU/IoU por clase/soporte/matriz de confusión), AMP opcional solo CUDA, clipping opcional, scheduler, early stopping, límite temporal por época y logs JSONL.
-- Checkpoints `last.pt`/`best.pt` atómicos con modelo, optimizer, scheduler, scaler, época/global step, mejor métrica, paciencia, RNG Python/NumPy/PyTorch/CUDA, hash de configuración y metadatos. La reanudación rechaza un hash de configuración diferente.
-- `scripts/run_urban_experiment.py`: CLI protegido; requiere simultáneamente `run_training: true` en el JSON y `--execute`. La factory Python `module:function` entrega modelo, loaders train/validation, optimizer y tarea. No recibe test.
-- `tests/test_urban_experiment_runner.py`: pruebas sintéticas de métricas, ignore 255, checkpoint, hash y bloqueo de Mask AP.
+- `src/urban_experiment_runner.py`: loops por tarea/dominio, pérdidas finitas, validación semántica (mIoU, mean/pixel accuracy, IoU/soporte por clase y matriz de confusión), early stopping, límite temporal por época, scheduler, AMP opcional solo CUDA, clipping opcional, métricas JSONL, checkpoints atómicos y reanudación.
+- `scripts/materialize_urban_experiment_data.py`: descarga al almacenamiento del runtime remoto solo train/validation de A2D2 y UrbanSyn a partir de manifests completos y sus índices. No toca test ni necesita transferir archivos por el teléfono.
+- `scripts/urban_experiment_factory.py`: construye datasets, loaders, modelo y optimizer para un experimento/dominio. Requiere que el materializador ya haya generado manifests locales.
+- `src/urban_coco_evaluator.py`: evalúa Box AP y Mask AP con `pycocotools.COCOeval`, manteniendo RLE binario en memoria y reportando AP@[.50:.95], AP50/AP75 y soporte por clase. Si faltan `pycocotools` o ground truths de validación, falla explícitamente.
+- `scripts/run_urban_experiment.py`: CLI protegida por `run_training: true` en config y `--execute`. La factory solo entrega train/validation; no se acepta test.
+- Tests: `tests/test_urban_experiment_runner.py` y `tests/test_urban_coco_evaluator.py`.
 
-## Factory de datos/modelo
+## Flujo de preparación (no ejecutar aún)
 
-Debe devolver `model`, `train_loader`, `validation_loader`, `optimizer`, `task`; opcionalmente `class_weights`, `scheduler`, `device`. Para instancias debe devolver `detection_evaluator(model, validation_loader, device)` con `mask_ap` numérico calculado mediante COCOeval validado. AP de cajas no satisface el contrato.
+1. En el runtime remoto, reconstruir los manifests completos sin cap y tener los JSONL de anotaciones completos en carpetas separadas.
+2. Instalar dependencias si faltan: `boto3`, `huggingface_hub`, `pycocotools`.
+3. Materializar solo train/val:
 
-La factory aún debe materializar los manifiestos completos A2D2/UrbanSyn en almacenamiento remoto, emparejar anotaciones por sample_id, usar loaders de train existentes y un loader determinista de validation. No pasar test. A2D2 conserva la limitación de instancias aproximadas por componentes conectados.
-
-## Configuración plantilla (bloqueada)
-
-```json
-{"run_training":false,"experiment_id":"SEM-URBANSYN","dataset":"urbansyn","seed":2026,"max_epochs":5,"patience":2,"max_seconds":5400,"num_classes":20,"ignore_index":255,"amp":false}
+```bash
+python scripts/materialize_urban_experiment_data.py \
+  --manifest-dir /RUTA/manifests \
+  --annotation-index-dir /RUTA/annotation_index \
+  --output-dir /RUTA/urban_data
 ```
 
-## Pendiente antes de piloto
+El materializador verifica IDs únicos, igualdad de IDs manifest/index y `annotation_status=ok`; persiste un informe. No descargar test. El directorio resultante puede ser grande y debe estar en almacenamiento persistente remoto, nunca en el teléfono.
 
-1. Factory real de las cuatro configuraciones y materializador remoto train/validation.
-2. Evaluador COCO Box AP y Mask AP validado contra COCOeval; hasta entonces Mask R-CNN queda bloqueado.
-3. Prueba de integración con muestras reales de train y validation, checkpoint/resume y recursos GPU/almacenamiento.
-4. Suite de pruebas ejecutada en el HEAD exacto.
+## Contrato de configuración y ejecución (plantilla bloqueada)
 
-No se ha ejecutado el motor, no se descargaron datasets ni se creó checkpoint experimental. `RUN_TRAINING=False` permanece. Implementar el motor no autoriza el piloto. PR #3 continúa abierta y draft.
+```json
+{
+  "run_training": false,
+  "experiment_id": "SEM-URBANSYN",
+  "dataset": "urbansyn",
+  "task": "semantic",
+  "data_dir": "/RUTA/urban_data",
+  "annotation_index_dir": "/RUTA/annotation_index",
+  "image_size": 512,
+  "batch_size": 1,
+  "validation_batch_size": 1,
+  "num_workers": 2,
+  "num_classes": 20,
+  "ignore_index": 255,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "momentum": 0.9,
+  "seed": 2026,
+  "max_epochs": 5,
+  "patience": 2,
+  "min_delta": 0.0,
+  "max_seconds": 5400,
+  "amp": false
+}
+```
+
+La plantilla solo ilustra campos; LR, batch, resolución, workers, pesos iniciales y AMP deben fijarse después del preflight. La factory actual inicializa DeepLabV3+ y Mask R-CNN sin pesos preentrenados. No comparar esta inicialización con experimentos que usen pesos distintos sin declararlo.
+
+Comando futuro, únicamente después de autorización independiente para el piloto:
+
+```bash
+python -m scripts.run_urban_experiment \
+  --config /RUTA/experiment_config.json \
+  --factory scripts.urban_experiment_factory:create_experiment \
+  --output-dir /RUTA/resultados/SEM-URBANSYN \
+  --execute
+```
+
+Para reanudar, añadir `--resume /RUTA/resultados/SEM-URBANSYN/last.pt`. El hash de configuración debe coincidir exactamente. Ejecutar cada uno de los cuatro experimentos con config y directorio propios.
+
+## Puertas pendientes
+
+1. Ejecutar la suite nueva en Colab sobre el SHA exacto y corregir cualquier fallo.
+2. Validar el evaluador COCO con su prueba sintética y luego con una muestra real de validación; no se ha ejecutado todavía esta verificación.
+3. Ejecutar materialización y smoke de loaders train/validation (sin optimización) para cada uno de los cuatro experimentos; comprobar espacio, hashes, IDs y targets.
+4. Probar checkpoint/resume con esos loaders y verificar persistencia GPU/runtime.
+5. Confirmar hiperparámetros, memoria y presupuesto. El materializador puede descargar miles de imágenes/etiquetas al runtime remoto, por lo que no debe lanzarse antes de tener almacenamiento suficiente.
+
+La implementación no se ha ejecutado en datos reales ni en GPU. No hay épocas ni checkpoints experimentales. `RUN_TRAINING=False` permanece y la CLI exige además `--execute`; ninguna de estas medidas sustituye la autorización expresa del piloto. PR #3 permanece draft y sin merge.
