@@ -3,7 +3,7 @@ import pytest
 import torch
 from torch import nn
 from torch.utils.data import DataLoader,TensorDataset
-from src.urban_experiment_runner import evaluate_semantic,load_checkpoint,run_experiment,semantic_confusion_matrix
+from src.urban_experiment_runner import evaluate_semantic,load_checkpoint,run_experiment,semantic_confusion_matrix,semantic_metrics
 
 class Tiny(nn.Module):
     def __init__(self): super().__init__(); self.conv=nn.Conv2d(1,2,1)
@@ -73,3 +73,13 @@ def test_instance_loop_logs_individual_loss_components(tmp_path):
         detection_evaluator=lambda m,l,d:{"mask_ap":0.5,"box_ap":0.6},device="cpu")
     losses=result["history"][0]["train_loss"]
     assert set(losses["components"])=={"loss_classifier","loss_mask"}
+
+
+def test_iou_absent_ground_truth_class_is_undefined_even_with_false_positives():
+    # La clase 1 no aparece en GT, pero el modelo la predice 3 veces.
+    cm=torch.tensor([[4,0],[3,0]],dtype=torch.int64)
+    report=semantic_metrics(cm)
+    assert report["support_per_class"]==[4,0]
+    assert report["iou_per_class"][1] is None
+    assert report["miou"]==pytest.approx(4/7)
+    assert report["accuracy_per_class"][1] is None
