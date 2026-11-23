@@ -2397,3 +2397,33 @@ Tras el primer motor se completaron componentes adicionales:
 - Cambiado el dictamen: se publican `drive_status` y `gpu_status` por separado y `status=PASS` exige ambos PASS. Notebook ahora imprime `nvidia-smi`, muestra instrucciones para activar GPU y permite leer el informe incluso si el proceso devuelve código 2; no aborta antes del dictamen.
 - Cambios publicados: auditor corregido en commit `16f26fc0e68fae575abc965c9f5032a0bbcb7f7d`; notebook actualizado en commit `2a2c603bfd1fef446a8fe70faefdbd3570d93c53`. Sintaxis Python del auditor comprobada localmente con `compile()` (PASS); se debe volver a ejecutar en Colab para validar el I/O real.
 - Sin entrenamiento, sin descarga adicional, sin acceso a test. `RUN_TRAINING=False`. PR #3 se mantiene abierta, draft y sin merge.
+
+
+## 16. Preflight GPU/Drive aprobado y auditoría de memoria por arquitectura — 2026-11-23
+
+El usuario ejecutó el notebook corregido en Colab y compartió el informe persistido. Evidencia recibida:
+
+- GPU NVIDIA Tesla T4, 15,637,086,208 bytes de VRAM; nvidia-smi exit 0.
+- PyTorch 2.14.1+cu130, CUDA 13.0, cuda_available=true, device_count=1, compute capability 7.5.
+- Prueba de asignación GPU PASS (64 MiB; peak allocated 67,110,400 bytes).
+- Drive checkpoint I/O PASS: 1,050,513 bytes, SHA-256 antes/después idéntico (ecc59f98a7a6600d67695805d5c423a954bdedf1ad0a43087575552b6d1a0c83), tensor_equal=true.
+- Dictamen de la celda 4: DRIVE_IO_PASS=True, GPU_PASS=True, PREFLIGHT_READY=True.
+- training_started=false, dataset_downloaded=false, test_split_touched=false, forward_calls=0, backward_calls=0, optimizer_steps=0.
+
+Se considera superada la puerta de disponibilidad de GPU y escritura/lectura en el montaje actual de Drive. Esto no garantiza que la GPU siga disponible en otra sesión ni demuestra recuperación tras destruir la VM; los checkpoints de cualquier futuro piloto requerirán guardado frecuente y verificación de reconexión.
+
+### Siguiente fase creada: auditoría aislada de memoria
+
+Se añadieron:
+- scripts/audit_model_memory.py: mide DeepLabV3+ semántico o Mask R-CNN de instancias con tensores sintéticos, un forward y un backward; registra VRAM pico/peak reserved/tiempo y clasifica OOM por caso. Nunca llama optimizer.step(), no abre datasets, no toca test y no guarda checkpoints.
+- notebooks/colab_auditoria_memoria_gpu_por_arquitectura.ipynb: ejecuta en procesos aislados batch 1, 2 y 4 a 512×512 para cada arquitectura, AMP desactivado, valida el preflight persistido y guarda informes JSON en Drive. Un OOM en una combinación no aborta las siguientes; errores distintos de OOM sí detienen la auditoría.
+
+Los resultados de memoria aún no se han ejecutado. Esta medición sintética aproxima memoria de forward/backward, pero no representa la variabilidad real de objetos/propuestas, augmentations, DataLoader ni validación. No autoriza materialización completa ni entrenamiento. Seleccionar inicialmente el batch más conservador con margen de VRAM; revisar los seis resultados antes de proponer el piloto.
+
+### Estado de control
+
+- RUN_TRAINING=False; no se activó entrenamiento ni se descargaron datasets como parte de esta fase.
+- PR #3 permanece abierta, draft y sin fusionar.
+- HEAD al crear los artefactos: 245127104bed00152b27c0335a73afc4c2aa4a93 (notebook); script: 5c15bb22187f431f5985ffa2f98354b678c7cc5f.
+- Auditoría de Actions en HEAD anterior cea5231dff45e48ff1d9a1251f75d6c3d9245e0b: run más reciente observado 45259225867, failure. No se hizo rerun ni se atribuye causa.
+- Próximo paso: ejecutar el nuevo notebook de memoria en Colab y compartir gpu_memory_audit_summary.json o la salida de la tabla. Después revisar margen de VRAM y decidir si hace falta una segunda medición con AMP o menor resolución.
