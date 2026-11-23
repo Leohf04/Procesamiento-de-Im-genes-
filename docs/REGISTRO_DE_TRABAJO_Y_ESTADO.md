@@ -2248,3 +2248,15 @@ Tras el primer motor se completaron componentes adicionales:
 - **Puerta inmediata:** ejecutar `notebooks/colab_validacion_completa.ipynb` de nuevo (la celda inicial actualiza branch) y compartir el resumen. No ejecutar aún el nuevo notebook de preflight hasta que la suite completa pase en el HEAD actualizado.
 - Si la suite pasa, ejecutar `notebooks/colab_preflight_datos_reales.ipynb`. Ese primer smoke materializa solo 1 train + 1 val por dataset, seleccionados con instancias positivas; estima y limita esa descarga a 2 GiB. No representa una estimación de tamaño del dataset completo. La materialización completa se decide en una fase posterior con cálculo de almacenamiento.
 - `RUN_TRAINING=False`; no se descargaron datos ni se inició entrenamiento durante esta implementación. PR #3 permanece draft y sin merge.
+
+
+
+### Corrección de sintaxis tras validación Colab — 2026-11-23
+
+- El usuario ejecutó la prueba dirigida del balanceador en HEAD `47b911ed275528d0482ace572fa9c1b72c023494`: **1 passed**.
+- La suite completa no pudo recopilarse: `SyntaxError` en `scripts/materialize_urban_experiment_data.py:178`, causado por una secuencia literal `\\n` insertada entre dos entradas del diccionario del informe.
+- El preflight remoto falló al importar el mismo script antes de iniciar materialización. El resumen aportado indica `datasets_downloaded=false` y `training_started=false`; no hay evidencia de que se haya tocado test.
+- Corrección aplicada en el repositorio: reemplazada la secuencia literal por un salto de línea real. Commit: `646f27d30ae3400b4b0259ee6b309fffd863b1d3`. Se volvió a leer el archivo desde GitHub y se verificó visualmente que las dos entradas del diccionario están separadas correctamente.
+- Actions consultado para el commit de corrección: no devuelve runs asociados en esta consulta. No se declara CI aprobado. No se lanzaron reruns.
+- **Pendiente obligatorio:** volver a ejecutar la suite completa en Colab sobre el HEAD corregido. No ejecutar todavía el notebook de preflight remoto hasta obtener PASS. Si pasa, repetir el preflight; mantener el límite de 2 GiB, solo train/val y sin entrenamiento.
+- No se ha ejecutado localmente pytest ni se ha confirmado aún que el módulo importe correctamente en Colab. `RUN_TRAINING=False`; PR #3 debe permanecer abierta, draft y sin fusionar.
