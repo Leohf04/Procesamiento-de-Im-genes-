@@ -38,6 +38,14 @@ Cada ID entrena un modelo independiente. No compartir pesos, optimizador, schedu
 6. No calcular pesos, frecuencias, normalizaciones estadísticas ni selección balanceada usando validation/test.
 7. El split test se evalúa una sola vez por configuración final elegida. Si se inspecciona para depurar, deja de ser test ciego y debe declararse.
 
+### Estado operativo tras aprobar la suite unitaria — 2026-11-23
+
+La suite completa se ejecutó en Colab sobre SHA `ace39a56a3b46edb0a876cf23d0ea53e67d0aaf3`: 85 passed, prueba dirigida 1 passed. Esto cierra solo la puerta de pruebas unitarias.
+
+La siguiente puerta es `notebooks/colab_preflight_datos_reales.ipynb`: preflight remoto de tamaños y IDs, materialización limitada a una muestra train/val con instancias positivas por dataset, y smoke de los cuatro loaders, forward semántico, COCOeval real y round-trip checkpoint/RNG. El script `scripts/materialize_urban_experiment_data.py` admite dry-run, límite de muestras y presupuesto de bytes; el script `scripts/smoke_test_urban_experiment_factory.py` no llama backward ni optimizer.step. Ninguno se ha ejecutado todavía en este punto. No se considera aprobado hasta recibir el informe generado por Colab.
+
+La materialización completa de train/validation queda para una etapa posterior, solo después del smoke limitado y de comprobar almacenamiento suficiente. Test permanece inaccesible.
+
 ## 4. Fase A — preflight antes de cualquier entrenamiento
 
 La ejecución debe abortar si falla cualquiera de estas comprobaciones:
