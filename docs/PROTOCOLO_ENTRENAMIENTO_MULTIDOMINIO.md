@@ -220,3 +220,12 @@ Interpretación:
 - El preflight no estima el tiempo de entrenamiento ni garantiza disponibilidad futura de GPU en Colab Free.
 
 Mantener RUN_TRAINING=False, no descargar el dataset completo y no iniciar entrenamiento sin autorización expresa. PR #3 permanece abierta, draft y sin merge.
+
+
+## 15. Corrección del preflight tras ejecución CPU-only — 2026-11-23
+
+El primer intento del preflight en Colab reportó `torch=2.14.1+cpu`, `cuda_available=false`, `device_count=0` y `gpu_allocation_probe=CPU_ONLY`: el runtime no expuso GPU/CUDA. También falló la carga segura del checkpoint sintético porque el auditor serializaba `torch.__version__` como objeto `TorchVersion`; ahora guarda `str(torch.__version__)`, compatible con `weights_only=True`.
+
+El dictamen ahora separa `drive_status` y `gpu_status`; el estado general solo es PASS cuando ambos son PASS. El notebook imprime `nvidia-smi`, explica cómo seleccionar GPU en Colab y no aborta antes de mostrar ambos resultados. No instalar PyTorch manualmente ni cambiar versiones sin diagnóstico.
+
+El error de carga no demuestra fallo de Drive: el archivo fue escrito, pero el deserializador rechazó un objeto no permitido. El siguiente intento debe ejecutarse con acelerador GPU seleccionado y comprobar `nvidia-smi`, CUDA y el round-trip del checkpoint. No se autoriza entrenamiento hasta que `PREFLIGHT_READY=True` y se complete una prueba de memoria por arquitectura/batch.
