@@ -32,12 +32,18 @@ def write_jsonl(path, rows):
             f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-def select_rows(rows, limit):
+def select_rows(rows, limit, annotation_map=None, require_instances=False):
+    candidates = list(rows)
+    if require_instances:
+        if annotation_map is None:
+            raise ValueError("annotation_map is required when require_instances=True")
+        candidates = [row for row in candidates
+                      if annotation_map[str(row["sample_id"])].get("instance_counts")]
     if limit is None:
-        return list(rows)
+        return candidates
     if limit < 1:
         raise ValueError("max_samples_per_split must be >= 1")
-    return list(rows[:limit])
+    return candidates[:limit]
 
 
 def check_byte_budget(total_bytes, max_total_bytes):
@@ -118,6 +124,8 @@ def main():
                    help="Limit each dataset/split to the first N manifest rows (for smoke validation).")
     p.add_argument("--max-total-bytes", type=int,
                    help="Abort before downloading if selected remote assets exceed this byte budget.")
+    p.add_argument("--require-instances", action="store_true",
+                   help="Select only samples whose annotation index reports at least one instance.")
     a = p.parse_args()
     if a.max_samples_per_split is not None and a.max_samples_per_split < 1:
         p.error("--max-samples-per-split must be >= 1")
@@ -146,7 +154,7 @@ def main():
             ann_map = {str(x["sample_id"]): x for x in annotations}
             if any(ann_map[x].get("annotation_status", "ok") != "ok" for x in ids):
                 raise RuntimeError(f"{ds}/{split}: annotations contain non-ok rows")
-            chosen = select_rows(manifests, a.max_samples_per_split)
+            chosen = select_rows(manifests, a.max_samples_per_split, ann_map, a.require_instances)
             chosen_ids = [str(x["sample_id"]) for x in chosen]
             selected[(ds, split)] = chosen
             selected_annotations[(ds, split)] = [ann_map[x] for x in chosen_ids]
@@ -165,7 +173,7 @@ def main():
         "splits": ["train", "val"],
         "test_touched": False,
         "training_started": False,
-        "max_samples_per_split": a.max_samples_per_split,
+        "max_samples_per_split": a.max_samples_per_split,\n        "require_instances": bool(a.require_instances),
         "estimated_remote_asset_bytes": total_bytes,
         "estimated_remote_asset_gib": round(total_bytes / (1024 ** 3), 3),
         "asset_count": len(estimates),
