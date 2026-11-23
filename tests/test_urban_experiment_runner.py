@@ -47,3 +47,29 @@ def test_instances_require_mask_ap_evaluator(tmp_path):
     with pytest.raises(ValueError,match="COCO evaluator"):
         run_experiment(model=model,train_loader=tr,validation_loader=va,task="instances",
             optimizer=opt,output_dir=tmp_path,config={"experiment_id":"det","dataset":"synthetic"},device="cpu")
+
+
+class TinyDetector(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight=nn.Parameter(torch.tensor(1.0))
+    def forward(self,images,targets=None):
+        if self.training:
+            return {"loss_classifier":self.weight.square(),
+                    "loss_mask":(self.weight*2).square()}
+        return [{"boxes":torch.zeros((0,4)),"labels":torch.zeros((0,),dtype=torch.long),
+                 "scores":torch.zeros((0,)),"masks":torch.zeros((0,1,4,4))} for _ in images]
+
+def test_instance_loop_logs_individual_loss_components(tmp_path):
+    model=TinyDetector()
+    optimizer=torch.optim.SGD(model.parameters(),lr=.01)
+    batch=([torch.zeros((3,4,4))],[{"boxes":torch.tensor([[0.,0.,2.,2.]]),
+        "labels":torch.tensor([1]),"masks":torch.ones((1,4,4),dtype=torch.uint8),
+        "image_id":torch.tensor([1]),"area":torch.tensor([4.]),"iscrowd":torch.tensor([0])}])
+    train=[batch]; validation=[batch]
+    result=run_experiment(model=model,train_loader=train,validation_loader=validation,
+        task="instances",optimizer=optimizer,output_dir=tmp_path,
+        config={"experiment_id":"unit-det","dataset":"synthetic","max_epochs":1,"patience":1},
+        detection_evaluator=lambda m,l,d:{"mask_ap":0.5,"box_ap":0.6},device="cpu")
+    losses=result["history"][0]["train_loss"]
+    assert set(losses["components"])=={"loss_classifier","loss_mask"}
