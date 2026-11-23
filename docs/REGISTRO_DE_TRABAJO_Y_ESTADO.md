@@ -2198,3 +2198,14 @@ Tras el primer motor se completaron componentes adicionales:
 - Guía y protocolo actualizados: guía `832f6a06e99415de7e9f05b2429a3141c68765d8`; protocolo `47c878b7b980b508522b69ae164efecfaed4e76d`.
 - Aun así, ningún test nuevo se ha ejecutado. No afirmar compilación ni suite aprobada. Próximo paso obligatorio: ejecutar suite completa en Colab sobre el SHA final; revisar errores antes de materializar datos. Luego materialización/loaders train-validation sin entrenamiento, validación COCOeval y prueba de checkpoint/resume.
 - Se mantiene `RUN_TRAINING=False`; no hubo descargas, optimización ni checkpoints. La CLI requiere doble activación, pero no se usará hasta autorización expresa. PR #3 permanece abierta y draft.
+
+
+### Corrección tras validación Colab — IoU de clases sin soporte — 2026-11-23
+
+- El usuario ejecutó el notebook sobre HEAD `9788cc2efa413845503d254bb1e6b4f0159bc411`: prueba dirigida del balanceador **1 passed**; suite completa **83 passed, 1 failed** en 30.37 s. Fallo: `tests/test_urban_experiment_runner.py::test_confusion_ignore_and_absent_class`; esperaba `iou_per_class[1] is None`, pero recibía `0.0`. No inició entrenamiento ni descargó datos.
+- Causa: `semantic_metrics` calculaba IoU=0 cuando una clase no tenía soporte GT pero aparecía en predicciones (falsos positivos). El protocolo exige clases sin soporte GT como no evaluables y excluidas del mIoU, sin ocultar los FP de la matriz de confusión.
+- Corrección en `src/urban_experiment_runner.py`: IoU ahora solo se define cuando `support > 0` y el denominador es positivo. Commit `cfdf1d7314c379fd29252362ad1d008fe20e061b`.
+- Prueba de regresión nueva: clase ausente en GT con tres falsos positivos; exige IoU null, accuracy null y mIoU calculado solo con clase soportada. Commit `aca7e40bd3d7e4d164b3d895a7aca382ca830ef0`.
+- Protocolo precisado para indicar que los FP siguen visibles en la matriz de confusión, pero la clase sin GT se excluye del mIoU: commit `7194445aba3c067c3f9a51c2f8fa5cbe28818731`.
+- No se han ejecutado aún los tests tras el fix. Actions no muestra runs ni status asociados al commit de la corrección; no es evidencia de aprobación. El run anterior `45241919444` para SHA `9788cc2...` falló en job pytest; el conector devolvió `steps=null`, sin logs.
+- Estado: no iniciar materialización ni entrenamiento hasta que Colab confirme suite completa verde. `RUN_TRAINING=False`; sin descargas ni entrenamiento. PR #3 permanece abierta, draft y sin fusionar.
