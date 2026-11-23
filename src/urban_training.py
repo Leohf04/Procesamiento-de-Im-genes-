@@ -102,6 +102,7 @@ def build_urban_train_loader(
     )
     return loader, None
 
+
 def build_urban_train_loaders(
     dataset_specs: Mapping[str, Mapping],
     *,
@@ -145,6 +146,10 @@ def build_urban_train_loaders(
         seen_dataset_objects.add(id(dataset))
 
         rows = spec["annotation_rows"]
+        if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+            raise ValueError(f"Annotation rows for {dataset_name!r} must be a sequence")
+        if not isinstance(spec["class_to_id"], Mapping):
+            raise ValueError(f"class_to_id for {dataset_name!r} must be a mapping")
         records = getattr(dataset, "records", None)
         if records is not None:
             tagged = {
