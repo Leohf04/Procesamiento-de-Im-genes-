@@ -96,7 +96,7 @@ El piloto sirve para verificar que loss desciende de forma razonable, que métri
 
 - Métrica primaria: mIoU macro sobre clases con soporte ground-truth en validation, con la lista de clases y soporte publicadas junto al resultado.
 - Además: IoU por clase, pixel accuracy, mean accuracy, matriz de confusión y frecuencia/soporte por clase.
-- Ignorar ID 255. Reportar por separado las clases sin soporte en train o validation; nunca asignarles IoU=0 como si fueran errores del modelo.
+- Ignorar ID 255. Reportar por separado las clases sin soporte en train o validation; nunca asignarles IoU=0 como si fueran errores del modelo. En evaluación, una clase con soporte ground-truth cero tiene IoU `null` incluso si recibe falsos positivos; queda excluida del mIoU macro. Los falsos positivos permanecen visibles en la matriz de confusión y en las métricas de clases con soporte.
 - Guardar mejor checkpoint por mIoU de validation y último checkpoint para reanudación.
 
 ### Instancias
