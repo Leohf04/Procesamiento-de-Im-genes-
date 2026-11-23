@@ -1856,3 +1856,14 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - La corrección se ha guardado en la rama `urban-models-and-benchmark`. Todavía no se ha ejecutado pytest después del cambio; requiere actualizar el clon de Colab con `git pull --ff-only` y repetir primero la prueba fallida y después la suite completa. No declarar resuelto hasta obtener ambas salidas satisfactorias.
 - No se ejecutó el plan cap200 ni se descargó el artifact en esta intervención. No se inició entrenamiento; `RUN_TRAINING=False`. PR #3 permanece abierta, draft y sin fusionar.
 - Próximo paso: en Colab actualizar el repositorio a `bd52609f472bb4b0ea0632695d713297ccd76cbc`, ejecutar `pytest -q tests/test_urban_ontology_and_balance.py::test_greedy_balancer_enforces_per_class_cap_and_can_reduce_training_set`, luego `pytest -q`. Si ambas pasan, continuar con la recuperación del artifact existente y auditar el plan antes de aceptarlo.
+
+
+## 2026-11-23 — Notebook autónomo de pruebas completas en Colab
+
+- El usuario pidió un flujo de pruebas completo que solo requiera abrir Colab y ejecutar las celdas.
+- Se creó `notebooks/colab_validacion_completa.ipynb`, separado del notebook de entrenamiento para no mezclar validación con preparación de datasets o experimentos.
+- El notebook monta Google Drive para persistir evidencia, clona/actualiza la rama privada `urban-models-and-benchmark` mediante Fine-grained PAT de solo lectura (`Contents: Read-only`, secreto Colab `GITHUB_TOKEN` o entrada oculta), instala dependencias de pruebas sin reinstalar PyTorch/Torchvision y ejecuta en orden: (1) la prueba dirigida del balanceador que falló en la sesión anterior y (2) la suite completa `pytest -q`, aun si la prueba dirigida falla.
+- Guarda logs separados y resumen JSON en `MyDrive/ProcesamientoImagenes/validacion_colab`. No descarga datasets, no usa GPU deliberadamente y no inicia entrenamiento.
+- Se corrigieron los escapes de nueva línea en el código del notebook y se verificó que el JSON del notebook se puede analizar. La ejecución real en Colab queda pendiente; no se afirma que las pruebas pasen.
+- No se alteró el notebook de entrenamiento existente. PR #3 debe seguir abierta, draft y sin fusionar; `RUN_TRAINING=False`.
+- Próximo paso: el usuario abre el notebook nuevo y selecciona **Entorno de ejecución → Ejecutar todas**. Revisar el resumen y logs antes de continuar con artifact/plan de balanceo.
