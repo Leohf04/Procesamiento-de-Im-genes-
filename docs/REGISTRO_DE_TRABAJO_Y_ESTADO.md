@@ -2136,3 +2136,20 @@ No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=
 - Mantener PR #3 abierta, draft y sin fusionar.
 
 - Auditoría final tras guardar el protocolo y el registro: HEAD rama y head PR #3 = `9983139ff7b81e8fd5be60449b59682192a946f2`; PR #3 sigue `open`, `draft=true`, `merged=false`. Actions para ese SHA: `45240218424` (pytest) queued al consultar; `45240208235` (pytest) y `45240208141` (probe) failure. La consulta de jobs devuelve `steps=null`, sin logs de ejecución disponibles; por ello no se atribuye el fallo a código ni se afirma que pytest/probe se ejecutaran. No se lanzaron reruns.
+
+
+## Implementación parcial del ejecutor multidominio — 2026-11-23
+
+- Se consultó primero este registro. HEAD observado al iniciar la intervención: `636b60d7d9aefa55f401e1df04866308917cdfbc`; PR #3 localizada en GitHub y se conserva la instrucción de mantenerla abierta/draft/sin merge. No se modificó su estado.
+- Se inspeccionaron `src/urban_training.py`, adaptadores de datos, script de smoke test, ontología, notebook de manifiestos y protocolo. El estado real mostró que los loaders de train ya existen, pero el notebook materializa únicamente muestras del smoke test; no existe aún una factory que construya train/validation completos desde los manifiestos remotos.
+- Se añadieron:
+  - `src/urban_experiment_runner.py`: motor reutilizable de entrenamiento por experimento, validación semántica (mIoU/IoU por clase/soporte/matriz de confusión), scheduler, early stopping, límite temporal por época, AMP opcional solo CUDA, clipping opcional, métricas JSONL, checkpoints atómicos last/best y restauración de optimizer/scheduler/scaler/RNG. La reanudación valida el hash de configuración.
+  - `scripts/run_urban_experiment.py`: CLI que requiere `run_training=true` y `--execute`, y consume una factory Python con loaders separados train/validation. No recibe test.
+  - `tests/test_urban_experiment_runner.py`: cuatro pruebas sintéticas para métricas/ignore 255, loop y checkpoints, hash de reanudación y bloqueo de Mask AP sin evaluador.
+  - `docs/EJECUTOR_ENTRENAMIENTO_MULTIDOMINIO.md`: contrato y bloqueos pendientes.
+- Se amplió `docs/PROTOCOLO_ENTRENAMIENTO_MULTIDOMINIO.md` con el estado parcial y las puertas pendientes.
+- Commits de archivos nuevos: motor `a1299c5d240f16632a48784444f4953b1cc1ba21`; CLI `d6fa2dffaa49ff6febf28ab1996a55e191d7c889`; tests `fb1ff27b4dd48b998169247f73e16eff72fd5965`; guía `adcf7fb54cc9990ab8459d317788c94faf1ba45b`. Actualización del protocolo: `1cc7a94cd87406f055146556a1549283b61ff098`.
+- **Limitaciones no resueltas:** no se implementó todavía la factory/materializador remoto de los manifests completos para A2D2/UrbanSyn ni el evaluador COCO de Box AP/Mask AP. El runner bloquea correctamente la tarea de instancias si no se suministra un evaluador que devuelva `mask_ap` numérico finito; no se falseará Mask AP con AP de cajas. No se ha validado el motor contra loaders reales de train/validation, checkpoint/resume en esos loaders ni GPU.
+- **Pruebas:** se añadieron tests sintéticos, pero no se ejecutaron en esta intervención. La CI del repo ya había mostrado para el commit previo `636b60d7...` el run `45240266965` con job `pytest` en failure, `steps=null` y sin logs; ese metadato no permite atribuir la causa ni demuestra que pytest llegara a ejecutarse. No se lanzaron reruns. Tampoco se afirma que CI haya probado los commits nuevos.
+- No se inició entrenamiento, no se descargaron datasets completos, no se generaron checkpoints experimentales y no se cambió el notebook ni `RUN_TRAINING=False`. La autorización previa solo cubrió cuatro pasos SGD aislados ya realizados; no autoriza el piloto. La siguiente fase es implementar y validar la factory real y el evaluador COCO, luego ejecutar suite en Colab sobre SHA exacto y comprobar checkpoint/resume. Solo después pedir autorización explícita para el piloto.
+- PR #3 debe seguir abierta, draft y sin fusionar.
