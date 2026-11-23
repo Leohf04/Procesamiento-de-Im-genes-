@@ -40,3 +40,9 @@ def test_select_rows_can_require_instance_positive_annotations():
         "has-instance": {"instance_counts": {"car": 1}},
     }
     assert select_rows(rows, 1, annotations, require_instances=True) == [rows[1]]
+
+
+def test_select_rows_rejects_empty_instance_positive_pool():
+    with pytest.raises(RuntimeError, match="No samples with positive instance"):
+        select_rows([{"sample_id": "empty"}], 1,
+                    {"empty": {"instance_counts": {}}}, require_instances=True)
