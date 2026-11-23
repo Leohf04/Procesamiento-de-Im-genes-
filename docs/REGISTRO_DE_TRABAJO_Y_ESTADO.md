@@ -1867,3 +1867,15 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Se corrigieron los escapes de nueva línea en el código del notebook y se verificó que el JSON del notebook se puede analizar. La ejecución real en Colab queda pendiente; no se afirma que las pruebas pasen.
 - No se alteró el notebook de entrenamiento existente. PR #3 debe seguir abierta, draft y sin fusionar; `RUN_TRAINING=False`.
 - Próximo paso: el usuario abre el notebook nuevo y selecciona **Entorno de ejecución → Ejecutar todas**. Revisar el resumen y logs antes de continuar con artifact/plan de balanceo.
+
+
+#### Validación completa satisfactoria en Google Colab Free — 2026-11-23
+
+- El usuario ejecutó correctamente el notebook `notebooks/colab_validacion_completa.ipynb` en Colab Free, rama `urban-models-and-benchmark`, HEAD `4733ca5e0d0bad1039be429e790579c55a05d520`.
+- La prueba dirigida `tests/test_urban_ontology_and_balance.py::test_greedy_balancer_enforces_per_class_cap_and_can_reduce_training_set` pasó: **1 passed in 0.10s**, código de salida 0.
+- La suite completa `pytest -q` pasó: **76 passed in 39.73s**, código de salida 0. Queda confirmada en Colab la corrección del balanceador que antes fallaba.
+- El resumen de ejecución confirma `passed=true`, `training_started=false` y `datasets_downloaded=false`. Logs persistidos en Google Drive: `MyDrive/ProcesamientoImagenes/validacion_colab/prueba_balanceador_20261123_154909.log` y `suite_completa_20261123_154909.log`; resumen JSON `resumen_pruebas_20261123_154909.json`.
+- Auditoría GitHub posterior: HEAD sigue en `4733ca5e0d0bad1039be429e790579c55a05d520`; PR #3 permanece `open`, `draft=true`, `merged=false`. Los workflows de Actions recientes siguen terminando en failure (runs Python `45198525405` y `45198512640`, probe BDD `45198512490`); la respuesta disponible del conector no incluye pasos ni información suficiente para diagnosticar la causa. Esto no invalida la ejecución independiente y satisfactoria en Colab.
+- No se inició entrenamiento, no se descargaron datasets y no se generó todavía un plan nuevo con cap 200.
+- Próximo paso autorizado por el flujo de trabajo: recuperar en Colab el artifact de indexación existente `14770171764` (run `45038801547`), reconstruir manifiestos a partir de los JSONL enriquecidos y ejecutar el planificador con `per_class_cap=200`; después inspeccionar retención/tamaño por split, cobertura de clases, clases no disponibles/no cubiertas, muestras excluidas y diversidad antes de considerar válido el plan. La recuperación requiere un PAT con `Actions: Read-only` además de `Contents: Read-only`; no pedir el token en el chat. No volver a indexar ni descargar datasets fuente.
+- Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
