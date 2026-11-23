@@ -2180,3 +2180,11 @@ Tras el primer motor se completaron componentes adicionales:
 - Auditoría Actions al cierre para SHA de protocolo `4f178c38...`: `fetch_commit_workflow_runs` y combined status no devolvieron runs/checks. No equivale a CI aprobado. No se lanzaron reruns. El run histórico `45240266965` para SHA previo tuvo job pytest failure con `steps=null`; no permite conocer la causa.
 - PR #3 aparece abierta y su descripción mantiene explícitamente “Draft intencional. No fusionar todavía”. No se cambió estado ni se fusionó.
 - Este bloque quedó guardado en la rama de trabajo mediante el commit de actualización del registro; el SHA de cierre se confirma en la auditoría GitHub de la respuesta.
+
+
+#### Revisión estática posterior de factory y COCOeval — 2026-11-23
+
+- Al inspeccionar los archivos guardados se detectaron y corrigieron detalles de integración antes de cerrar: normalización del campo `rgb` de UrbanSyn a `image` para los adapters; reordenamiento seguro de anotaciones por `sample_id`; inversión del mapping nombre→ID para categorías COCO; preservación de RLE binario en la llamada in-memory a COCOeval; eliminación de un literal de salto de línea mal insertado en la métrica semántica.
+- Commits correctivos: factory `9d520bccff5e2ad1a0312305d5a581dfbffde92e`; COCO evaluator `e9b0b60eda375c8a50b942df99ceea21f9b8ec60`; motor semántico `71b14cf99879c78a5bf1e77d9f953fbf73051325`. No se han ejecutado tests ni un linter tras estas correcciones.
+- Se revisó de nuevo el código fuente remoto y no se detectan ya los errores textuales de integración mencionados; sigue pendiente validación ejecutable, especialmente pycocotools/COCOeval real y factory con manifests descargados.
+- Último HEAD antes de esta actualización del registro: `e9b0b60eda375c8a50b942df99ceea21f9b8ec60`. Actions/status asociados no se han considerado aprobados; no se lanzaron reruns.
