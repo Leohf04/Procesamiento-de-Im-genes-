@@ -25,7 +25,9 @@ def semantic_confusion_matrix(prediction, target, num_classes: int, ignore_index
 def semantic_metrics(confusion) -> dict:
     m = confusion.to(torch.float64); support=m.sum(1); tp=m.diag()
     denom=support+m.sum(0)-tp
-    iou=torch.where(denom>0,tp/denom,torch.nan)
+    # El soporte se define por píxeles GT. Una clase ausente en GT queda
+    # indefinida aunque el modelo produzca falsos positivos para esa clase.
+    iou=torch.where((support>0)&(denom>0),tp/denom,torch.nan)
     acc=torch.where(support>0,tp/support,torch.nan)
     total=support.sum()
     return {"miou": float(torch.nanmean(iou)) if bool(torch.isfinite(iou).any()) else None,
