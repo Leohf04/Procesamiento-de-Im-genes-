@@ -2321,3 +2321,12 @@ Tras el primer motor se completaron componentes adicionales:
 - Auditoría previa al cambio: HEAD `d3faf18b65719f7934c446773afa4d0ebbddf293`; PR #3 abierta, draft y sin merge. Actions más recientes visibles en ese HEAD: Python tests `45250672339` y `45250658663` failure; BDD probe `45250658478` failure. No se lanzaron reruns ni se declara CI verde.
 - No se modificó `RUN_TRAINING=False`; no se ejecutó entrenamiento, no se descargó material adicional y test sigue bloqueado.
 - Commit de implementación esperado en esta rama; después de publicarse, Colab debe clonar/actualizar el nuevo HEAD al ejecutar el notebook.
+
+
+### Ajuste de formato del notebook de capacidad — 2026-11-23
+
+- Durante la verificación posterior a la publicación se detectó que las listas `source` del notebook nuevo podían concatenar líneas sin saltos. Se normalizó el contenido de las 20 celdas a texto con saltos de línea explícitos; se verificó el tipo/contenido de cada celda y el formato JSON del notebook.
+- Commit correctivo: `28c6bea95c65f7f0f6d0aa90f3bb4689e1a2782c`. HEAD actualizado tras la corrección.
+- La notebook final conserva 20 celdas: montaje Drive, actualización del repositorio, recuperación artifact, reconstrucción/verificación de seis manifiestos/índices, inventario de hardware/almacenamiento, dry-run 50, dry-run 10 + guardia de espacio, materialización 10 por split, auditoría de decodificación y entrega de reportes.
+- No se ejecutó la notebook desde el agente. Los scripts/notebook nuevos todavía requieren validación de ejecución en Colab; Actions continúa sin CI verde y no se lanzaron reruns. La siguiente acción depende del usuario ejecutando la notebook final publicada.
+- No se descargó ningún activo nuevo, no se ejecutó entrenamiento y no se tocó test.
