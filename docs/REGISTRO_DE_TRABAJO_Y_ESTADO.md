@@ -1989,3 +1989,20 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Próximo paso: ejecutar la nueva sección 9 en Colab y revisar el JSON resultante. Solo si pasa, avanzar a un smoke test de forward del modelo con esas muestras; no habilitar entrenamiento todavía.
 
 - **Auditoría final después de guardar este registro:** el commit que contiene la documentación de esta intervención es `f923a191dce01408cb9ae698e12a4e6e75983685`, y la rama/PR #3 apuntan a ese mismo HEAD. PR #3 permanece `open`, `draft=true`, `merged=false`. El run Python más reciente `45224570271` también terminó antes de ejecutar steps (`runner_id=0`, `runner_name=""`, `steps=[]`); no es un resultado de pytest. No se lanzaron reruns.
+
+
+## Incidencia del smoke test real y mejora de diagnóstico — 2026-11-23
+
+El usuario ejecutó la sección 9 desde Colab y recibió `subprocess.CalledProcessError` con código de salida 1. El traceback compartido solo identifica el fallo del proceso hijo; no contiene stdout/stderr del script, por lo que **la causa raíz sigue sin determinarse**. El `audit_summary.json` aportado corresponde a la auditoría cap200 y no diagnostica el smoke test.
+
+Se inspeccionaron el script `scripts/smoke_test_urban_training_integration.py`, los adaptadores de `src/data_adapters.py` y el helper `src/urban_training.py`. La ruta de A2D2 sí usa el campo `instance` esperado por `A2D2InstanceDataset`; no se encontró evidencia suficiente para atribuir el fallo a una línea concreta. No se debe adivinar la causa.
+
+Se modificó la celda 9 del notebook para ejecutar el script con salida sin búfer, capturar y mostrar stdout/stderr completos incluso cuando el proceso falle, y persistir ambos logs en Drive:
+- `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_loader_integration.stdout.log`
+- `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_loader_integration.stderr.log`
+
+En la siguiente ejecución, el traceback completo debe aparecer en la salida de la celda; si vuelve a fallar, compartir ambos logs o pegar el contenido de stderr. No se alteró el script de integración ni se declaró PASS. La integración con muestras reales continúa pendiente.
+
+Se revisó PR #3: sigue abierta; el estado draft/no fusionada se mantiene como requisito. En Actions, el run Python `45224667061` terminó en failure, pero la consulta de jobs no expuso pasos/logs (steps=null), así que no permite inferir si falló por código o por runner. No se lanzó ningún rerun.
+
+No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=False` permanece obligatorio.
