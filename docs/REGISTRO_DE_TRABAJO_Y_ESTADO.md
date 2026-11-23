@@ -2,7 +2,7 @@
 
 > **Documento de continuidad.** Este archivo es la fuente principal para recuperar el contexto, las decisiones, el estado real y los próximos pasos del trabajo. Debe consultarse al comenzar cada nueva intervención relacionada con el proyecto y actualizarse al terminarla, registrando también cuando una acción no se haya podido completar.
 >
-> Última actualización: **2026-11-22**.
+> Última actualización: **2026-11-23**.
 
 ## 1. Identidad y objetivo del proyecto
 
@@ -1861,7 +1861,7 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 ## 2026-11-23 — Notebook autónomo de pruebas completas en Colab
 
 - El usuario pidió un flujo de pruebas completo que solo requiera abrir Colab y ejecutar las celdas.
-- Se creó `notebooks/colab_validacion_completa.ipynb`, separado del notebook de entrenamiento para no mezclar validación con preparación de datasets o experimentos.
+- Se creó [`notebooks/colab_validacion_completa.ipynb`](../blob/urban-models-and-benchmark/notebooks/colab_validacion_completa.ipynb), separado del notebook de entrenamiento para no mezclar validación con preparación de datasets o experimentos.
 - El notebook monta Google Drive para persistir evidencia, clona/actualiza la rama privada `urban-models-and-benchmark` mediante Fine-grained PAT de solo lectura (`Contents: Read-only`, secreto Colab `GITHUB_TOKEN` o entrada oculta), instala dependencias de pruebas sin reinstalar PyTorch/Torchvision y ejecuta en orden: (1) la prueba dirigida del balanceador que falló en la sesión anterior y (2) la suite completa `pytest -q`, aun si la prueba dirigida falla.
 - Guarda logs separados y resumen JSON en `MyDrive/ProcesamientoImagenes/validacion_colab`. No descarga datasets, no usa GPU deliberadamente y no inicia entrenamiento.
 - Se corrigieron los escapes de nueva línea en el código del notebook y se verificó que el JSON del notebook se puede analizar. La ejecución real en Colab queda pendiente; no se afirma que las pruebas pasen.
