@@ -1962,3 +1962,15 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 
 - **Actualización de CI tras el commit de registro:** los runs Python `45222675506` y BDD probe `45222675580` terminaron en failure inmediato; ambos jobs reportan `runner_id=0`, `runner_name=""` y `steps=[]`. Es un fallo de asignación/arranque de runner, no un resultado de pytest. No se lanzaron reruns. La ejecución de las 8 pruebas del loader queda pendiente de Colab.
 
+
+
+#### Suite completa validada en Google Colab para el loader multidataset — 2026-11-23
+
+- El usuario ejecutó en Google Colab Free el notebook de validación completa sobre la rama `urban-models-and-benchmark`, HEAD exacto `c6b1c29b757b88a289e3583693001510d642c904`.
+- La prueba dirigida del balanceador terminó con **1 passed in 0.02s**, código de salida 0. La suite completa terminó con **79 passed in 30.39s**, código de salida 0. El resumen aportado por Colab confirma `passed=true`.
+- Evidencia persistida por el usuario en Drive: `MyDrive/ProcesamientoImagenes/validacion_colab/prueba_balanceador_20261123_170118.log` y `suite_completa_20261123_170118.log`. Resumen JSON con timestamp `2026-11-23T17:01:56.264497+00:00`, `git_head=c6b1c29b757b88a289e3583693001510d642c904`, `focused_test_exit_code=0`, `full_suite_exit_code=0`, `training_started=false`, `datasets_downloaded=false`.
+- Esta ejecución valida en Colab los cambios recientes de `build_urban_train_loaders`, los pesos semánticos y samplers independientes por dominio y el resto de la suite. Es validación automatizada de código; no constituye entrenamiento ni evaluación de modelos con datos reales.
+- Auditoría GitHub al recibir el resultado: HEAD de la rama sigue siendo `c6b1c29b757b88a289e3583693001510d642c904`. PR #3 continúa `open`, `draft=true`, `merged=false`.
+- CI de GitHub Actions para ese mismo HEAD continúa fallando antes de ejecutar pasos: Python run `45222727246`, job `pytest`, y BDD probe run `45222714429`, job `probe`; ambos devuelven `runner_id=0`, `runner_name=""` y `steps=[]`. Esto indica que Actions no asignó runner y no es un resultado de pytest. La validación exitosa de Colab es independiente y sí ejecutó las 79 pruebas. No se lanzaron nuevos reruns.
+- No se descargaron datasets ni se inició entrenamiento. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
+- Próximo paso: avanzar a la revisión de integración de manifiestos/rutas y configuración de ejecución por dataset antes de habilitar entrenamiento. Primero resolver la infraestructura de ejecución/persistencia remota; no activar entrenamiento automáticamente a partir del éxito de pytest.
