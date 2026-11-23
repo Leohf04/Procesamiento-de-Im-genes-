@@ -76,10 +76,11 @@ def test_instance_loop_logs_individual_loss_components(tmp_path):
 
 
 def test_iou_absent_ground_truth_class_is_undefined_even_with_false_positives():
-    # La clase 1 no aparece en GT, pero el modelo la predice 3 veces.
-    cm=torch.tensor([[4,0],[3,0]],dtype=torch.int64)
+    # Filas = clase GT y columnas = clase predicha. Clase 1 no aparece en GT,
+    # pero hay 3 falsos positivos de clase 1 sobre píxeles GT de clase 0.
+    cm=torch.tensor([[4,3],[0,0]],dtype=torch.int64)
     report=semantic_metrics(cm)
-    assert report["support_per_class"]==[4,0]
+    assert report["support_per_class"]==[7,0]
     assert report["iou_per_class"][1] is None
     assert report["miou"]==pytest.approx(4/7)
     assert report["accuracy_per_class"][1] is None
