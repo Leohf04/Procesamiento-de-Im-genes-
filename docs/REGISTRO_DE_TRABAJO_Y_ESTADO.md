@@ -1892,3 +1892,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Paquete local de auditoría generado: `urban_cap200_plan_audit_20261123.zip` (plan JSON, seis manifiestos/tareas/splits, validación reconstrucción y comparación caps; sin imágenes/máscaras). La evidencia se comparte en esta conversación. Informe en `docs/INFORME_AUDITORIA_BALANCEO_CAP200.md`.
 - No se inició entrenamiento; `RUN_TRAINING=False`. No se modificaron datasets ni se subieron imágenes/máscaras al repo. Mantener PR #3 abierta, draft y sin fusionar.
 - Próximo paso: ejecutar el notebook Colab nuevo para confirmar mediante el CLI del repositorio y guardar la evidencia en Drive; después decidir el protocolo baseline completo vs ablaciones cap 500/700. No iniciar entrenamiento hasta decisión explícita.
+
+
+#### Cierre de auditoría local y notebook reproducible — 2026-11-23
+
+- Se verificó que la recuperación del manifiesto debe restaurar el orden original de `prepare_reproducible_subsets.py` ordenando por `sha256("2026:"+sample_id)`; el notebook incluye esta reconstrucción y valida que val/test conserven identidad y orden exactos.
+- Se validó además que los JSONL semánticos y de instancias contienen los mismos IDs y metadatos fuente por ID, aunque el orden de train difiere por selección de tarea. La reconstrucción usa el manifiesto semántico ordenado por hash y cruza las estadísticas por sample_id.
+- Paquete de auditoría actualizado: `urban_cap200_plan_audit_20261123.zip`, SHA-256 `88f8dbc26b48837f4adbb64c808a2df1b9b3a7dfb3f3b9eb91137b9c9ed729bf`. Incluye plan, seis manifiestos de train/val/test por tarea, comprobaciones y comparación de caps; no contiene imágenes ni máscaras.
+- Notebook `notebooks/colab_generar_plan_cap200.ipynb` quedó reforzado para: verificar digest del artifact, reconstruir seis manifiestos, correr el CLI real del repositorio, comprobar cap<=200, IDs train subset y val/test idénticos en orden, y comparar caps 300/400/500/700/1000. Requiere PAT con Contents: Read-only y Actions: Read-only. Su ejecución real en Colab sigue pendiente; la auditoría local previa reprodujo la función de selección actual con semilla y desempate exactos.
+- HEAD auditado antes de esta actualización: `c3934ee824078fc573920a1666f107b6716a6b88`; PR #3 `open/draft/unmerged`. Mantener PR así y `RUN_TRAINING=False`.
