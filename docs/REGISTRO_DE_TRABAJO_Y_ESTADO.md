@@ -2330,3 +2330,13 @@ Tras el primer motor se completaron componentes adicionales:
 - La notebook final conserva 20 celdas: montaje Drive, actualización del repositorio, recuperación artifact, reconstrucción/verificación de seis manifiestos/índices, inventario de hardware/almacenamiento, dry-run 50, dry-run 10 + guardia de espacio, materialización 10 por split, auditoría de decodificación y entrega de reportes.
 - No se ejecutó la notebook desde el agente. Los scripts/notebook nuevos todavía requieren validación de ejecución en Colab; Actions continúa sin CI verde y no se lanzaron reruns. La siguiente acción depende del usuario ejecutando la notebook final publicada.
 - No se descargó ningún activo nuevo, no se ejecutó entrenamiento y no se tocó test.
+
+
+### Corrección del SyntaxError en la primera celda de Colab — 2026-11-23
+
+- El usuario reportó que la celda inicial ejecutaba instrucciones concatenadas (por ejemplo, drivefrom pathlib) y producía SyntaxError. Causa confirmada al inspeccionar el notebook publicado: las entradas de source en varias celdas eran líneas sin caracteres de salto de línea, por lo que Jupyter las concatenaba.
+- Se restauraron los saltos de línea en las 20 celdas usando el contenido previo a la normalización defectuosa; cada celda conserva ahora su texto completo con separadores de línea explícitos.
+- Verificación remota posterior: notebook JSON parseable; las 20 celdas tienen contenido íntegro y las celdas de código presentan saltos de línea reales. En particular, la celda 2 comienza con from google.colab import drive, sigue con imports en líneas separadas y contiene drive.mount como instrucción independiente.
+- Commit correctivo definitivo: dafa49faf2ba80a71fa9d0c7f16595ac1743e2ba. La corrección se verificó en GitHub; todavía no se ha ejecutado nuevamente en Colab.
+- No se modificó la lógica de descarga/materialización ni los límites. No se descargaron activos, no se accedió a test y no se inició entrenamiento.
+- La auditoría de Actions previa a esta corrección mostraba runs 45251656751, 45251641828 y 45251641804 fallidos para el HEAD anterior e505de93bac55924571eeaffb00721e0326457f8; no se lanzaron reruns. PR #3 seguía abierta, draft y sin merge al inicio de esta corrección; debe permanecer así.
