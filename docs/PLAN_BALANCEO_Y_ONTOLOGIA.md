@@ -199,3 +199,21 @@ Para instancias, usar `task="instances"` y `instance_name_to_id(ontology)` en ca
 
 Se añadieron pruebas sintéticas que comprueban pesos semánticos diferentes ante distribuciones opuestas, samplers de instancias calculados con frecuencias locales, rechazo de filas etiquetadas con otro dominio y rechazo de reutilizar el mismo Dataset. Estas pruebas están añadidas al repositorio, pero su ejecución CI queda pendiente de recuperar runners. No se materializaron datasets ni se entrenaron modelos.
 
+
+
+## Smoke test de integración con muestras reales — 2026-11-23
+
+Se añadió scripts/smoke_test_urban_training_integration.py y se integró como sección 9 de notebooks/colab_generar_plan_cap200.ipynb. Esta prueba usa una sola muestra del split train por dominio, seleccionada de forma determinista y con estadísticas semánticas y de instancias no vacías. Descarga únicamente los archivos requeridos para esas dos muestras a almacenamiento temporal.
+
+La prueba construye los cuatro adaptadores reales (A2D2/UrbanSyn × semántica/instancias) y llama a build_urban_train_loaders por separado para ambas tareas. Verifica:
+- alineación exacta de sample_id y etiqueta dataset entre dataset e índice;
+- split=train y annotation_status=ok;
+- pesos semánticos finitos y con dimensión acorde a la ontología;
+- WeightedRandomSampler para instancias y targets Torchvision con cajas/máscaras/labels coherentes;
+- IDs de salida dentro de los rangos definidos por configs/urban_ontology_v1.json.
+
+La prueba deriva los mapas desde src.urban_ontology; no define IDs manuales. También se corrigió scripts/smoke_test_real_manifest_loaders.py, que utilizaba mapas UrbanSyn desplazados y mapas de instancia/semántica escritos a mano. Ambos scripts ahora usan la ontología versionada.
+
+Ejecución en Colab: completar las secciones 1–7 del notebook colab_generar_plan_cap200.ipynb para descargar/verificar el artifact y reconstruir MANIFEST_DIR/INDEX_DIR; después ejecutar la nueva sección 9. El informe se guarda en MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_loader_integration.json.
+
+Esta prueba no ejecuta modelos, no calcula métricas de calidad, no descarga conjuntos completos y no inicia entrenamiento. Hasta que el informe real indique status=PASS, la integración con datos reales permanece pendiente. Mantener RUN_TRAINING=False.
