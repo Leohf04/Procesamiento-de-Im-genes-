@@ -2179,4 +2179,4 @@ Tras el primer motor se completaron componentes adicionales:
 - No se ha iniciado materialización ni descarga de datos, no se ha iniciado entrenamiento ni se han creado checkpoints. `RUN_TRAINING=False` continúa intacto. La CLI requiere `run_training=true` y `--execute`, pero eso no sustituye autorización explícita.
 - Auditoría Actions al cierre para SHA de protocolo `4f178c38...`: `fetch_commit_workflow_runs` y combined status no devolvieron runs/checks. No equivale a CI aprobado. No se lanzaron reruns. El run histórico `45240266965` para SHA previo tuvo job pytest failure con `steps=null`; no permite conocer la causa.
 - PR #3 aparece abierta y su descripción mantiene explícitamente “Draft intencional. No fusionar todavía”. No se cambió estado ni se fusionó.
-- Commit del registro de esta auditoría final: pendiente de escritura de este mismo registro.
+- Este bloque quedó guardado en la rama de trabajo mediante el commit de actualización del registro; el SHA de cierre se confirma en la auditoría GitHub de la respuesta.
