@@ -2260,3 +2260,16 @@ Tras el primer motor se completaron componentes adicionales:
 - Actions consultado para el commit de corrección: no devuelve runs asociados en esta consulta. No se declara CI aprobado. No se lanzaron reruns.
 - **Pendiente obligatorio:** volver a ejecutar la suite completa en Colab sobre el HEAD corregido. No ejecutar todavía el notebook de preflight remoto hasta obtener PASS. Si pasa, repetir el preflight; mantener el límite de 2 GiB, solo train/val y sin entrenamiento.
 - No se ha ejecutado localmente pytest ni se ha confirmado aún que el módulo importe correctamente en Colab. `RUN_TRAINING=False`; PR #3 debe permanecer abierta, draft y sin fusionar.
+
+
+### Validación unitaria del preflight escalonado — 2026-11-23
+
+- El usuario ejecutó `notebooks/colab_validacion_completa.ipynb` sobre HEAD exacto `b813e1a5c3917c3b25f42cb049b976a1eeab3754`, rama `urban-models-and-benchmark`.
+- Prueba dirigida del balanceador: **1 passed**, código 0, 0.03 s. Log: `MyDrive/ProcesamientoImagenes/validacion_colab/prueba_balanceador_20261123_192103.log`.
+- Suite completa: **93 passed**, código 0, 31.14 s. Log: `MyDrive/ProcesamientoImagenes/validacion_colab/suite_completa_20261123_192103.log`.
+- Resumen JSON: `2026-11-23T19:21:47.908250+00:00`, `passed=true`, `training_started=false`, `datasets_downloaded=false`. Se cierra la puerta de pruebas unitarias para el materializador corregido.
+- Auditoría del código de preflight: notebook limita la materialización a 1 muestra por dataset/split, solo train/val, exige anotaciones con instancias positivas y fija presupuesto máximo de 2 GiB; valida SHA-256 del artifact de estadísticas; smoke posterior corre las cuatro combinaciones A2D2/UrbanSyn × semántica/instancias, COCOeval en instancias y round-trip de checkpoint/RNG, con 0 backward y 0 optimizer steps. El notebook reconstruye y verifica metadatos/manifiestos del artifact incluyendo filas de test, pero el materializador y loaders solo consumen train/val; no descarga imágenes/máscaras de test ni las pasa al modelo.
+- GitHub Actions para HEAD `b813e1a...`: run `45247784488` de Python tests concluyó failure; job `pytest` no expone steps/logs (`steps=null`, `logs_url=null`). No se declara CI aprobado ni se lanza rerun. PASS de esta puerta procede exclusivamente de Colab aportado por el usuario.
+- PR #3 sigue localizada y abierta en la búsqueda de PRs; conservar draft y sin merge.
+- **Siguiente paso habilitado:** el usuario puede ejecutar ahora `notebooks/colab_preflight_datos_reales.ipynb` en Colab. La primera celda de trabajo remoto verifica artifact, manifests e índices; luego estima tamaños de cuatro muestras train/val y aplica límite 2 GiB antes de descargar. Si preflight PASS, materializa esas cuatro muestras y ejecuta smoke de loaders/forward/COCOeval/checkpoint. Si falla cualquier puerta, detener y compartir stdout/stderr; no ampliar materialización.
+- `RUN_TRAINING=False`; el notebook de preflight no debe llamar backward/optimizer.step ni consumir test. No se ha iniciado entrenamiento ni descargado dataset completo.
