@@ -31,3 +31,12 @@ def test_byte_budget_rejects_over_budget_before_download():
 
 def test_byte_budget_without_limit_is_unrestricted():
     check_byte_budget(10**12, None)
+
+
+def test_select_rows_can_require_instance_positive_annotations():
+    rows = [{"sample_id": "empty"}, {"sample_id": "has-instance"}]
+    annotations = {
+        "empty": {"instance_counts": {}},
+        "has-instance": {"instance_counts": {"car": 1}},
+    }
+    assert select_rows(rows, 1, annotations, require_instances=True) == [rows[1]]
