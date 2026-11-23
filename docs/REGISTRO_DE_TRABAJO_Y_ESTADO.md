@@ -2026,3 +2026,14 @@ No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=
 - La sección 9 debe reintentarse desde la rama urban-models-and-benchmark. Si pip falla, compartir su error; si la prueba avanza y aparece otro traceback, compartir el nuevo stderr. No editar ni instalar paquetes manualmente en el teléfono; todo se ejecuta dentro del entorno Colab.
 - Este error no demuestra que el smoke test haya pasado ni que haya fallado la integración de datos: no llegó a ejecutarse más allá de imports. No se inició entrenamiento ni se descargaron datasets completos; RUN_TRAINING=False.
 - Se consultó el estado de Actions para el commit anterior y se encontró un run Python con failure; esta comprobación no se usa como resultado del smoke test local de Colab. No se lanzaron reruns. Mantener PR #3 abierta, draft y sin fusionar.
+
+
+#### Corrección de importación del paquete src en el smoke test de Colab — 2026-11-23
+
+- El usuario volvió a ejecutar la sección 9 después de la instalación automática de dependencias. `boto3` se instaló y el proceso avanzó hasta importar `src.data_adapters`, donde falló con `ModuleNotFoundError: No module named 'src'`.
+- Causa raíz confirmada por el modo de lanzamiento: la celda ejecutaba el archivo por ruta (`python scripts/smoke_test_urban_training_integration.py`). En ese modo, Python pone `scripts/` como primera ruta de módulos y no garantiza que la raíz del repositorio esté en `sys.path`, aunque `cwd=WORKDIR`.
+- Corrección aplicada a la sección 9: ejecutar el mismo script como módulo (`python -m scripts.smoke_test_urban_training_integration`) desde `WORKDIR`. Esto hace que la raíz del repositorio esté en la ruta de importación y permite resolver `src` sin modificar el código de los adaptadores ni instalar un paquete ficticio. Se mantienen captura de stdout/stderr, dependencias automáticas, borrado de informe previo y validación explícita de `status=PASS` / `training_started=false`.
+- Commit del notebook: `ff7af24be7e843b3c2a4baa7f9491c4421f7835d`.
+- El smoke test todavía no ha pasado: el nuevo comando debe ejecutarse en Colab y cualquier error posterior se diagnosticará con su stderr real. La prueba sigue limitada a una muestra por dataset; no descarga datasets completos, no hace forward de modelos y no entrena.
+- Auditoría antes del cambio: HEAD previo `58a83f6bb6f2b64fc67478d41f77c2a0872f2418`; PR #3 confirmada `open`, `draft=true`, `merged=false`. Actions run `45231711166` (Python tests) falló en 2 segundos antes de ejecutar steps, con `runner_id=0`, `runner_name=""`, `steps=[]`; no es un resultado de pytest. No se lanzaron reruns.
+- No se descargaron datasets completos ni se inició entrenamiento. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
