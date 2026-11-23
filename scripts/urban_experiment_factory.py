@@ -65,6 +65,8 @@ def create_experiment(config):
         from src.models.deeplabv3plus import DeepLabV3Plus
         model=DeepLabV3Plus(num_classes=len(semantic_ids),pretrained_backbone=False)
         num_classes=len(semantic_ids)
+        if int(config.get("num_classes",num_classes)) != num_classes:
+            raise ValueError("num_classes does not match urban-v1 semantic ontology")
     else:
         import torchvision
         from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
