@@ -73,7 +73,7 @@ def choose_train_record(manifest_rows: list[dict], annotation_rows: list[dict]) 
         if stats.get("semantic_pixels") and stats.get("instance_counts"):
             candidates.append((record, stats))
     if not candidates:
-        raise RuntimeError(f"No train sample has non-empty {count_key} statistics")
+        raise RuntimeError("No train sample has both semantic_pixels and instance_counts")
     return min(
         candidates,
         key=lambda pair: hashlib.sha256(
