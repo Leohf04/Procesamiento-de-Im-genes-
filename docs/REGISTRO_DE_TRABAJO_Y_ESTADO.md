@@ -2437,3 +2437,15 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - PR #3 verificada: open=true, draft=true, merged=false.
 - Actions en HEAD final: runs 45261058618 y 45261047638 completados con failure. No se relanzaron; no se atribuye causa. Mantener pendiente el estado de runners/CI.
 - Los artefactos de auditoría de memoria están publicados; todavía no se han ejecutado en Colab. RUN_TRAINING=False.
+
+
+### Corrección del notebook de auditoría de memoria por SyntaxError en celda 1 — 2026-11-23
+
+- El usuario reportó que la primera celda Python mostraba todo el código como una única línea con secuencias literales `\\n`, provocando `SyntaxError: unexpected character after line continuation character`. Diagnóstico confirmado al recuperar el notebook: las celdas tenían saltos de línea serializados incorrectamente como texto `\\n`, no como líneas reales.
+- Corregido `notebooks/colab_auditoria_memoria_gpu_por_arquitectura.ipynb`: se reescribieron las nueve celdas con líneas reales. También se simplificó la autenticación Git del clon privado para usar un header temporal en el entorno del proceso, sin incluir el token en la URL ni dejarlo en la configuración del repositorio.
+- Commit de la corrección: `a9b0bab093a34b2e194517a8fbc26a40b1ad6e07`.
+- Verificación posterior desde GitHub: JSON válido, 9 celdas, 4 celdas de código; las celdas de código ya no contienen la secuencia literal `\\nfrom` que causó el error. HEAD de rama y PR #3 coinciden en `a9b0bab093a34b2e194517a8fbc26a40b1ad6e07`.
+- PR #3 sigue `open`, `draft=true`, `merged=false`.
+- Actions automáticos sobre el nuevo HEAD: runs `45266228739` y `45266220415`, ambos `failure`. No se hicieron reruns ni se infiere causa.
+- La auditoría GPU de memoria aún no se ha ejecutado. La corrección resuelve el error de formato de la celda; no es todavía evidencia de que las seis pruebas de memoria pasen. RUN_TRAINING=False, no se cargan datasets ni se toca test.
+- Próximo paso del usuario: volver a abrir/actualizar el notebook en Colab (recargar la pestaña para obtener la última versión) y ejecutar desde la primera celda. Si Colab conserva la copia anterior, cerrar y volver a abrir el enlace del notebook actualizado.
