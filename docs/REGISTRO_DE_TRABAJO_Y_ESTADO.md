@@ -2427,3 +2427,13 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - HEAD al crear los artefactos: 245127104bed00152b27c0335a73afc4c2aa4a93 (notebook); script: 5c15bb22187f431f5985ffa2f98354b678c7cc5f.
 - Auditoría de Actions en HEAD anterior cea5231dff45e48ff1d9a1251f75d6c3d9245e0b: run más reciente observado 45259225867, failure. No se hizo rerun ni se atribuye causa.
 - Próximo paso: ejecutar el nuevo notebook de memoria en Colab y compartir gpu_memory_audit_summary.json o la salida de la tabla. Después revisar margen de VRAM y decidir si hace falta una segunda medición con AMP o menor resolución.
+
+
+### Verificación final de esta intervención — 2026-11-23
+
+- Script audit_model_memory.py recuperado desde GitHub y compilado localmente con compile(): sintaxis Python PASS.
+- Notebook colab_auditoria_memoria_gpu_por_arquitectura.ipynb recuperado desde GitHub y parseado como JSON: PASS, 9 celdas.
+- HEAD final de la rama y head de PR #3: 7dc5046eefaa1c9c1b56628f90e80770ad0468b2.
+- PR #3 verificada: open=true, draft=true, merged=false.
+- Actions en HEAD final: runs 45261058618 y 45261047638 completados con failure. No se relanzaron; no se atribuye causa. Mantener pendiente el estado de runners/CI.
+- Los artefactos de auditoría de memoria están publicados; todavía no se han ejecutado en Colab. RUN_TRAINING=False.
