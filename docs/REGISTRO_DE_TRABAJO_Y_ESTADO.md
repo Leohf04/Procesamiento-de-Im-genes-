@@ -1744,3 +1744,12 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 
 
 - **Comprobación final de CI tras actualizar el registro:** los runs `45067044843` (Python tests) y `45067044841` (probe BDD100K), disparados sobre el HEAD `1980184c`, también terminaron failure en 1–2 segundos con `runner_id=0`, `runner_name` vacío y `steps=[]`. Se confirma que GitHub Actions no asignó runner; no se ejecutó pytest ni el probe. Se conserva el bloqueo y no se interpretan como fallos de las pruebas del código.
+
+
+#### Reintento controlado de GitHub Actions — 2026-11-22
+
+- A petición del usuario se reintentaron únicamente los jobs fallidos sobre el HEAD `eafe85ff9348615fa730f5dd3b95536ae488811c`: Python tests (push, job original `137345519621`), Python tests (pull_request, `137345536073`) y BDD100K probe (`137345519206`). La API aceptó los tres reintentos (`success=true`).
+- Los reintentos generaron attempt 2 de los runs `45067078270`, `45067083863` y `45067078237`. Al consultar sus jobs, los dos jobs de Python volvieron a terminar `failure` con `runner_id=0`, `runner_name` vacío y `steps=[]`. El probe BDD100K también terminó `failure` con `runner_id=0`, sin runner y sin pasos. Por tanto, pytest, instalación de dependencias y probe no llegaron a ejecutarse; no hay fallo de código confirmado ni pruebas aprobadas.
+- El reintento demuestra que el bloqueo persiste incluso al volver a ejecutar los jobs existentes. La conexión GitHub permite solicitar re-run, pero no administrar/inspeccionar los runners de organización/repositorio desde las APIs disponibles en esta sesión. Se requiere que el propietario revise en GitHub Actions la disponibilidad/estado de runners y límites/colas de ejecución, o que soporte GitHub investigue la asignación. No se cambió la configuración de runners ni se tocaron secretos/permisos.
+- Se mantiene el HEAD `eafe85ff9348615fa730f5dd3b95536ae488811c`, PR #3 abierta y draft sin fusionar. `RUN_TRAINING=False`. No se lanzó otra indexación remota completa ni se generó artifact nuevo.
+- Próximo paso: resolver en GitHub la asignación de runners y después volver a ejecutar los jobs de CI; solo cuando haya ejecución real (runner asignado y steps presentes) evaluar logs y resultados. Tras CI verde, ejecutar el planificador sobre los índices existentes con `per_class_cap=200`, auditar tamaño/distribución y validar loaders con una pequeña materialización.
