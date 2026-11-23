@@ -2111,3 +2111,11 @@ No se descargaron datasets completos ni se inició entrenamiento; `RUN_TRAINING=
 - Las cifras de configuración son propuestas por validar, no benchmarks ni garantía de que el runtime tenga recursos. Se exige primero implementar runner/evaluadores/checkpoint restore, validar sobre HEAD exacto y probar materialización completa lógica. La autorización anterior cubrió únicamente cuatro pasos SGD aislados; **no autoriza el piloto de 10 batches ni el entrenamiento completo**.
 - Estado explícito del protocolo: propuesta documentada, no autorizada para ejecución. `RUN_TRAINING=False`, no hay épocas ni checkpoints entrenados. Se requiere autorización específica para el piloto y, tras revisar sus resultados, autorización separada para entrenamiento completo.
 - Auditoría previa a los cambios de documentación: HEAD era `5ea81a34b99bf9b4a8432cd62bd2fb3335dac15d`; PR #3 `open`, `draft=true`, `merged=false`. Actions recientes de ese SHA (runs 45239753324, 45239745544, 45239745521) fallaron con jobs sin pasos consultables; no se interpretan como pytest ejecutado.
+
+
+##### Auditoría posterior a la documentación del protocolo — 2026-11-23
+
+- HEAD final de `urban-models-and-benchmark` y head de PR #3: `db262f9bb971c89aacc42a542c1c8c5c15e82adf`.
+- PR #3 continúa `open`, `draft=true`, `merged=false`.
+- Actions para el HEAD final: runs 45240089901 (pytest) y 45240089856 (probe) aparecen queued al consultar. Runs previos del mismo cambio documental 45240076012 y 45240051463 terminaron failure con `runner_id=0`, `runner_name=""`, `steps=[]`; no se ejecutó pytest/probe. No se lanzaron reruns.
+- No se cambió `RUN_TRAINING`, no se implementó ni ejecutó el runner experimental, no se iniciaron épocas ni se generaron checkpoints. El protocolo sigue siendo propuesta pendiente de revisión y autorización.
