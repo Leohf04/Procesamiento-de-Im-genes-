@@ -229,3 +229,18 @@ El primer intento del preflight en Colab reportó `torch=2.14.1+cpu`, `cuda_avai
 El dictamen ahora separa `drive_status` y `gpu_status`; el estado general solo es PASS cuando ambos son PASS. El notebook imprime `nvidia-smi`, explica cómo seleccionar GPU en Colab y no aborta antes de mostrar ambos resultados. No instalar PyTorch manualmente ni cambiar versiones sin diagnóstico.
 
 El error de carga no demuestra fallo de Drive: el archivo fue escrito, pero el deserializador rechazó un objeto no permitido. El siguiente intento debe ejecutarse con acelerador GPU seleccionado y comprobar `nvidia-smi`, CUDA y el round-trip del checkpoint. No se autoriza entrenamiento hasta que `PREFLIGHT_READY=True` y se complete una prueba de memoria por arquitectura/batch.
+
+
+## Fase de auditoría de memoria GPU por arquitectura (sin entrenamiento)
+
+Notebook: notebooks/colab_auditoria_memoria_gpu_por_arquitectura.ipynb.
+
+Script: scripts/audit_model_memory.py.
+
+- Requiere que training_runtime_preflight.json exista en Drive y tenga status=PASS, gpu_status=PASS, drive_status=PASS.
+- Usa la Tesla T4/runtime realmente disponible y ejecuta procesos independientes para DeepLabV3+ semántico y Mask R-CNN de instancias, batch 1/2/4, 512×512, AMP desactivado.
+- Cada caso crea tensores sintéticos, realiza un forward y backward, registra peak allocated/reserved VRAM y tiempo, y finaliza sin optimizer.step() ni checkpoint.
+- No carga datasets, no materializa archivos, no accede a test, no evalúa calidad ni inicia entrenamiento. OOM se registra como OOM y se continúa con el siguiente proceso; un error funcional detiene la auditoría.
+- Los resultados se guardan en Drive en ProcesamientoImagenes/auditoria_memoria_gpu/. El batch para un futuro piloto no se selecciona solo por cabe: debe dejar margen para variación de objetos/propuestas y overhead del runtime/DataLoader.
+
+La auditoría de memoria es requisito previo a fijar batch y AMP; no autoriza por sí sola materialización completa ni piloto. RUN_TRAINING=False permanece.
