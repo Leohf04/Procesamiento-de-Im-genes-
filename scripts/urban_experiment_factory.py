@@ -25,7 +25,10 @@ def create_experiment(config):
     for split in ("train","val"):
         ids=[str(x["sample_id"]) for x in rows[split]]
         ann_ids=[str(x["sample_id"]) for x in annotations[split]]
-        if ids!=ann_ids: raise ValueError(f"{ds}/{split}: local manifest and annotation index order/IDs differ")
+        if len(ann_ids)!=len(set(ann_ids)) or set(ids)!=set(ann_ids):
+            raise ValueError(f"{ds}/{split}: local manifest and annotation index IDs differ")
+        ann_by_id={str(x["sample_id"]):x for x in annotations[split]}
+        annotations[split]=[ann_by_id[sid] for sid in ids]
         if any(x.get("annotation_status","ok")!="ok" for x in annotations[split]):
             raise ValueError(f"{ds}/{split}: annotation_status not ok")
     train_ids={x["sample_id"] for x in rows["train"]}
@@ -40,14 +43,15 @@ def create_experiment(config):
             train_ds=A2D2InstanceDataset(rows["train"],cmap,instance_ids,(size,size))
             val_ds=A2D2InstanceDataset(rows["val"],cmap,instance_ids,(size,size))
     else:
+        local_rows={split:[{**row,"image":row["rgb"]} for row in rows[split]] for split in ("train","val")}
         if task=="semantic":
             source=source_semantic_map("urbansyn",ontology)
-            train_ds=UrbanSynSemanticDataset(rows["train"],source,(size,size))
-            val_ds=UrbanSynSemanticDataset(rows["val"],source,(size,size))
+            train_ds=UrbanSynSemanticDataset(local_rows["train"],source,(size,size))
+            val_ds=UrbanSynSemanticDataset(local_rows["val"],source,(size,size))
         else:
             source=source_instance_map("urbansyn",ontology)
-            train_ds=UrbanSynInstanceDataset(rows["train"],source,(size,size))
-            val_ds=UrbanSynInstanceDataset(rows["val"],source,(size,size))
+            train_ds=UrbanSynInstanceDataset(local_rows["train"],source,(size,size))
+            val_ds=UrbanSynInstanceDataset(local_rows["val"],source,(size,size))
     train_rows=[dict(x,dataset=ds,split="train") for x in annotations["train"]]
     train_loader,weights=build_urban_train_loader(train_ds,train_rows,task=task,class_to_id=mapping,
         batch_size=batch,num_workers=workers,seed=int(config.get("seed",2026)),
