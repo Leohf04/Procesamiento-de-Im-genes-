@@ -195,6 +195,146 @@ def run_model_forward_checks(semantic_loaders, instance_loaders, num_semantic_cl
     return results
 
 
+
+def _assert_finite_gradients(model, model_name: str) -> dict:
+    gradients = [parameter.grad for parameter in model.parameters()
+                 if parameter.requires_grad and parameter.grad is not None]
+    if not gradients:
+        raise RuntimeError(f"{model_name}: backward no produjo gradientes")
+    finite = all(bool(torch.isfinite(gradient).all()) for gradient in gradients)
+    if not finite:
+        raise RuntimeError(f"{model_name}: se detectaron gradientes NaN/Inf")
+    nonzero = sum(int(torch.count_nonzero(gradient).item() > 0) for gradient in gradients)
+    if nonzero == 0:
+        raise RuntimeError(f"{model_name}: todos los gradientes son cero")
+    return {"gradient_tensors": len(gradients), "nonzero_gradient_tensors": nonzero,
+            "finite_gradients": True}
+
+
+def _optimizer_step(model, loss: torch.Tensor, model_name: str, learning_rate: float) -> dict:
+    if loss.ndim != 0 or not bool(torch.isfinite(loss)):
+        raise RuntimeError(f"{model_name}: loss no escalar o no finita")
+    optimizer = torch.optim.SGD(
+        (parameter for parameter in model.parameters() if parameter.requires_grad),
+        lr=learning_rate, momentum=0.0,
+    )
+    optimizer.zero_grad(set_to_none=True)
+    before = next(parameter.detach().clone() for parameter in model.parameters()
+                  if parameter.requires_grad)
+    loss.backward()
+    gradient_report = _assert_finite_gradients(model, model_name)
+    optimizer.step()
+    after = next(parameter.detach() for parameter in model.parameters()
+                 if parameter.requires_grad)
+    changed = not torch.equal(before, after)
+    if not changed:
+        raise RuntimeError(f"{model_name}: el optimizador no modificó el parámetro inspeccionado")
+    return {
+        "loss": float(loss.detach().cpu()),
+        "optimizer": "SGD",
+        "learning_rate": learning_rate,
+        "parameter_updated": True,
+        **gradient_report,
+    }
+
+
+def run_controlled_learning_steps(semantic_loaders, instance_loaders,
+                                  num_semantic_classes: int, num_instance_classes: int,
+                                  size: int, learning_rate: float = 1e-4) -> dict:
+    """One real-data loss/backward/SGD step per model and dataset, no checkpoint."""
+    import torchvision
+    from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+    from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    report = {
+        "status": "running", "device": str(device), "image_size": size,
+        "initialization": "random_no_pretrained_weights",
+        "optimizer_steps_expected": 4, "optimizer_steps_completed": 0,
+        "full_training": False, "checkpoint_saved": False,
+        "deeplabv3plus": {}, "mask_rcnn": {},
+    }
+
+    for dataset_name, (loader, class_weights) in semantic_loaders.items():
+        torch.manual_seed(2026)
+        model = DeepLabV3Plus(
+            num_classes=num_semantic_classes, pretrained_backbone=False
+        ).to(device).train()
+        images, masks = next(iter(loader))
+        images, masks = images.to(device), masks.to(device)
+        weights = class_weights.to(device=device, dtype=torch.float32)
+        optimizer_report = None
+        try:
+            logits = model(images)["out"]
+            if tuple(logits.shape) != (1, num_semantic_classes, size, size):
+                raise RuntimeError(f"{dataset_name}: logits shape inesperada {tuple(logits.shape)}")
+            loss = torch.nn.functional.cross_entropy(
+                logits, masks, weight=weights, ignore_index=255
+            )
+            optimizer_report = _optimizer_step(
+                model, loss, f"DeepLabV3+/{dataset_name}", learning_rate
+            )
+            report["deeplabv3plus"][dataset_name] = {
+                "input_shape": list(images.shape), "target_shape": list(masks.shape),
+                "logits_shape": list(logits.shape), **optimizer_report,
+            }
+            report["optimizer_steps_completed"] += 1
+        finally:
+            del model, images, masks
+            if "logits" in locals(): del logits
+            if "loss" in locals(): del loss
+            if device.type == "cuda": torch.cuda.empty_cache()
+
+    for dataset_name, (loader, _) in instance_loaders.items():
+        torch.manual_seed(2026)
+        detector = torchvision.models.detection.maskrcnn_resnet50_fpn(
+            weights=None, weights_backbone=None, min_size=size, max_size=size
+        )
+        box_features = detector.roi_heads.box_predictor.cls_score.in_features
+        detector.roi_heads.box_predictor = FastRCNNPredictor(box_features, num_instance_classes)
+        mask_features = detector.roi_heads.mask_predictor.conv5_mask.in_channels
+        detector.roi_heads.mask_predictor = MaskRCNNPredictor(
+            mask_features, 256, num_instance_classes
+        )
+        detector.to(device).train()
+        images, targets = next(iter(loader))
+        images = [image.to(device) for image in images]
+        targets = [{key: value.to(device) if torch.is_tensor(value) else value
+                    for key, value in target.items()} for target in targets]
+        if not targets or any(len(target["labels"]) == 0 for target in targets):
+            raise RuntimeError(f"{dataset_name}: Mask R-CNN requiere al menos una instancia GT")
+        try:
+            losses = detector(images, targets)
+            if not losses:
+                raise RuntimeError(f"{dataset_name}: Mask R-CNN no devolvió componentes de loss")
+            bad = [name for name, value in losses.items()
+                   if value.ndim != 0 or not bool(torch.isfinite(value))]
+            if bad:
+                raise RuntimeError(f"{dataset_name}: losses no finitas/no escalares: {bad}")
+            total_loss = sum(losses.values())
+            optimizer_report = _optimizer_step(
+                detector, total_loss, f"Mask R-CNN/{dataset_name}", learning_rate
+            )
+            report["mask_rcnn"][dataset_name] = {
+                "input_shape": list(images[0].shape),
+                "ground_truth_instances": int(len(targets[0]["labels"])),
+                "loss_components": {name: float(value.detach().cpu())
+                                    for name, value in losses.items()},
+                **optimizer_report,
+            }
+            report["optimizer_steps_completed"] += 1
+        finally:
+            del detector, images, targets
+            if "losses" in locals(): del losses
+            if "total_loss" in locals(): del total_loss
+            if device.type == "cuda": torch.cuda.empty_cache()
+
+    if report["optimizer_steps_completed"] != report["optimizer_steps_expected"]:
+        raise RuntimeError("No se completaron los cuatro pasos de optimizador.")
+    report["status"] = "PASS"
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest-dir", type=Path, required=True)
@@ -202,9 +342,15 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--size", type=int, default=512)
     parser.add_argument("--model-forward", action="store_true", help="Run inference-only DeepLabV3+ and Mask R-CNN forward passes on the real samples.")
+    parser.add_argument("--learning-step", action="store_true", help="Run one loss/backward/SGD update for each model and dataset (four bounded steps).")
+    parser.add_argument("--learning-rate", type=float, default=1e-4)
+    if "--learning-step" in __import__("sys").argv and "--model-forward" in __import__("sys").argv:
+        parser.error("--learning-step and --model-forward are mutually exclusive")
     args = parser.parse_args()
     if args.size < 32:
         parser.error("--size must be >= 32")
+    if not (0 < args.learning_rate <= 1e-2):
+        parser.error("--learning-rate must be in (0, 1e-2]")
 
     ontology = load_urban_ontology()
     semantic_ids = semantic_name_to_id(ontology)
@@ -233,7 +379,9 @@ def main() -> None:
         "sampled_per_dataset": 1,
         "datasets": {},
         "tasks": {},
-        "training_started": False,
+        "training_started": bool(args.learning_step),
+        "controlled_learning_step": bool(args.learning_step),
+        "full_training_started": False,
         "full_dataset_downloaded": False,
         "model_forward": {"status": "NOT_REQUESTED"},
     }
@@ -274,7 +422,7 @@ def main() -> None:
                 )
                 instance_datasets[dataset_name] = A2D2InstanceDataset(
                     instance_records, color_map, instance_ids,
-                    size=(args.size, args.size), min_component_area=8,
+                    size=(args.size, args.size), min_component_area=(1 if args.learning_step else 8),
                 )
             else:
                 paths = {}
@@ -355,6 +503,13 @@ def main() -> None:
         report["tasks"]["instances"] = instance_results
 
 
+        if args.learning_step:
+            report["controlled_learning"] = run_controlled_learning_steps(
+                semantic_loaders, instance_loaders,
+                num_semantic_classes=len(semantic_ids),
+                num_instance_classes=len(instance_ids) + 1,
+                size=args.size, learning_rate=args.learning_rate,
+            )
         if args.model_forward:
             report["model_forward"] = {
                 "status": "PASS",
@@ -372,6 +527,8 @@ def main() -> None:
                             encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))
     print("RESULT: REAL MULTIDATASET TRAIN-LOADER INTEGRATION PASSED")
+    if args.learning_step:
+        print("RESULT: CONTROLLED REAL-DATA LEARNING STEPS PASSED (4 optimizer updates)")
 
 
 if __name__ == "__main__":
