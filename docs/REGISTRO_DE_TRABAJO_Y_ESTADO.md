@@ -1929,3 +1929,20 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Próximo paso: solicitar al usuario que abra `audit_summary.json` desde Google Drive y comparta su contenido completo (o descargue/adjunte el JSON/ZIP). No pedir el PAT ni datasets. Tras revisar, contrastar resultados reales del CLI con la auditoría local anterior y emitir dictamen sobre cap200 y alternativas.
 - Auditoría GitHub al registrar: HEAD de `urban-models-and-benchmark` `489df6aca8dd38b224339af226978b0e64a1a885`; PR #3 sigue `open`, `draft=true`, `merged=false`. Los seis Actions más recientes consultados continúan en `failure`; no se lanzaron reruns. La ejecución de Colab es evidencia independiente y no cambia ese estado de CI.
 - No iniciar entrenamiento hasta revisar el JSON y decidir el protocolo. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
+
+
+#### Auditoría cap200 confirmada por ejecución real del CLI en Colab — 2026-11-23
+
+- El usuario compartió el contenido completo de `audit_summary.json` del notebook `notebooks/colab_generar_plan_cap200.ipynb`. El resumen identifica el HEAD ejecutado como `7e1c8dc52374302dd18529a56ac6f4d9b35b6356`, commit existente en el repositorio.
+- El artifact `14770171764` y su SHA-256 `b6cbcb54dfd0598e6a9011667073028be1804fc1c112d82e516a42bdbf2ba4e5` coinciden con la auditoría previa.
+- Confirmada la ejecución del CLI real para `per_class_cap=200`: A2D2 semántica 206/1000 (20,6 %), A2D2 instancias 257/1000 (25,7 %), UrbanSyn semántica 200/1000 (20,0 %) y UrbanSyn instancias 209/1000 (20,9 %). Los resultados coinciden con la reproducción local.
+- Val/test permanecen completos: A2D2 1000/1000 por split/tarea; UrbanSyn val 751/751 y test 783/783 por tarea. No se aplicó cap a estos splits.
+- Cobertura: A2D2 tiene 12 clases semánticas y 4 clases de instancias no disponibles en el índice; UrbanSyn cubre 19/19 clases semánticas y 8/8 clases de instancias. Elevar el cap no corrige las clases ausentes en A2D2.
+- Sensibilidad confirmada por el notebook: cap 300 retiene 30–35,7 %; cap 400 retiene 40–45,7 %; cap 500 retiene 50–55,7 %; cap 700 retiene 70–75,7 % según dataset/tarea. Cap 1000 conserva 93,9–100 %. La tabla detallada está en `docs/INFORME_AUDITORIA_BALANCEO_CAP200.md`.
+- Importante: `per_class_cap` limita el número de muestras que contienen cada clase, no el total de imágenes seleccionadas; por eso los totales de A2D2 pueden ser mayores que 200 sin violar el cap individual por clase.
+- Dictamen: cap200 no se aprueba como train principal; queda como ablación. Baseline recomendado: train completo por dataset, pesos semánticos calculados solo con train y sampler ponderado para instancias. Caps 500/700 pueden compararse como ablaciones, no adoptarse sin evaluación.
+- El resumen confirma `training_started=false` y `datasets_downloaded=false`. No se inició entrenamiento ni se descargaron datasets.
+- Se actualizó el informe técnico en commit `74085f6aa45a2006117934a2851e6cd717465e13`.
+- Auditoría GitHub de esta intervención: HEAD de `urban-models-and-benchmark` `a5526715dd4524513425dd82ff25b3128afbfd83`; el HEAD registrado por el notebook (`7e1c8dc...`) es un commit anterior válido. PR #3 sigue `open`, `draft=true`, `merged=false`. Los seis Actions más recientes consultados (runs `45221858110`, `45221842622`, `45221842530`, `45219425817`, `45219409383`, `45219409350`) terminan en failure. No se lanzaron reruns.
+- Próximo paso: fijar el protocolo baseline completo vs ablaciones y revisar el cargador de datos para confirmar que los pesos/sampler se aplican independientemente por dataset y solo con estadísticas de train. No iniciar entrenamiento hasta validarlo y recibir decisión expresa.
+- Mantener `RUN_TRAINING=False`, PR #3 abierta, draft y sin fusionar.
