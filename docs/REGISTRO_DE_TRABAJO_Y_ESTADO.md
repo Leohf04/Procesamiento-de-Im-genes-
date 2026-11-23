@@ -2221,3 +2221,15 @@ Tras el primer motor se completaron componentes adicionales:
 - Auditoría Actions del SHA anterior `d370146...`: run `45242636788`, workflow Python tests, conclusión failure; job `pytest` failure, pero GitHub devolvió `steps=[]`, sin logs. Combined status no devolvió estados. No se lanzó rerun.
 - PR #3 comprobada abierta; su descripción mantiene **Draft intencional. No fusionar todavía**. No se cambió estado ni se fusionó.
 - Pendiente: ejecutar nuevamente la prueba dirigida y la suite completa en Colab sobre el nuevo HEAD que incluya el commit `74d151a...` y la actualización de este registro. No iniciar materialización ni entrenamiento hasta suite completa verde. `RUN_TRAINING=False`; no se descargaron datos ni se inició entrenamiento.
+
+
+### Suite completa aprobada en Colab — 2026-11-23
+
+- El usuario ejecutó `notebooks/colab_validacion_completa.ipynb` sobre el HEAD exacto `ace39a56a3b46edb0a876cf23d0ea53e67d0aaf3`, rama `urban-models-and-benchmark`.
+- Prueba dirigida del balanceador: **1 passed**, código de salida 0, 0.02 s. Log persistido en Drive: `MyDrive/ProcesamientoImagenes/validacion_colab/prueba_balanceador_20261123_185821.log`.
+- Suite completa del repositorio: **85 passed**, código de salida 0, 27.29 s. Log persistido en Drive: `MyDrive/ProcesamientoImagenes/validacion_colab/suite_completa_20261123_185821.log`.
+- Resumen JSON: timestamp `2026-11-23T18:58:57.562817+00:00`, `passed=true`, `focused_test_exit_code=0`, `full_suite_exit_code=0`, `training_started=false`, `datasets_downloaded=false`.
+- Esta validación cubre la suite de pruebas del repositorio en el SHA indicado. No constituye validación integral de materialización remota, loaders reales, COCOeval con anotaciones reales, checkpoints/reanudación con loaders reales, ni entrenamiento.
+- Auditoría al registrar: HEAD `ace39a56a3b46edb0a876cf23d0ea53e67d0aaf3`; PR #3 abierta, draft y sin fusionar. Los runs de Actions visibles en esta auditoría corresponden al mismo SHA pero aparecen fallidos; los jobs no exponen pasos/logs útiles, por lo que Actions no se declara aprobado y el PASS procede exclusivamente del log de Colab aportado por el usuario. No se lanzó ningún rerun.
+- Se cierra la puerta de validación unitaria y se habilita la siguiente fase de preflight: materialización remota solo train/validation, inspección de espacio y hashes, smoke de loaders reales por cada dominio/tarea, COCOeval sintético y con muestra real, y prueba de checkpoint/resume. Esta fase debe permanecer sin backward/optimizer step/entrenamiento; test no se descarga ni se carga. La ejecución de materialización se hará de forma controlada en el runtime remoto y no en el teléfono.
+- `RUN_TRAINING=False`; no se ha entrenado ningún modelo ni descargado datasets en esta validación. El piloto sigue requiriendo autorización expresa independiente. PR #3 permanece draft y sin merge.
