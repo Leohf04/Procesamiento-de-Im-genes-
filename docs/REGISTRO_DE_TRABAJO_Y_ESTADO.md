@@ -1987,3 +1987,5 @@ Solicitud del usuario: preparar los subconjuntos reproducibles.
 - Auditoría tras los cambios: HEAD de la rama `e31042f840ce40940291adab618313edd019ed3d`; PR #3 continúa `open`, `draft=true`, `merged=false`. Los runs Python `45224475611` y `45224459568` fallan antes de los steps con `runner_id=0`, `runner_name=""`, `steps=[]`; no se consideran resultados de pytest. No se lanzaron reruns.
 - No se ha descargado el dataset completo ni iniciado entrenamiento. Mantener `RUN_TRAINING=False` y PR #3 abierta, draft y sin fusionar.
 - Próximo paso: ejecutar la nueva sección 9 en Colab y revisar el JSON resultante. Solo si pasa, avanzar a un smoke test de forward del modelo con esas muestras; no habilitar entrenamiento todavía.
+
+- **Auditoría final después de guardar este registro:** el commit que contiene la documentación de esta intervención es `f923a191dce01408cb9ae698e12a4e6e75983685`, y la rama/PR #3 apuntan a ese mismo HEAD. PR #3 permanece `open`, `draft=true`, `merged=false`. El run Python más reciente `45224570271` también terminó antes de ejecutar steps (`runner_id=0`, `runner_name=""`, `steps=[]`); no es un resultado de pytest. No se lanzaron reruns.
