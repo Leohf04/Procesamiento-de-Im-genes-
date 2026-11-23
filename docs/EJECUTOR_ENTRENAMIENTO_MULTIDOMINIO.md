@@ -107,3 +107,16 @@ Puerta de decisión: si GPU_PASS es falso, detenerse; no ejecutar piloto en CPU.
 ## Corrección tras primer intento de Colab
 
 El primer resultado mostró PyTorch CPU-only (`2.14.1+cpu`) y ausencia de CUDA; cambia el acelerador a GPU en Colab, reinicia si se solicita y ejecuta todo el notebook desde el principio. No fuerces una instalación de PyTorch manualmente. El auditor ya convierte `torch.__version__` a texto para que `torch.load(weights_only=True)` pueda leer el checkpoint sintético de forma segura. Ahora separa `drive_status` y `gpu_status`, y el estado global solo es PASS cuando ambos pasan. La prueba Drive anterior no demuestra fallo de almacenamiento; fue un problema de tipo serializado.
+
+
+## Auditoría de memoria GPU por arquitectura
+
+Una vez PREFLIGHT_READY=True, ejecutar notebooks/colab_auditoria_memoria_gpu_por_arquitectura.ipynb.
+
+El notebook valida el JSON del preflight en Drive y ejecuta scripts/audit_model_memory.py en procesos separados para DeepLabV3+ semántico y Mask R-CNN de instancias, con batch 1, 2 y 4 a 512×512. La prueba usa tensores sintéticos y realiza forward/backward para estimar memoria de activaciones; no carga datasets, no toca test, no crea checkpoints y no ejecuta optimizer.step().
+
+Cada combinación reporta estado PASS/OOM, VRAM peak allocated/reserved, incremento sobre el modelo y tiempo. OOM queda registrado por combinación sin contaminar la siguiente. Un fallo distinto de OOM detiene el proceso. Los resultados se guardan en MyDrive/ProcesamientoImagenes/auditoria_memoria_gpu/.
+
+Interpretación: la memoria de Mask R-CNN depende del número de propuestas/objetos y la prueba sintética no cubre el peor caso. El batch inicial del piloto debe elegirse conservadoramente y dejar margen; si no hay margen, repetir con AMP o resolución inferior como auditorías separadas. No inferir rendimiento ni calidad del modelo a partir de esta prueba.
+
+Estado: notebook y script añadidos; pendientes de ejecución por el usuario. RUN_TRAINING=False; PR #3 permanece abierta y draft.
