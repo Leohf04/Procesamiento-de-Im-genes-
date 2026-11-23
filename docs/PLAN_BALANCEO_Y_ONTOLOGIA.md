@@ -143,3 +143,14 @@ Se añadieron pruebas para:
 - identidad y orden correctos para loaders semánticos y de instancias.
 
 **Pendiente:** CI del nuevo HEAD, inspección del artifact generado con el límite 200 y prueba con una materialización pequeña de datos reales. No ejecutar entrenamiento hasta completar estas comprobaciones.
+
+
+## Auditoría experimental cap 200 — 2026-11-23
+
+Se recuperó el artifact `14770171764` del run `45038801547` (SHA-256 verificado). Se reconstruyeron los seis manifiestos completos a partir de los JSONL enriquecidos del plan previo sin cap, validando 5.534 filas totales, IDs únicos y coincidencia exacta de estadísticas por imagen. Se reprodujo la selección determinista con cap 200 y se auditó cobertura/retención.
+
+**Resultado:** A2D2 semántica 206/1000 (20,6 %), A2D2 instancias 257/1000 (25,7 %), UrbanSyn semántica 200/1000 (20,0 %), UrbanSyn instancias 209/1000 (20,9 %). El límite se cumple y val/test permanecen completos. A2D2 mantiene ausencias de clases: 12 en semántica y 4 en instancias. UrbanSyn cubre las 19 clases semánticas y 8 de instancias.
+
+**Dictamen:** cap 200 es demasiado agresivo para train principal; se conserva solo como ablación. La sensibilidad cap 500 retiene aproximadamente 50–56 % y cap 700 70–76 %. Recomendación: baseline con train completo y pesos/sampler ya implementados, sin mezclar dominios; evaluar cap 500/700 solo como ablación. No entrenar todavía. Detalles en [INFORME_AUDITORIA_BALANCEO_CAP200.md](INFORME_AUDITORIA_BALANCEO_CAP200.md).
+
+Notebook reproducible que ejecuta el CLI real en Colab: [colab_generar_plan_cap200.ipynb](../blob/urban-models-and-benchmark/notebooks/colab_generar_plan_cap200.ipynb). La ejecución CLI en Colab queda como confirmación reproducible; la reproducción local de esta auditoría utilizó la misma función de selección del código actual. `RUN_TRAINING=False`.
