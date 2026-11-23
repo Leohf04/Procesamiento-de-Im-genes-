@@ -60,7 +60,7 @@ A2D2 semántica conserva 15 de 18 grupos/secuencias de train; A2D2 instancias co
 
 ## Sensibilidad al valor del cap
 
-Se reprodujo el mismo selector determinista para valores alternativos. Porcentaje del train retenido:
+El notebook de Colab ejecutó el CLI real del repositorio para cap 200. La sensibilidad para caps alternativos fue calculada por el mismo notebook a partir de los manifiestos reconstruidos. Porcentaje del train retenido:
 
 | Cap | A2D2 semántica | A2D2 instancias | UrbanSyn semántica | UrbanSyn instancias |
 |---:|---:|---:|---:|---:|
@@ -82,12 +82,35 @@ Recomendación metodológica:
 2. Usar los pesos semánticos y el sampler de instancias ya implementados, calculados exclusivamente con train y por dataset.
 3. Si se requiere una ablación de downsampling, comparar cap 500 o 700 contra el baseline y reportar retención/cobertura; no elegirlos automáticamente como configuración final.
 4. Mantener A2D2 como dominio real complementario y UrbanSyn como fuente sintética principal de instancias.
-5. No iniciar entrenamiento hasta revisar la reproducción del CLI y decidir explícitamente el protocolo.
+5. No iniciar entrenamiento hasta decidir explícitamente el protocolo.
 
 ## Reproducibilidad y archivos
 
 - Notebook para ejecutar el **script real** en Colab, recuperar el artifact, reconstruir manifiestos, generar cap 200 y comparar caps: [`notebooks/colab_generar_plan_cap200.ipynb`](../blob/urban-models-and-benchmark/notebooks/colab_generar_plan_cap200.ipynb).
 - Paquete de auditoría generado en esta sesión: contiene manifiestos cap 200, informe JSON, comprobación de reconstrucción y comparación de caps. No contiene imágenes ni máscaras.
-- La reproducción local realizada para esta auditoría siguió la función determinista `greedy_balanced_select` del script actual, con semilla y desempate SHA-256 idénticos. El notebook Colab permite confirmar el mismo resultado ejecutando el CLI del repositorio y guardar la evidencia en Drive.
+- La reproducción local inicial siguió la función determinista `greedy_balanced_select` con semilla y desempate SHA-256 idénticos. Posteriormente, el usuario ejecutó el notebook en Colab y compartió `audit_summary.json`, que confirma la ejecución del CLI real y los resultados de cap 200.
 
 **Estado:** plan cap 200 auditado, pero no aprobado para entrenamiento. `RUN_TRAINING=False`.
+
+
+## Confirmación del CLI real en Google Colab — 2026-11-23
+
+El usuario compartió el contenido completo de `audit_summary.json` generado por `notebooks/colab_generar_plan_cap200.ipynb`. El resumen registra:
+
+- `git_head`: `7e1c8dc52374302dd18529a56ac6f4d9b35b6356` (commit existente en el repositorio).
+- Artifact `14770171764`, SHA-256 coincidente con el artifact auditado inicialmente: `b6cbcb54dfd0598e6a9011667073028be1804fc1c112d82e516a42bdbf2ba4e5`.
+- `per_class_cap=200`.
+- `training_started=false`, `datasets_downloaded=false`.
+- Los cuatro resultados de train coinciden con la auditoría local: A2D2 semántica 206/1000, A2D2 instancias 257/1000, UrbanSyn semántica 200/1000 y UrbanSyn instancias 209/1000.
+- Los seis splits de validación/prueba se conservaron íntegros: A2D2 1000/1000 por tarea y split; UrbanSyn 751/751 en val y 783/783 en test por tarea.
+- La cobertura coincide: A2D2 presenta 12 clases semánticas y 4 clases de instancias no disponibles; UrbanSyn cubre 19/19 clases semánticas y 8/8 clases de instancias.
+- La sensibilidad de caps 300/400/500/700/1000 coincide con los porcentajes de la tabla anterior.
+
+Esto eleva el estado de la auditoría: ya no es solo una reproducción local del selector; existe confirmación reportada por el notebook Colab al ejecutar el CLI real. La evidencia es el JSON compartido por el usuario; no se dispone de acceso directo a su Google Drive para inspeccionar el ZIP allí almacenado.
+
+### Interpretación metodológica
+
+El cap limita la **frecuencia de presencia de cada clase entre muestras seleccionadas**, no el número total de imágenes del split ni el número de objetos/píxeles. Por eso el total seleccionado puede superar 200 (A2D2 206/257) aunque cada clase individual respete el límite. El algoritmo también puede dejar fuera clases que no existen en el índice de origen; elevar el cap no corrige esa falta de disponibilidad.
+
+**Dictamen confirmado:** cap 200 no es adecuado como train principal. Mantenerlo únicamente como ablación. Baseline recomendado: train completo por dataset, pesos semánticos calculados solo en train y sampler ponderado de instancias, sin mezclar dominios ni modificar val/test. Caps 500/700 quedan como posibles ablaciones, no como decisión automática.
+
