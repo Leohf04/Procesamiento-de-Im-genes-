@@ -44,7 +44,7 @@ def main():
         annotations=read_jsonl(a.annotation_index_dir/f"{ds}_{split}.annotations.jsonl")
         ann_ids=[str(x.get("sample_id","")) for x in annotations]
         ids=[str(x.get("sample_id","")) for x in manifests]
-        if not ids or len(ids)!=len(set(ids)) or set(ids)!=set(ann_ids) or len(ann_ids)!=len(set(ann_ids)):
+        if not ids or any(not sid for sid in ids+ann_ids) or len(ids)!=len(set(ids)) or set(ids)!=set(ann_ids) or len(ann_ids)!=len(set(ann_ids)):
             raise RuntimeError(f"{ds}/{split}: manifest/index IDs missing, duplicate or mismatched")
         ann_map={str(x["sample_id"]):x for x in annotations}
         if any(ann_map[x].get("annotation_status","ok")!="ok" for x in ids):
