@@ -230,3 +230,8 @@ La opción `--learning-step` del script `scripts/smoke_test_urban_training_integ
 - Notebook: `notebooks/colab_generar_plan_cap200.ipynb`, sección 11. Informe Drive: `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_controlled_learning_step.json`; stdout/stderr se guardan junto al informe.
 - Un PASS demuestra compatibilidad del cálculo de pérdidas y del paso de optimizador en esas cuatro muestras/configuraciones. No demuestra convergencia, estabilidad multi-iteración, generalización, calidad predictiva ni que el protocolo completo esté listo para producción. Si falla por memoria/tiempo, conservar el stderr; no aumentar tamaño ni cantidad de pasos a ciegas.
 - La ejecución real en Colab sigue pendiente; los cambios de código/notebook aún no han sido validados por una ejecución de esta sección.
+
+
+## Protocolo de entrenamiento experimental — 2026-11-23
+
+El baseline recomendado (train completo por dataset, pesos semánticos y sampler de instancias calculados solo desde train, sin mezclar dominios) se concreta en [docs/PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md](PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md). Cap200 queda como ablación, no train principal. El protocolo exige val/test completos, métricas específicas por tarea, checkpoints restaurables y puertas previas de CI, materialización, evaluación y recursos. No habilita ejecución; mantener `RUN_TRAINING=False` hasta autorización expresa.
