@@ -142,7 +142,11 @@ def greedy_balanced_select(records: list[dict], *, count_key: str, seed: int,
                 rarity = 1.0 / max(available[label], 1)
                 deficit = 1.0 / (1 + selected_presence[label])
                 gains.append(rarity * deficit * (1.0 + min(value, 20) / 20.0))
-            return (sum(gains), _tie_key(seed, str(row["sample_id"])))
+            # With a per-class cap, prefer samples that add balanced coverage
+            # without consuming several class slots at once. Averaging marginal
+            # gains prevents a mixed image from exhausting every cap in one step.
+            objective = sum(gains) / len(gains) if per_class_cap is not None and gains else sum(gains)
+            return (objective, _tie_key(seed, str(row["sample_id"])))
 
         best = max(candidates, key=score)
         remaining.remove(best)
