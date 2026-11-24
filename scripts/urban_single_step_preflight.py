@@ -69,6 +69,7 @@ def run_one(dataset: str, task: str, data_dir: Path, index_dir: Path,
         raise RuntimeError("Materialization report is not PASS or does not explicitly exclude test")
 
     torch.manual_seed(2026)
+    free_before, total_vram = torch.cuda.mem_get_info()
     torch.cuda.reset_peak_memory_stats()
     started = time.monotonic()
     bundle = create_experiment(cfg)
@@ -142,12 +143,16 @@ def run_one(dataset: str, task: str, data_dir: Path, index_dir: Path,
 
     torch.cuda.synchronize()
     elapsed = round(time.monotonic() - started, 3)
+    optimizer_state_tensors = [value for state in optimizer.state.values() for value in state.values() if torch.is_tensor(value)]
+    optimizer_state_bytes = sum(value.numel() * value.element_size() for value in optimizer_state_tensors)
     report = {
         "status": "PASS",
         "dataset": dataset,
         "task": task,
         "experiment_id": cfg["experiment_id"],
         "device": torch.cuda.get_device_name(0),
+        "vram_total_bytes": int(total_vram),
+        "vram_free_before_bytes": int(free_before),
         "torch": str(torch.__version__),
         "cuda": torch.version.cuda,
         "image_size": image_size,
@@ -161,6 +166,8 @@ def run_one(dataset: str, task: str, data_dir: Path, index_dir: Path,
         "gradient_l2_norm_before_clip": gradient_norm,
         "optimizer_steps": 1,
         "parameter_changed": parameter_changed,
+        "optimizer_state_tensor_count": len(optimizer_state_tensors),
+        "optimizer_state_bytes": int(optimizer_state_bytes),
         "elapsed_seconds": elapsed,
         "peak_allocated_bytes": int(torch.cuda.max_memory_allocated()),
         "peak_reserved_bytes": int(torch.cuda.max_memory_reserved()),
