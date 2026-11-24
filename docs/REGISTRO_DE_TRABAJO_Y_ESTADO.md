@@ -2654,3 +2654,10 @@ El usuario pidió preparar la actualización de pruebas anunciada previamente. S
 - Pruebas: `55a76f1d29d3000f88db85e40e1dbb21c5ad2e59`
 
 Próximo paso: ejecutar la notebook de auditoría segura en Colab y pegar únicamente el bloque delimitado. Después revisar el JSON, resolver los faltantes de configuración efectiva/procedencia de pesos y completar pruebas pendientes antes de solicitar autorización separada para el piloto.
+
+
+### Cierre de la intervención — verificación final
+- La notebook fue ajustada para declarar explícitamente `experiment_readiness=BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`; las pruebas mecánicas pueden pasar sin que ello autorice un experimento.
+- La notebook se guardó en `notebooks/colab_preflight_un_paso_real.ipynb`; JSON validado al releerlo desde GitHub.
+- La PR #3 se verificó abierta, draft y sin merge. Su head debe coincidir con el último commit de esta intervención.
+- No se ejecutaron pytest, Colab, entrenamiento, optimizer.step, descarga de datasets, lectura de test ni Actions. La validación ejecutada aquí fue inspección estática de archivos y estructura JSON.
