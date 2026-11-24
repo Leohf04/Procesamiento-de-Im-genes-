@@ -2808,3 +2808,21 @@ Validación realizada: JSON nbformat 4 parseado, 13 celdas presentes, cero secue
 Commit de corrección del Notebook: `eec3d748482b8846f1a9791c496212139ff57580`.
 
 Para continuar, el usuario debe volver a abrir/recargar el Notebook desde el enlace GitHub-Colab para cargar esta versión corregida; la copia que ya estaba abierta en Colab no se actualiza automáticamente. Después puede ejecutar el Notebook desde el principio. El bloque único final sigue siendo la última celda.
+
+
+## 2026-11-24 — Corrección de resolución de assets antiguos en Drive
+
+El usuario compartió el bloque final de la auditoría Urban-v1. Los cuatro manifiestos e índices existentes contienen 10 filas, frente a 1.000/1.000 para A2D2 y 1.000/751 para UrbanSyn. La auditoría anterior marcó assets ausentes porque los manifiestos conservaban rutas absolutas históricas bajo `/content/urban_data_capacity/`, mientras la ubicación persistente configurada es `/content/drive/MyDrive/ProcesamientoImagenes/urban_data_capacity/`. El bloque no permite afirmar si los archivos están o no en Drive; la resolución anterior no probaba la ubicación alternativa.
+
+Se actualizó `notebooks/urban_v1_cierre_tres_pendientes.ipynb` (13 celdas) para:
+- probar primero la ruta original y luego mapear el prefijo histórico `/content/urban_data_capacity/` a `DATA_DIR`, conservando registro de candidatos;
+- distinguir assets encontrados en ruta original, encontrados tras remapeo y realmente no localizados;
+- resumir campos comprobados y rutas físicas únicas para no confundir alias de una misma máscara (A2D2 `semantic`/`instance`) con archivos diferentes;
+- usar el mismo resolvedor al construir la hoja visual;
+- incluir en el bloque único los diagnósticos de resolución y las rutas candidatas de manifiestos.
+
+La corrección es diagnóstica: no descarga archivos, no fabrica filas, no amplía automáticamente manifiestos de 10 a cobertura completa, no reescribe índices y no toca test. La auditoría seguirá INCOMPLETE hasta que existan manifiestos/índices con los conteos del protocolo y todos los assets requeridos sean accesibles. No se ha ejecutado Colab ni se ha comprobado físicamente la existencia de archivos en Drive desde ChatGPT.
+
+Commit de notebook: `81cbd6486f6f302106ee71a245a877d054ec6b1d`.
+
+Siguiente paso seguro: abrir la notebook actualizada en Colab, ejecutar desde el principio y compartir el bloque único. Según los diagnósticos reales, decidir si los assets ya están en Drive con rutas antiguas o si falta materializarlos. Si los manifiestos siguen en 10 filas, localizar/regenerar los manifiestos completos TRAIN/VAL y construir índices completos antes de la auditoría final. No iniciar entrenamiento; `RUN_TRAINING=False`.
