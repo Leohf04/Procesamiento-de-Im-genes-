@@ -3106,3 +3106,12 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - Evaluación: el dispositivo permite tareas ligeras de desarrollo, validación de muestras pequeñas y posible inferencia optimizada; no es una plataforma realista para entrenar los cuatro experimentos DeepLabV3+/Mask R-CNN completos. No dispone de CUDA NVIDIA y solo tiene 4 GB de RAM.
 - No se ha instalado software, modificado código/configuración, descargado datasets ni ejecutado entrenamiento.
 - Próximo paso: diseñar un entorno Android de bajo consumo y no destructivo, empezando por comprobar almacenamiento libre y compatibilidad de herramientas; mantener separado cualquier piloto móvil del protocolo experimental oficial.
+
+
+## 2026-11-24 — Espacio disponible confirmado en Android
+
+- El usuario confirmó que su OnePlus Nord N200 5G (4 GB RAM, 64 GB almacenamiento) tiene **15 GB libres**.
+- Decisión: se puede proceder con una instalación mínima de Termux y herramientas básicas (Python/Git) para scripts ligeros, validación de muestras pequeñas y gestión del repositorio; no instalar PyTorch completo ni descargar datasets por ahora.
+- La documentación oficial de Termux recomienda obtenerlo desde F-Droid o GitHub oficial y advierte que Android 12+ puede terminar procesos por límites de procesos/CPU. Instalación debe proceder solo desde una fuente oficial y sin mezclar firmas de distribución. Fuente: https://github.com/termux/termux-app
+- El APK/entorno base indicado por los mantenedores ocupa aproximadamente 120–180 MB, según distribución/arquitectura; paquetes adicionales requerirán espacio extra. No se ha instalado todavía.
+- Próximo paso: guiar al usuario para instalar Termux desde una fuente oficial, abrirlo y ejecutar actualizaciones básicas. Después comprobar arquitectura/entorno y añadir Python, Git y Pillow de forma gradual. Mantener intactos los experimentos principales; no entrenar los cuatro modelos en el teléfono.
