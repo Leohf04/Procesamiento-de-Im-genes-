@@ -2458,3 +2458,12 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - Verificación del commit: diff confirma \n dentro del contenido de cada celda; el archivo conserva 9 celdas y no se modificó la lógica de auditoría. El endpoint de runs asociado a este commit no devolvió ejecuciones; no se lanzó ningún rerun.
 - Esta es una corrección del formato del notebook, no una prueba de ejecución en Colab. El usuario debe cerrar la copia abierta, abrir el notebook actualizado desde GitHub/Colab y ejecutar solo la primera celda para comprobar que desapareció el SyntaxError antes de continuar.
 - Sin datasets, sin test, sin forward/backward/optimizer de entrenamiento; RUN_TRAINING=False. PR #3 se mantiene sin fusionar y en draft.
+
+### Corrección de importación del paquete src en auditoría de memoria GPU — 2026-11-24
+
+- El usuario ejecutó correctamente las celdas 1 y 2 del notebook. La celda 3 inició el caso semantic/batch=1 y el script devolvió FAIL con ModuleNotFoundError: No module named 'src'. El JSON confirma Tesla T4, PyTorch 2.14.1+cu130, CUDA 13.0; no cargó dataset, no tocó test y optimizer_steps=0.
+- Diagnóstico: el notebook invoca el archivo como `python scripts/audit_model_memory.py`. En esa modalidad, `sys.path[0]` es el directorio scripts y el script no garantizaba incluir la raíz del repositorio para resolver imports `src.*`.
+- Corregido `scripts/audit_model_memory.py`: calcula la raíz mediante `Path(__file__).resolve().parents[1]` y la inserta explícitamente en `sys.path` antes de importar el modelo. Commit: `71c94d96f7c1388622220705130f56665a25d0d6`.
+- Comprobación estática: el módulo `src/models/deeplabv3plus.py` y el paquete `src/__init__.py` existen en la rama. Aún falta que el usuario repita la celda 3 para validar importación y medición real en la Tesla T4; no se afirma que el script ya haya pasado en Colab.
+- No se modificó el notebook ni los parámetros de la auditoría. No se cargan datasets, no se toca test, no se llama optimizer.step(); esto es una prueba sintética de memoria, no entrenamiento. RUN_TRAINING=False.
+- Antes de continuar, auditar HEAD/PR #3/Actions y comprobar la nueva versión publicada. PR #3 debe seguir abierta, draft y sin fusionar.
