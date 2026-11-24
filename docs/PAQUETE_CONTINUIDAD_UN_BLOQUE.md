@@ -228,3 +228,18 @@ No ejecutar materialización real ni entrenamiento; no tocar TEST. El dry-run pe
 
 
 Ajuste final de la misma corrección: commit `ed656be7baa77f646716eed50dae98c2f3d7e327` deja explícita la escritura del reporte con `chr(10)` para evitar ambigüedades de escapes en la celda. La versión final fue releída desde GitHub; la celda registra `reused_existing_metadata` y valida los ocho JSONL antes de continuar.
+
+
+## 2026-11-24 — Entrenamiento autorizado y notebook lista
+
+El usuario autorizó iniciar el entrenamiento real. Notebook: notebooks/urban_v1_entrenamiento_completo_gpu.ipynb.
+
+- Link: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_entrenamiento_completo_gpu.ipynb
+- Commit de creación: a3197e7e7036ecbf5357bc3592489deaa383eca7; commits correctivos: c147bf362ecbfc67edf4eee2b2827595d77c8a28 y 0ae5532c1a8feb1d742f61e5a6454189c2daca3e.
+- Secuencia: GPU CUDA → pytest local → recuperar metadatos completos TRAIN/VAL → dry-run 3.751 → comprobar espacio → materializar en disco temporal Colab → validar assets → piloto 10 batches por configuración → entrenamiento completo de cuatro modelos con checkpoints/reanudación.
+- Resultados/checkpoints se guardan en Drive privado; TEST permanece intacto.
+- RUN_TRAINING=True está habilitado en la notebook por autorización explícita del usuario.
+- Si GPU, pytest, datos, espacio o cualquier piloto fallan, se detiene antes del entrenamiento completo. AMP permanece desactivado; OOM se revisará antes de cambiar configuración.
+- Estado actual: notebook creada; Colab no ejecutado desde ChatGPT; no hay confirmación de materialización ni entrenamiento nuevo. La salida final produce un bloque único de continuidad.
+
+No afirmar que hay entrenamiento en marcha hasta que el usuario comparta evidencia de Colab. PR #3 sigue abierta/draft/sin merge y no se ha lanzado Actions.
