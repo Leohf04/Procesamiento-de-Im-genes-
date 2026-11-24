@@ -1,0 +1,56 @@
+name: Python tests
+
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+  pull_request:
+    branches:
+      - main
+      - fix/evaluacion-y-pipeline
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install CPU PyTorch
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - name: Install project dependencies
+        run: |
+          pip install numpy 'opencv-python-headless<5' scikit-learn matplotlib PyYAML tqdm joblib pytest onnx onnxruntime
+      - name: Compile all Python modules
+        run: python -m compileall -q src scripts main.py evaluate_scenarios.py
+      - name: Validate training and evaluation CLIs
+        run: |
+          python scripts/train_urban_segmentation.py --help
+          python scripts/train_maskrcnn_cityscapes.py --help
+          python scripts/audit_bdd100k_instance_splits.py --help
+          python scripts/train_bdd100k_detection.py --help
+          python scripts/train_bdd100k_lanes.py --help
+          python scripts/evaluate_cityscapes.py --help
+          python scripts/evaluate_lanes.py --help
+          python scripts/export_deeplabv3plus_onnx.py --help
+          python scripts/benchmark.py --help
+          python scripts/prepare_dataset_ci.py --help
+          python scripts/select_bdd100k_batch.py --help
+          python scripts/prepare_bdd100k_batch.py --help
+          python scripts/verify_setup.py
+      - name: Run test suite
+        run: pytest -q
+
+      - name: Validate real BDD100K semantic samples
+        run: |
+          python -m pip install huggingface_hub
+          python scripts/validate_bdd100k_semantic_sample.py --samples-per-split 2

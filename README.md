@@ -1,196 +1,253 @@
 # Detección y segmentación semántica en escenas urbanas
 
-Proyecto académico del **Equipo 2**: detección y segmentación de elementos urbanos mediante un enfoque de segmentación por instancias y otro híbrido de segmentación semántica más detección.
+Proyecto académico del Equipo 2 para detectar y segmentar objetos de escenas viales y evaluar modelos de percepción urbana.
 
-El sistema explora peatones, bicicletas, automóviles, motocicletas, autobuses, camiones, semáforos y señales de stop. Incluye preprocesamiento de iluminación y condiciones atmosféricas, clasificación fina mediante descriptores y SVM, evaluación por escenarios sintéticos y procesamiento de imágenes/vídeo.
+## Estrategia de datos activa
 
-> **Estado del proyecto:** prototipo funcional en desarrollo. La implementación actual usa COCO val2017 como fuente de evaluación, modelos preentrenados de Torchvision y degradaciones sintéticas. No debe interpretarse todavía como una validación completa sobre Cityscapes o BDD100K ni como una comparación experimental definitiva.
+La combinación seleccionada es **A2D2 + UrbanSyn + SHIFT**: A2D2 como dominio real, UrbanSyn para semántica/panoptic/cajas 2D y SHIFT para evaluación sintética de cambios de dominio. La matriz de cobertura, el mapeo de clases, las licencias y las puertas de validación están documentados en [docs/ESTRATEGIA_MULTIDATASET.md](docs/ESTRATEGIA_MULTIDATASET.md).
 
-## Contenido
+**No se ha iniciado entrenamiento.** A2D2 y UrbanSyn ya pasaron preflights de muestras pequeñas para semántica; UrbanSyn también validó panoptic y cajas 2D. SHIFT tiene metadata de clima/hora y una muestra RGB/semseg decodificada en el espejo parcial; falta resolver una diferencia de FPS (RGB 10, semseg 25) antes de usarla en métricas. El entrenamiento permanece bloqueado hasta completar adaptadores y compatibilidad.
 
-- [Objetivo](#objetivo)
-- [Enfoques comparados](#enfoques-comparados)
-- [Clases objetivo](#clases-objetivo)
-- [Arquitectura](#arquitectura)
-- [Preprocesamiento](#preprocesamiento)
-- [Dataset actual y limitaciones](#dataset-actual-y-limitaciones)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Evaluación](#evaluación)
-- [Estructura del repositorio](#estructura-del-repositorio)
-- [Auditoría y documentación](#auditoría-y-documentación)
-- [Trabajo pendiente](#trabajo-pendiente)
+## Estado actual del código
 
-## Objetivo
+El repositorio conserva código y evaluadores que se desarrollaron inicialmente para BDD100K/Cityscapes, además de:
+- Arquitectura **DeepLabV3+ ResNet-50** para segmentación semántica.
+- **Mask R-CNN** para segmentación por instancias.
+- Pipeline heredado de carriles BDD100K (categoría, dirección y estilo) y detector Faster R-CNN BDD100K.
+- Inferencia semántica/carriles mediante **ONNX Runtime**.
+- Benchmark de latencia p50/p95/p99 y FPS con warm-up y sincronización CUDA.
 
-Desarrollar un sistema de percepción urbana que detecte y segmente objetos relevantes de escenas viales, compare segmentación por instancias con segmentación semántica complementada por detección y estudie su comportamiento bajo variaciones de iluminación y clima.
+Estos componentes son una base de código, no una afirmación de que los adaptadores para A2D2, UrbanSyn y SHIFT estén terminados. La migración a la combinación multidataset se hará después de validar formatos y taxonomías.
 
-## Enfoques comparados
+**Pruebas automatizadas:** GitHub Actions ejecuta compileall, smoke tests de CLI y `pytest -q` en Python 3.11 / CPU. Los preflights de datos son workflows separados; un test de código aprobado no certifica por sí solo la compatibilidad de anotaciones reales ni la GPU.
 
-### 1. Segmentación por instancias — Mask R-CNN
+**Importante:** los workflows de preflight descargan únicamente muestras pequeñas en runners remotos y no en el teléfono. No descargar datasets completos ni iniciar entrenamiento hasta que la estrategia multidataset y sus puertas de validación estén aprobadas. No hay todavía checkpoints ni métricas experimentales de A2D2/UrbanSyn/SHIFT.
 
-Implementada en `src/models/instance_seg.py` mediante `maskrcnn_resnet50_fpn_v2` y pesos preentrenados de Torchvision.
+## Arquitecturas
 
-Entrega cajas delimitadoras, clase, confianza y una máscara por instancia. También genera máscaras binarias agregadas para comparar regiones urbanas.
-
-### 2. Enfoque híbrido — DeepLabV3 + Faster R-CNN + carriles HSV
-
-Implementado en `src/models/semantic_hybrid.py`:
-
-- DeepLabV3 ResNet-50 produce un mapa semántico.
-- Faster R-CNN ResNet-50 FPN V2 produce cajas, clases y puntuaciones.
-- OpenCV/HSV extrae una máscara heurística de marcas blancas y amarillas de carril.
-
-**Precisión terminológica:** el código usa DeepLabV3 de Torchvision, no DeepLabV3+, y Faster R-CNN no genera máscaras de instancia. Por tanto, el enfoque híbrido entrega segmentación semántica, detección por cajas y una máscara heurística de carriles; no equivale a Mask R-CNN.
-
-### Backend ligero
-
-El backend denominado `onnx_cv2` no ejecuta actualmente un modelo ONNX. Utiliza HOG de OpenCV para peatones y máscaras geométricas elípticas en el modelo de instancias; en el modelo híbrido añade extracción HSV de carriles. Es un modo demostrativo de menor coste, no un sustituto equivalente de los modelos neuronales.
-
-## Clases objetivo
-
-La configuración declara ocho clases COCO: persona, bicicleta, automóvil, motocicleta, autobús, camión, semáforo y señal de stop. El subconjunto común usado para algunas máscaras semánticas contiene cinco clases: persona, bicicleta, automóvil, motocicleta y autobús.
-
-Las clases realmente reconocibles dependen de las categorías de los pesos preentrenados y del filtrado configurado. Las señales, carriles y clases finas no tienen todas un modelo aprendido específico en esta versión.
-
-## Arquitectura
-
-1. `configs/config.yaml`: backend, dataset, umbrales, clases y escenarios.
-2. `src/preprocessing/`: correcciones de iluminación y degradaciones atmosféricas.
-3. `src/models/`: Mask R-CNN y enfoque híbrido.
-4. `src/features/`: descriptores HOG, histograma HSV y clasificador SVM.
-5. `src/pipeline.py`: orquestación de predicción por imagen y vídeo.
-6. `src/evaluation/`: métricas, evaluación por escenario y visualizaciones de errores.
-7. `src/utils/coco_loader.py`: carga de anotaciones COCO y construcción de cajas/máscaras.
-
-## Preprocesamiento
-
-Se encuentran implementadas estas operaciones:
-
-- Ajuste lineal de exposición (`alpha`, `beta`).
-- Corrección gamma y CLAHE para mejorar contraste en baja iluminación.
-- Desenfoque por movimiento con kernel direccional.
-- Simulación sintética de niebla mediante transmisión atmosférica.
-- Simulación sintética de lluvia mediante trazos y oscurecimiento.
-
-Las transformaciones se aplican a la imagen de entrada, no a las máscaras de verdad-terreno. La evaluación actual prueba escenarios `clear_day`, `night`, `rain`, `fog` y `motion_blur`.
-
-## Dataset actual y limitaciones
-
-La configuración y los scripts descargan **COCO val2017**. El cargador selecciona imágenes que contienen alguna de las ocho categorías urbanas mapeadas y decodifica polígonos/RLE (si está disponible `pycocotools`; en su ausencia, el fallback solo rasteriza polígonos).
-
-Cityscapes, BDD100K y KITTI son alternativas relevantes para el objetivo académico, pero **no están integradas como cargadores en el estado inspeccionado del repositorio**. COCO tampoco proporciona por sí solo la separación real día/noche/lluvia/niebla que exige una evaluación por condiciones; esos escenarios se sintetizan sobre las imágenes.
+| Componente | Arquitectura | Datos / estado |
+|---|---|---|
+| Segmentación semántica | DeepLabV3+ ResNet-50 | Arquitectura disponible; adaptador A2D2/UrbanSyn/SHIFT pendiente |
+| Segmentación de instancias | Mask R-CNN ResNet-50 FPN V2 | Arquitectura disponible; adaptadores panoptic SHIFT/UrbanSyn/A2D2 y evaluación cruzada pendientes |
+| Carriles | DeepLabV3 multi-cabeza | Categoría (8), dirección (2) y estilo (2) desde bitmasks oficiales; validación mIoU por cabeza y checkpoints reanudables |
+| ONNX | ONNX Runtime | Inferencia semántica/carriles; no produce cajas ni instancias |
+| Detección 2D | Faster R-CNN ResNet-50 FPN | Código heredado; adaptadores activos UrbanSyn/SHIFT pendientes |
+| Backend `onnx_cv2` | HOG + OpenCV | Modo demostrativo; no es ONNX |
 
 ## Instalación
 
-Se recomienda Python 3.10 o superior en un entorno virtual. La disponibilidad de PyTorch/Torchvision compatible depende del sistema operativo, la versión de Python y el hardware.
+Python 3.10+ recomendado. Instala PyTorch/Torchvision compatibles con tu CPU/GPU y luego:
 
 ```bash
-git clone https://github.com/Leohf04/Procesamiento-de-Im-genes-.git
-cd Procesamiento-de-Im-genes-
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
 pip install -r requirements.txt
 python scripts/verify_setup.py
+pytest -q
 ```
 
-En Windows, activar el entorno con `.venv\\Scripts\\activate`. Para instalaciones de PyTorch específicas de CPU/CUDA, consultar la matriz oficial de compatibilidad de PyTorch y Torchvision antes de instalar las dependencias.
+## BDD100K (flujo heredado, no forma parte de la combinación activa)
 
-## Uso
+Los comandos y loaders de esta sección se conservan como referencia histórica. **No se utilizará BDD100K como dataset principal** en la estrategia activa A2D2 + UrbanSyn + SHIFT. No ejecutar estos comandos como flujo actual hasta que se autorice una revisión específica.
 
-Descargar COCO val2017 y sus anotaciones:
-
-```bash
-python scripts/download_coco_val2017.py
-```
-
-Procesar una imagen con Mask R-CNN:
-
-```bash
-python main.py --source ruta/imagen.jpg --approach instance --backend torch --no-gui --save-image salida.png
-```
-
-Procesar una imagen con el enfoque híbrido:
-
-```bash
-python main.py --source ruta/imagen.jpg --approach hybrid --backend torch --no-gui --save-video salida.png
-```
-
-Procesar una cámara (el índice predeterminado es 0):
-
-```bash
-python main.py --source 0 --approach instance --backend torch --max-frames 200
-```
-
-Evaluar escenarios (ejemplo exploratorio con 30 imágenes):
-
-```bash
-python evaluate_scenarios.py --approach instance --backend torch --max-samples 30
-python evaluate_scenarios.py --approach hybrid --backend torch --max-samples 30
-```
-
-Los reportes se escriben en `data/outputs/`. El backend `onnx_cv2` puede probarse con `--backend onnx_cv2`, pero sus resultados no son comparables con los modelos neuronales.
-
-> **Salida:** usa `--save-image salida.png` para una imagen y `--save-video salida.mp4` para una fuente de vídeo o cámara.
-
-## Evaluación
-
-El proyecto calcula actualmente:
-
-- IoU de cajas y conteos de TP/FP/FN.
-- Una aproximación denominada `mAP50` / AP por clase.
-- mIoU binario (fondo frente a unión de clases urbanas).
-- Precisión, recall, latencia media y FPS.
-- Gráficas por escenario y AP por clase.
-- Ejemplos visuales de cajas predichas frente a cajas GT.
-
-**Advertencia metodológica:** la implementación actual de AP promedia una razón de verdaderos positivos por cantidad de objetos GT por imagen; no construye la curva precisión-recall estándar ni integra AP como COCO. Los conteos globales TP/FP/FN tampoco comprueban la coincidencia de clase. El mIoU mide una máscara binaria agregada, no mIoU multiclase. Los valores deben considerarse diagnósticos preliminares hasta corregir el protocolo.
-
-## Estructura del repositorio
+Estructura esperada dentro de `/content/datasets/bdd100k`:
 
 ```text
-.
-├── configs/config.yaml
-├── data/                         # datos y resultados locales (no versionados)
-├── docs/
-│   └── AUDITORIA_Y_DOCUMENTACION.md
-├── evaluate_scenarios.py
-├── main.py
-├── requirements.txt
-├── scripts/
-│   ├── download_coco_val2017.py
-│   └── verify_setup.py
-├── src/
-│   ├── evaluation/
-│   ├── features/
-│   ├── models/
-│   ├── preprocessing/
-│   ├── utils/
-│   └── pipeline.py
-└── tests/
-    └── test_system_integrity.py
+images/10k/{train,val}/*.jpg
+labels/sem_seg/masks/{train,val}/*.png
+labels/ins_seg/bitmasks/{train,val}/*.png
 ```
 
-## Auditoría y documentación
+Las máscaras semánticas son PNG monocanal con IDs 0–18 y 255 para ignorar. Las máscaras de instancias son PNG RGBA: R=category ID (1–8), G=flags, B:A=ann_id de 16 bits (B byte alto, A byte bajo); el loader entrega imágenes en [0,1] para que Torchvision aplique su normalización interna. No convertir los bitmasks RGBA a RGB ni a escala de grises.
 
-La auditoría estática, el mapa de módulos, las limitaciones conocidas, la matriz de cumplimiento de la consigna y el plan de trabajo se documentan en:
+Entrenar DeepLabV3+ semántico:
 
-- [Documentación técnica y auditoría](docs/AUDITORIA_Y_DOCUMENTACION.md)
+```bash
+python scripts/train_urban_segmentation.py --task bdd100k-semantic \
+  --images-dir data/bdd100k/images/10k/train \
+  --masks-dir data/bdd100k/labels/sem_seg/masks/train \
+  --val-images-dir data/bdd100k/images/10k/val \
+  --val-masks-dir data/bdd100k/labels/sem_seg/masks/val \
+  --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_bdd100k_semantic.pt
+```
 
-La auditoría se realizó mediante inspección del código fuente disponible en la rama documentada. No representa una ejecución de pruebas ni una medición experimental; no se publican métricas de rendimiento no verificadas.
+Entrenar Mask R-CNN con bitmasks de instancias:
 
-## Trabajo pendiente prioritario
+```bash
+python scripts/train_maskrcnn_cityscapes.py --dataset bdd100k \
+  --images-dir data/bdd100k/images/10k/train \
+  --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/train \
+  --val-images-dir data/bdd100k/images/10k/val \
+  --val-bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val \
+  --epochs 20 --batch-size 2 --output data/processed/maskrcnn_bdd100k.pt
+```
 
-1. Corregir el protocolo de evaluación: AP estándar con ordenamiento por confianza, emparejamiento por clase e IoU, y mIoU multiclase.
-2. Separar entrenamiento, validación y prueba; no evaluar un clasificador con las mismas muestras usadas para entrenarlo.
-3. Incorporar Cityscapes o BDD100K y una evaluación con condiciones reales, conservando los escenarios sintéticos como experimento adicional.
-4. Definir claramente clases comunes para comparar ambos enfoques y documentar categorías no cubiertas por VOC/COCO.
-5. Corregir la salida de vídeo y los parámetros CLI que hoy no se aplican a la ruta de vídeo.
-6. Sustituir o renombrar el backend `onnx_cv2` para que el nombre describa lo que ejecuta.
-7. Añadir una matriz de confusión de detección/clasificación basada en predicciones de prueba y ejemplos de falsos positivos/negativos.
-8. Ejecutar la suite de pruebas en un entorno compatible y registrar versiones, hardware, tiempos y resultados reproducibles.
+Evaluar mIoU semántico:
 
-## Licencia y atribuciones
+```bash
+python scripts/evaluate_cityscapes.py --task bdd100k-semantic \
+  --images-dir data/bdd100k/images/10k/val \
+  --masks-dir data/bdd100k/labels/sem_seg/masks/val \
+  --checkpoint data/processed/deeplabv3plus_bdd100k_semantic.pt
+```
 
-Los modelos preentrenados y datasets mantienen sus propias licencias y condiciones de uso. Antes de redistribuir pesos o datos, revisar las condiciones de Torchvision, COCO y de cada dataset utilizado. Este repositorio no declara resultados oficiales ni una certificación de benchmark.
+El orden de clases sigue el formato oficial BDD100K. Los flujos de detección 2D y carriles usan las anotaciones oficiales correspondientes. Los datos se descargan directamente a la VM remota, nunca al teléfono.
+
+Entrenar detector 2D Faster R-CNN (las etiquetas oficiales `det_20` usan 10 categorías):
+```bash
+python scripts/train_bdd100k_detection.py \
+  --train-images data/bdd100k/images/100k/train \
+  --train-labels data/bdd100k/labels/det_20/det_train.json \
+  --val-images data/bdd100k/images/100k/val \
+  --val-labels data/bdd100k/labels/det_20/det_val.json \
+  --epochs 15 --batch-size 2 --output data/processed/bdd100k_fasterrcnn.pt
+```
+
+Entrenar las tres subtareas de carriles con las máscaras oficiales empaquetadas:
+```bash
+python scripts/train_bdd100k_lanes.py \
+  --train-images data/bdd100k/images/100k/train \
+  --train-masks data/bdd100k/labels/lane/masks/train \
+  --val-images data/bdd100k/images/100k/val \
+  --val-masks data/bdd100k/labels/lane/masks/val \
+  --epochs 20 --batch-size 2 --output data/processed/bdd100k_lanes.pt
+```
+
+Evaluar Mask R-CNN BDD100K (Box AP y Mask AP):
+```bash
+python scripts/evaluate_cityscapes.py --task bdd100k-instance \
+  --images-dir data/bdd100k/images/10k/val \
+  --bitmasks-dir data/bdd100k/labels/ins_seg/bitmasks/val \
+  --checkpoint data/processed/maskrcnn_bdd100k.pt \
+  --output data/outputs/bdd100k_instance_metrics.json
+```
+
+El evaluador informa AP50, AP75 y media AP50:95 con matching greedy por imagen e interpolación precision-recall. Es una implementación interna y **no debe presentarse como COCOeval oficial**. Para resultados de benchmark publicables, se debe contrastar con el evaluador oficial BDD100K/COCO.
+
+
+## Cityscapes (flujo legado)
+
+Cityscapes permanece únicamente como compatibilidad heredada; no es requisito para la ejecución BDD100K. Los comandos y loaders Cityscapes existentes siguen disponibles para reproducir experimentos anteriores.
+
+
+### Cityscapes
+
+Descarga el paquete de imágenes `leftImg8bit` y las anotaciones `gtFine` desde el portal oficial de Cityscapes y conserva su estructura:
+
+```text
+data/cityscapes/
+├── leftImg8bit/{train,val}/<city>/*_leftImg8bit.png
+└── gtFine/{train,val}/<city>/*_gtFine_labelIds.png
+                              *_gtFine_instanceIds.png
+```
+
+Entrenar DeepLabV3+:
+
+```bash
+python scripts/train_urban_segmentation.py --task cityscapes --data-root data/cityscapes --epochs 30 --batch-size 2 --output data/processed/deeplabv3plus_urban.pt
+```
+
+Entrenar Mask R-CNN:
+
+```bash
+python scripts/train_maskrcnn_cityscapes.py --data-root data/cityscapes --epochs 20 --batch-size 2 --output data/processed/maskrcnn_cityscapes.pt
+```
+
+DeepLabV3+ predice 11 clases: road, sidewalk, person, rider, car, truck, bus, motorcycle, bicycle, traffic light y traffic sign. Mask R-CNN predice siete clases de instancia: person, rider, car, truck, bus, motorcycle y bicycle.
+
+## Formatos oficiales de carriles y detección BDD100K
+
+BDD100K publica etiquetas de carriles con tres atributos evaluables: categoría, dirección y estilo. Sus máscaras oficiales son PNG monocanal empaquetadas; no son máscaras binarias genéricas. El parser anterior que interpretaba `poly2d.vertices` como una polilínea simple no debe utilizarse para generar resultados: el formato oficial usa curvas Bezier con puntos de control.
+
+El loader de carriles decodifica el byte oficial: bits 0–2 categoría, bit 3 fondo, bit 4 estilo y bit 5 dirección. El entrenador tiene tres cabezas y calcula mIoU de validación por subtarea. El rasterizador antiguo de `poly2d` a una máscara binaria está obsoleto. El detector utiliza las diez categorías oficiales `bike, bus, car, motor, person, rider, traffic light, traffic sign, train, truck` y etiquetas `box2d` de `det_20`.
+
+## Ejecución remota en Google Colab Free
+
+Consulta [docs/COLAB_FREE.md](docs/COLAB_FREE.md) y abre el [notebook de Colab](https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/colab_free_urban_training.ipynb). El notebook prepara Drive, clona esta rama privada mediante un token de solo lectura, comprueba PyTorch/CUDA y valida la estructura de los datasets. No descarga datasets automáticamente ni inicia entrenamiento al abrirse. Los scripts de DeepLabV3+ y Mask R-CNN guardan checkpoints reanudables entre sesiones. Colab Free no garantiza GPU ni sesiones persistentes.
+
+## Preparación automatizada de datasets
+
+La preparación puede ejecutarse con GitHub Actions y Google Drive sin almacenar datos en Git. Consulta [docs/DATASETS_GITHUB_ACTIONS.md](docs/DATASETS_GITHUB_ACTIONS.md) para configurar rclone mediante OAuth y guardar el archivo de configuración en el secreto `GDRIVE_RCLONE_CONFIG`.
+
+El workflow manual `.github/workflows/prepare-datasets.yml` es una ruta heredada de preparación por lotes desde Drive. No usarlo como conversor oficial de carriles hasta revisar su parser Bezier y el empaquetado de atributos. Esta fase no sustituye los nuevos loaders BDD100K ni ejecuta entrenamiento.
+
+## Inferencia
+
+```bash
+# Mask R-CNN fine-tuned en Cityscapes
+python main.py --source ruta/video.mp4 --approach instance --backend torch --no-gui
+
+# DeepLabV3+ + Faster R-CNN COCO + segmentador de carriles (si existe su checkpoint)
+python main.py --source ruta/video.mp4 --approach hybrid --backend torch --no-gui
+```
+
+El archivo `configs/config.yaml` apunta a:
+- `data/processed/maskrcnn_cityscapes.pt`
+- `data/processed/deeplabv3plus_urban.pt`
+- `data/processed/deeplabv3plus_lanes.pt`
+
+Si falta el checkpoint DeepLabV3+, el enfoque híbrido se detiene con un error explícito. Si falta el checkpoint de carriles, devuelve una máscara vacía y marca `lane_model_loaded=false`; no finge segmentación aprendida.
+
+### Evaluar precisión
+
+```bash
+python scripts/evaluate_cityscapes.py --task semantic --data-root data/cityscapes --checkpoint data/processed/deeplabv3plus_urban.pt
+python scripts/evaluate_cityscapes.py --task instance --data-root data/cityscapes --checkpoint data/processed/maskrcnn_cityscapes.pt
+python scripts/evaluate_lanes.py --images-dir data/bdd100k/images/100k/val --masks-dir data/bdd100k/lane_masks/val --checkpoint data/processed/deeplabv3plus_lanes.pt
+```
+
+El evaluador BDD100K de instancias calcula Box AP y Mask AP con un protocolo interno descrito en su JSON; no equivale al evaluador COCO oficial.
+
+## Exportar a ONNX
+
+```bash
+python scripts/export_deeplabv3plus_onnx.py --checkpoint data/processed/deeplabv3plus_urban.pt --output data/processed/urban_semantic.onnx
+python scripts/export_deeplabv3plus_onnx.py --checkpoint data/processed/deeplabv3plus_lanes.pt --classes 2 --output data/processed/urban_lanes.onnx
+python main.py --source ruta/video.mp4 --approach hybrid --backend onnx --no-gui
+```
+
+ONNX Runtime carga logits semánticos y del segmentador de carriles. Esta ruta no ejecuta Mask R-CNN ni genera detecciones de instancias.
+
+## Protocolo de evaluación
+
+Consulta [docs/PROTOCOLO_EXPERIMENTAL.md](docs/PROTOCOLO_EXPERIMENTAL.md). Resume:
+- BDD100K 10K train/val para semántica e instancias; máscaras oficiales y mapeos de clases.
+- BDD100K 100K + labels det_20/lane para detección y carriles; sus adaptadores específicos están pendientes.
+- mIoU por clase, AP@0.5 por clase y evaluación de máscaras cuando esté disponible el evaluador correspondiente.
+- Benchmark con warm-up, sincronización CUDA, latencia media/mediana/p95/p99, resolución y hardware.
+
+Benchmark de inferencia (no incluye decodificación, GUI ni escritura):
+
+```bash
+python scripts/benchmark.py --source data/benchmark/urban.mp4 --approach instance --backend torch --warmup 30 --frames 300 --output data/outputs/benchmark.json
+```
+
+No comparar métricas de datasets distintos ni presentar los escenarios sintéticos como robustez real bajo clima adverso.
+
+## Estructura principal
+
+```text
+configs/                 Configuración del sistema y checkpoints
+docs/                    Auditoría y protocolo experimental
+scripts/                 Entrenamiento, preparación BDD, exportación y benchmark
+src/models/              Mask R-CNN, DeepLabV3+ y ONNX Runtime
+src/utils/               Cargadores Cityscapes/BDD y utilidades
+src/evaluation/          Métricas y evaluación
+tests/                   Pruebas unitarias y de integridad
+```
+
+## Limitaciones aún abiertas
+
+1. Faster R-CNN dentro del enfoque híbrido continúa con pesos COCO, sin fine-tuning urbano.
+2. El exportador ONNX cubre segmentación semántica y carriles, no instancias.
+3. El script de benchmark mide inferencia del modelo; la medición end-to-end de captura, render y escritura es otro experimento.
+4. Falta incorporar un evaluador de AP de máscaras de instancias y F1/IoU de carriles sobre un split BDD100K reservado.
+5. La partición BDD100K por secuencia debe prepararse antes de entrenar.
+6. No se incluyen pesos entrenados ni datos de datasets en Git.
+
+## Documentación
+
+- [Estrategia multidataset A2D2 + UrbanSyn + SHIFT](docs/ESTRATEGIA_MULTIDATASET.md)
+- [Guía de Google Colab Free](docs/COLAB_FREE.md)
+- [Registro de trabajo, decisiones y estado actual (documento de continuidad)](docs/REGISTRO_DE_TRABAJO_Y_ESTADO.md)
+
+- [Auditoría técnica](docs/AUDITORIA_Y_DOCUMENTACION.md)
+- [Protocolo experimental reproducible](docs/PROTOCOLO_EXPERIMENTAL.md)

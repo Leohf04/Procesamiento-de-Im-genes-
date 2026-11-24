@@ -47,6 +47,16 @@ def _build_model(approach: str, backend: str, config: dict):
             mask_threshold=instance_cfg.get("mask_threshold", 0.50),
             allowed_labels=allowed_labels,
             shared_labels=set(SHARED_VOC_LABELS),
+            checkpoint_path=instance_cfg.get("urban_checkpoint"),
+        )
+
+    if backend == "onnx_cv2":
+        # The lightweight fallback is HOG-only; do not construct the neural hybrid model.
+        return InstanceSegmentationModel(
+            backend="onnx_cv2", device=device,
+            confidence_threshold=config["models"]["instance"].get("confidence_threshold", 0.50),
+            allowed_labels=allowed_labels,
+            shared_labels=set(SHARED_VOC_LABELS),
         )
 
     hybrid_cfg = config["models"]["semantic_hybrid"]
@@ -59,6 +69,10 @@ def _build_model(approach: str, backend: str, config: dict):
         urban_voc_ids=hybrid_cfg.get("deeplab_urban_voc_ids", [2, 6, 7, 14, 15]),
         allowed_labels=allowed_labels,
         lane_params=hybrid_cfg,
+        segmentation_checkpoint=hybrid_cfg.get("checkpoint_path"),
+        lane_checkpoint=hybrid_cfg.get("lane_checkpoint"),
+        num_semantic_classes=hybrid_cfg.get("num_classes", 11),
+        input_size=tuple(hybrid_cfg.get("input_size", [512, 1024])),
     )
 
 
@@ -105,6 +119,8 @@ def main():
         )
 
     model = _build_model(args.approach, backend, config)
+    if args.approach == "instance" and getattr(model, "urban_finetuned", False):
+        raise RuntimeError("El modelo Mask R-CNN está ajustado a Cityscapes, pero este evaluador usa GT COCO. Usa scripts/evaluate_cityscapes.py para métricas urbanas.")
     evaluator = ScenarioEvaluator(
         model=model,
         config=config,

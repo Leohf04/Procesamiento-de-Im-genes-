@@ -1,0 +1,74 @@
+name: Build per-image annotation indexes and balanced manifests
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/index_remote_annotations.py"
+      - "scripts/prepare_reproducible_subsets.py"
+      - "scripts/build_balanced_training_plan.py"
+      - "src/data_adapters.py"
+      - "src/urban_ontology.py"
+      - "configs/urban_ontology_v1.json"
+      - ".github/workflows/index-remote-annotations.yml"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Manifest split seed
+        required: true
+        default: "2026"
+      max_per_split:
+        description: Maximum samples in each dataset split
+        required: true
+        default: "1000"
+      per_class_cap:
+        description: Maximum selected train samples containing each class (0 disables cap)
+        required: true
+        default: "200"
+
+permissions:
+  contents: read
+
+jobs:
+  index-and-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install remote data and image dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            boto3 huggingface_hub numpy pillow opencv-python-headless
+      - name: Build reproducible remote manifests
+        run: |
+          python scripts/prepare_reproducible_subsets.py \
+            --dataset both --seed "${{ inputs.seed || '2026' }}" \
+            --max-per-split "${{ inputs.max_per_split || '1000' }}" \
+            --output artifacts/manifests
+      - name: Index per-image annotations
+        run: |
+          python scripts/index_remote_annotations.py \
+            --manifest-dir artifacts/manifests \
+            --output-dir artifacts/annotation_index --dataset both
+      - name: Build class-aware training manifests
+        run: |
+          python scripts/build_balanced_training_plan.py \
+            --manifests-dir artifacts/manifests \
+            --annotation-index-dir artifacts/annotation_index \
+            --output-dir artifacts/balanced --seed "${{ inputs.seed || '2026' }}" \
+            --max-samples-per-split "${{ inputs.max_per_split || '1000' }}" \
+            --per-class-cap "${{ inputs.per_class_cap || '200' }}"
+      - name: Upload indexes, reports, and balanced manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: urban-per-image-index-and-balanced-plan-${{ github.run_id }}
+          path: |
+            artifacts/annotation_index/
+            artifacts/balanced/
+            artifacts/manifests/*_manifest_summary.json
+          if-no-files-found: error
+          retention-days: 30

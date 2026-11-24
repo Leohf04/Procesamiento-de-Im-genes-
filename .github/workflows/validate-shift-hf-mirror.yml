@@ -1,0 +1,38 @@
+name: Validate SHIFT Hugging Face mirror sample
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/validate_shift_hf_mirror.py"
+      - ".github/workflows/validate-shift-hf-mirror.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ffprobe and bounded preflight dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade huggingface_hub requests pillow opencv-python-headless numpy
+      - name: Inspect metadata and bounded archive prefixes
+        run: python scripts/validate_shift_hf_mirror.py
+      - name: Upload mirror report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shift-hf-mirror-preflight-report
+          path: shift_hf_mirror_preflight_report.json
+          if-no-files-found: warn
+          retention-days: 14

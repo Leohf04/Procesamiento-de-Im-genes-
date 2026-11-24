@@ -1,0 +1,55 @@
+name: Build reproducible urban subset manifests
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: Deterministic split seed
+        required: true
+        default: "2026"
+      max_per_split:
+        description: Maximum samples per split and dataset
+        required: true
+        default: "1000"
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/prepare_reproducible_subsets.py"
+      - ".github/workflows/build-reproducible-subsets.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  manifests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        dataset: [a2d2, urbansyn]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install metadata clients
+        run: python -m pip install --disable-pip-version-check boto3 huggingface_hub
+      - name: Build remote-reference manifests
+        env:
+          SEED: ${{ github.event.inputs.seed || '2026' }}
+          MAX_PER_SPLIT: ${{ github.event.inputs.max_per_split || '1000' }}
+        run: |
+          python scripts/prepare_reproducible_subsets.py \
+            --dataset "${{ matrix.dataset }}" \
+            --seed "$SEED" \
+            --max-per-split "$MAX_PER_SPLIT" \
+            --output artifacts/manifests
+      - name: Upload manifests and summaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: urban-subset-manifests-${{ matrix.dataset }}-${{ github.run_id }}
+          path: artifacts/manifests/
+          if-no-files-found: error
+          retention-days: 30

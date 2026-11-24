@@ -53,10 +53,17 @@ def decode_segmentation_mask(segmentation, height: int, width: int) -> np.ndarra
     if isinstance(segmentation, dict) and isinstance(segmentation.get("counts"), (str, bytes)):
         raise RuntimeError("La máscara RLE comprimida requiere pycocotools; instálalo para decodificar esta anotación.")
     if isinstance(segmentation, list):
+        # Sample at pixel centers (2x supersampling) to approximate COCO's
+        # polygon rasterization; cv2.fillPoly at native scale includes both
+        # polygon endpoints and overcounts axis-aligned rectangles by a border.
+        scale = 2
+        high_res = np.zeros((height * scale, width * scale), dtype=np.uint8)
         for poly in segmentation:
             if len(poly) >= 6:
-                pts = np.array(poly, dtype=np.float32).reshape((-1, 2))
-                cv2.fillPoly(mask, [np.round(pts).astype(np.int32)], 1)
+                pts = np.asarray(poly, dtype=np.float32).reshape((-1, 2))
+                pts = np.round(pts * scale).astype(np.int32)
+                cv2.fillPoly(high_res, [pts], 1)
+        return high_res[1::scale, 1::scale].copy()
     return mask
 
 

@@ -1,0 +1,66 @@
+{
+  "ontology_version": "urban-v1",
+  "ignore_index": 255,
+  "semantic": {
+    "classes": [
+      {"id": 0, "name": "road"},
+      {"id": 1, "name": "sidewalk"},
+      {"id": 2, "name": "building"},
+      {"id": 3, "name": "wall"},
+      {"id": 4, "name": "fence"},
+      {"id": 5, "name": "pole"},
+      {"id": 6, "name": "traffic light"},
+      {"id": 7, "name": "traffic sign"},
+      {"id": 8, "name": "vegetation"},
+      {"id": 9, "name": "terrain"},
+      {"id": 10, "name": "sky"},
+      {"id": 11, "name": "person"},
+      {"id": 12, "name": "rider"},
+      {"id": 13, "name": "car"},
+      {"id": 14, "name": "truck"},
+      {"id": 15, "name": "bus"},
+      {"id": 16, "name": "train"},
+      {"id": 17, "name": "motorcycle"},
+      {"id": 18, "name": "bicycle"},
+      {"id": 19, "name": "lane marking"}
+    ],
+    "sources": {
+      "urbansyn_train_id_to_semantic_id": {"0": 0, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "11": 11, "12": 12, "13": 13, "14": 14, "15": 15, "16": 16, "17": 17, "18": 18, "19": 255},
+      "a2d2_normalized_name_to_semantic_id": {
+        "road": 0, "sidewalk": 1, "building": 2, "wall": 3, "fence": 4, "pole": 5,
+        "traffic light": 6, "traffic sign": 7, "vegetation": 8, "terrain": 9, "sky": 10,
+        "person": 11, "pedestrian": 11, "rider": 12, "cyclist": 12, "motor biker": 12,
+        "car": 13, "truck": 14, "bus": 15, "train": 16, "motorcycle": 17, "bicycle": 18,
+        "solid line": 19, "dashed line": 19, "road marking": 19, "crosswalk": 19
+      }
+    }
+  },
+  "instances": {
+    "background_id": 0,
+    "classes": [
+      {"id": 1, "name": "person"},
+      {"id": 2, "name": "rider"},
+      {"id": 3, "name": "car"},
+      {"id": 4, "name": "truck"},
+      {"id": 5, "name": "bus"},
+      {"id": 6, "name": "train"},
+      {"id": 7, "name": "motorcycle"},
+      {"id": 8, "name": "bicycle"}
+    ],
+    "sources": {
+      "urbansyn_train_id_to_instance_id": {"11": 1, "12": 2, "13": 3, "14": 4, "15": 5, "16": 6, "17": 7, "18": 8},
+      "a2d2_normalized_name_to_instance_id": {
+        "person": 1, "pedestrian": 1, "rider": 2, "cyclist": 2, "motor biker": 2,
+        "car": 3, "truck": 4, "bus": 5, "train": 6, "motorcycle": 7, "bicycle": 8
+      }
+    }
+  },
+  "policy": {
+    "rider_is_not_bicycle": true,
+    "lane_marking_is_semantic_only": true,
+    "urbansyn_unlabeled_maps_to_ignore": true,
+    "a2d2_unknown_or_unmapped_classes_map_to_ignore": true,
+    "instance_ids_are_image_local": true,
+    "a2d2_instances_are_connected_components_not_native_global_ids": true
+  }
+}

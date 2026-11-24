@@ -4,15 +4,13 @@ system:
   seed: 42
 
 dataset:
-  name: "coco_val2017"
-  images_url: "http://images.cocodataset.org/zips/val2017.zip"
-  annotations_url: "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
-  base_dir: "data/coco"
+  name: "cityscapes"
+  root: "data/cityscapes"
   images_dir: "data/coco/val2017"
   annotations_file: "data/coco/annotations/instances_val2017.json"
+  coco_images_dir: "data/coco/val2017"
+  coco_annotations_file: "data/coco/annotations/instances_val2017.json"
   processed_dir: "data/processed"
-  max_samples: 200
-  save_processed_samples: 10
 
 preprocessing:
   gamma_night: 0.45
@@ -31,20 +29,25 @@ models:
   instance:
     confidence_threshold: 0.50
     mask_threshold: 0.50
+    urban_checkpoint: "data/processed/maskrcnn_cityscapes.pt"
+    note: "Carga el checkpoint Cityscapes si existe; en su ausencia usa pesos COCO preentrenados."
   semantic_hybrid:
+    architecture: "DeepLabV3Plus-ResNet50"
+    checkpoint_path: "data/processed/deeplabv3plus_urban.pt"
+    num_classes: 11
+    input_size: [512, 1024]
+    lane_checkpoint: "data/processed/deeplabv3plus_lanes.pt"
+    onnx_semantic_model: "data/processed/urban_semantic.onnx"
+    onnx_lane_model: "data/processed/urban_lanes.onnx"
     detector_confidence_threshold: 0.50
-    deeplab_urban_voc_ids: [2, 6, 7, 14, 15]
     shared_mask_labels: ["person", "bicycle", "car", "motorcycle", "bus"]
-    lane_hsv_white_lower: [0, 0, 185]
-    lane_hsv_white_upper: [180, 45, 255]
-    lane_hsv_yellow_lower: [15, 80, 120]
-    lane_hsv_yellow_upper: [35, 255, 255]
 
 fine_classification:
   model_path: "data/processed/fine_svm_classifier.joblib"
   train_max_rois_per_class: 120
   subclasses_map:
     person: "peaton"
+    rider: "ciclista"
     bicycle: "ciclista_bici"
     motorcycle: "motocicleta"
     car: "vehiculo_ligero"
@@ -54,7 +57,7 @@ fine_classification:
     "stop sign": "senal_stop"
 
 target_classes:
-  urban_labels: ["person", "bicycle", "car", "motorcycle", "bus", "truck", "traffic light", "stop sign"]
+  urban_labels: ["person", "rider", "bicycle", "car", "motorcycle", "bus", "truck", "traffic light", "stop sign"]
   coco_category_ids: [1, 2, 3, 4, 6, 8, 10, 13]
 
 evaluation:

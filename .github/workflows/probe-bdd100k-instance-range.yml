@@ -1,0 +1,30 @@
+name: BDD100K instance archive range probe
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/probe_bdd100k_instance_range.py"
+      - ".github/workflows/probe-bdd100k-instance-range.yml"
+      - "docs/REGISTRO_DE_TRABAJO_Y_ESTADO.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: urban-models-and-benchmark
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Probe official archive endpoints without downloading the archive
+        run: |
+          python -m pip install requests
+          python scripts/probe_bdd100k_instance_range.py

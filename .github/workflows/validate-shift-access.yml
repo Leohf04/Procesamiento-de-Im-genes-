@@ -1,0 +1,33 @@
+name: Validate SHIFT official endpoints
+
+on:
+  push:
+    branches:
+      - urban-models-and-benchmark
+    paths:
+      - "scripts/validate_shift_access.py"
+      - ".github/workflows/validate-shift-access.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Check official SHIFT endpoints (HEAD only)
+        run: python scripts/validate_shift_access.py
+      - name: Upload access report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shift-access-preflight-report
+          path: shift_access_preflight_report.json
+          if-no-files-found: warn
+          retention-days: 14
