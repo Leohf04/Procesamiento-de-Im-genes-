@@ -8,8 +8,16 @@ model checkpoints.
 import argparse
 import gc
 import json
+import sys
 import time
 from pathlib import Path
+
+# Ejecutado como script, sys.path[0] apunta a scripts/. Añadimos la raíz
+# del repositorio para que los imports del paquete src sean independientes
+# del directorio de trabajo desde el que se invoque.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 import torch
 
