@@ -2570,3 +2570,11 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - La celda es solo diagnóstica: no carga datasets, no ejecuta modelos, no hace forward/backward ni pasos del optimizador. La celda 3 conserva su guardia y seguirá deteniendo el flujo si CUDA no está disponible.
 - Commit de notebook: `4807208ef44891a50b194cc511844225c14494e5`. El usuario debe volver a abrir/recargar la notebook desde la rama para ver la nueva sección y ejecutar la celda diagnóstica antes de la celda 3.
 - No se ejecutó Colab desde esta conversación. No se inició entrenamiento, no se ejecutó optimizer.step(), no se descargaron ni materializaron datos y no se tocó test. `EXECUTE_SINGLE_STEP=False` y `RUN_TRAINING=False` permanecen vigentes.
+
+
+### Corrección de la celda 2.1 por SyntaxError — 2026-11-24
+
+- El usuario ejecutó la sección 2.1 y compartió `SyntaxError: unexpected character after line continuation character`. La salida mostraba que el código completo contenía secuencias literales `\\n` en vez de saltos de línea reales; por tanto, Python recibió la celda como una sola línea.
+- Se corrigió `notebooks/colab_preflight_un_paso_real.ipynb`: el código de la celda `gpu-diagnostic` ahora se almacena como líneas reales del notebook (y el texto de la celda Markdown también tiene saltos normales). La lógica diagnóstica no cambia: consulta `nvidia-smi` y PyTorch/CUDA, sin datos ni entrenamiento.
+- No se ejecutó Colab desde esta conversación. Esta corrección no prueba disponibilidad de GPU; después de recargar la notebook, el usuario debe ejecutar de nuevo la celda 2.1 y compartir su salida. No continuar a la celda 3 si CUDA no está disponible.
+- No se inició entrenamiento, no se ejecutó `optimizer.step()`, no se descargaron/materializaron datos ni se accedió a test. `EXECUTE_SINGLE_STEP=False` y `RUN_TRAINING=False` permanecen vigentes. PR #3 debe permanecer abierta y en draft.
