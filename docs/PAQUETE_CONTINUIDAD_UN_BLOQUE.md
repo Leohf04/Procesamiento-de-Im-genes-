@@ -161,3 +161,16 @@ Esto es validación estática del contenido del repositorio, no ejecución de Py
 
 
 La última revisión de la notebook endureció la auditoría: ahora un orden distinto entre IDs de manifiesto e índice se marca como error, y se exigen las claves de assets que consumen los adaptadores actuales (A2D2: `image`, `semantic`, `instance`; UrbanSyn: `rgb`, `semantic`, `panoptic`). También verifica que existan los archivos referenciados. La inspección final permanece limitada a TRAIN/VAL.
+
+
+## 2026-11-24 — Corrección de SyntaxError en auditoría de Notebook Urban-v1
+
+El usuario reportó que la celda de auditoría falló en Colab con `SyntaxError: unexpected character after line continuation character`. La causa fue que se guardaron secuencias literales `\\n` en medio de instrucciones Python, en lugar de saltos de línea reales. Se reemplazó íntegramente el código de la celda de auditoría en `notebooks/urban_v1_cierre_tres_pendientes.ipynb`.
+
+La versión corregida declara explícitamente `expected_rows` (A2D2 1000/1000; UrbanSyn 1000/751), compara IDs y orden, agrega soporte semántico/instancias, exige campos de anotación y verifica assets, y detecta solapamiento TRAIN/VAL. Continúa sin tocar `test`, sin descargas y sin entrenamiento.
+
+Validación realizada: JSON nbformat 4 parseado, 13 celdas presentes, cero secuencias literales `\\n` en la celda corregida, y compilación sintáctica Python de la celda corregida con resultado `Syntax OK`. No se ejecutó la auditoría sobre los datos ni se ejecutó Colab.
+
+Commit de corrección del Notebook: `eec3d748482b8846f1a9791c496212139ff57580`.
+
+Para continuar, el usuario debe volver a abrir/recargar el Notebook desde el enlace GitHub-Colab para cargar esta versión corregida; la copia que ya estaba abierta en Colab no se actualiza automáticamente. Después puede ejecutar el Notebook desde el principio. El bloque único final sigue siendo la última celda.
