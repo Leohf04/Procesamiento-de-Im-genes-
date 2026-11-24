@@ -144,3 +144,10 @@ La notebook verifica los conteos completos esperados (A2D2 1000/1000; UrbanSyn 1
 **No se ha ejecutado Colab desde ChatGPT.** El usuario debe ejecutar el Notebook completo, revisar la hoja visual y pegar solo el bloque final delimitado.
 
 Notebook: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_cierre_tres_pendientes.ipynb
+
+
+### Alineación de scheduler y acumulación
+
+Antes de congelar los valores del protocolo, se corrigió una discrepancia de implementación: `src/urban_optimizer.py` consume ahora `scheduler_factor=0.5` y `scheduler_patience=2`; `src/urban_experiment_runner.py` implementa `gradient_accumulation_steps` y maneja grupos parciales. La configuración versionada usa los nombres consumidos por factoría/runner. Se añadieron pruebas sintéticas para acumulación y factor del scheduler. La notebook comprueba la presencia de esas implementaciones y hashea los archivos de código.
+
+Las pruebas no se han ejecutado por ChatGPT; no afirmar pytest PASS. La ejecución de Colab sigue pendiente. `RUN_TRAINING=False`, sin test ni descargas; cualquier piloto requiere autorización expresa.
