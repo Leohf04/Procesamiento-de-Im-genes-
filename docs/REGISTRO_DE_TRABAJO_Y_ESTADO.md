@@ -2873,3 +2873,27 @@ Commit notebook: `ff70758c679bd7c1785d316c72f5f47b85f39b14`. La notebook se modi
 Enlace: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
 
 Mantener `RUN_TRAINING=False`, no descargar assets, no tocar TEST y no lanzar Actions. PR #3 continúa abierta, draft y sin merge.
+
+
+## 2026-11-24 — Notebook de entrenamiento Urban-v1 autorizada por el usuario
+
+El usuario autorizó iniciar el entrenamiento real de los cuatro experimentos. Se creó notebooks/urban_v1_entrenamiento_completo_gpu.ipynb en urban-models-and-benchmark (commit inicial a3197e7e7036ecbf5357bc3592489deaa383eca7; commit de corrección del preflight GPU 0ae5532c1a8feb1d742f61e5a6454189c2daca3e; commit de incorporación de pytest local c147bf362ecbfc67edf4eee2b2827595d77c8a28).
+
+La notebook:
+- exige GPU CUDA antes de descargar datos;
+- ejecuta la suite local pytest -q sobre el HEAD sincronizado (esto no se declara como CI);
+- recupera y verifica el artifact de metadatos, reconstruye y persiste solo TRAIN/VAL completos;
+- ejecuta dry-run de los 3.751 registros y comprueba espacio temporal con 15% de margen;
+- materializa TRAIN/VAL en /content de Colab, no en el teléfono ni en el repositorio;
+- valida los 3.751 registros, rutas locales, IDs y aislamiento TRAIN/VAL;
+- ejecuta piloto de 10 batches por cada una de las cuatro configuraciones; si falla cualquiera, bloquea entrenamiento completo;
+- si los pilotos pasan, inicia S-A2D2, S-UrbanSyn, I-UrbanSyn e I-A2D2 con la configuración versionada, checkpoints reanudables y resultados en Drive privado;
+- no lee ni evalúa TEST.
+
+Configuración: semántica batch 4; instancias batch 1 y acumulación 2; 512 px; inicialización aleatoria; AMP desactivado; 20 épocas máximas y 5 de paciencia. Cada experimento dispone de hasta 5.400 s por sesión; si no termina, se conserva checkpoint y queda reanudable. Un OOM o error detiene el flujo para revisión.
+
+**Estado real:** notebook creada y estructura JSON revisada desde GitHub; no se ha ejecutado en Colab, no se ha materializado el dataset completo y no existen nuevos checkpoints/entrenamientos derivados de esta notebook. La validación estática del JSON no equivale a compilar/ejecutar todas las celdas. La suite local de tests se ejecutará dentro de Colab antes de descargar datos. El usuario debe abrir la notebook, seleccionar T4 GPU y ejecutar desde el principio; después pegar el bloque único final o el traceback de la primera celda que falle.
+
+Notebook Colab: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_entrenamiento_completo_gpu.ipynb
+
+Se mantiene PR #3 abierta, draft y sin merge. No se ha lanzado GitHub Actions.
