@@ -2,7 +2,7 @@
 
 > **Documento de continuidad.** Este archivo es la fuente principal para recuperar el contexto, las decisiones, el estado real y los próximos pasos del trabajo. Debe consultarse al comenzar cada nueva intervención relacionada con el proyecto y actualizarse al terminarla, registrando también cuando una acción no se haya podido completar.
 >
-> Última actualización: **2026-11-23**.
+> Última actualización: **2026-11-24**.
 
 ## 1. Identidad y objetivo del proyecto
 
@@ -2480,3 +2480,21 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - Interpretación: en esta prueba la combinación más exigente fue semántica batch 4, con 3.578 GiB reservados (2.853 GiB allocated). Los seis casos caben en la T4, pero no se debe tomar batch 4 como configuración de entrenamiento garantizada. Para la primera prueba de entrenamiento real se recomienda comenzar conservadoramente con batch 1; evaluar batch 2 solo después de medir un paso real con datos y optimizador. No aumentar a batch 4 sin esa comprobación.
 - Auditoría GitHub previa a registrar: HEAD de `urban-models-and-benchmark` y head de PR #3 coinciden en `ef6e0425954bd29af6e2a8e3d366ad6a59f3dacb`; PR #3 sigue abierta, draft y sin fusionar. Actions asociadas a ese HEAD siguen mostrando el run 45386028662 (Python tests) en failure; no se relanzó y no se atribuye causa.
 - No se inició entrenamiento ni se descargaron datasets. `RUN_TRAINING=False` permanece vigente. Siguiente paso: preparar una validación controlada del primer paso de entrenamiento real, inicialmente batch 1, manteniendo separados dominio/tarea y sin tocar test; no iniciar el entrenamiento piloto hasta revisar ese preflight y recibir autorización.
+
+
+### Preparación del preflight de un paso real con datos — 2026-11-24
+
+- El usuario autorizó avanzar a la siguiente fase. Se consultó primero este registro y se auditó el estado actual: HEAD inicial `f9541a9d4a0d78a22f1b77e72d7ac0e14c7ff92d`; PR #3 abierta, draft y sin fusionar.
+- Se revisaron `src/urban_experiment_runner.py`, `scripts/urban_experiment_factory.py`, `scripts/run_urban_experiment.py`, `scripts/materialize_urban_experiment_data.py`, `src/urban_training.py` y el protocolo. El runner existente ejecuta épocas y evaluación; no debe utilizarse para esta prueba de un solo batch.
+- Añadido `scripts/urban_single_step_preflight.py`. Está separado del runner de épocas, exige `--execute-single-step`, requiere CUDA y usa la factory existente para una combinación por proceso. Solo itera un batch TRAIN real, batch 1, 512×512, workers 0 y AMP desactivado. Para semántica usa CrossEntropy con pesos calculados desde train; para instancias suma los losses de Mask R-CNN. Verifica loss/gradientes finitos, ejecuta un único `optimizer.step()` y comprueba cambio de parámetros.
+- El script registra dataset/tarea, hardware, VRAM total/libre, peak allocated/reserved, tiempo, loss, norma de gradiente, número/tamaño de tensores del estado del optimizador y conteo de pasos. No itera validation (la factory solo carga metadatos y construye su loader), no abre test, no descarga ni materializa datos y no guarda checkpoints. Modelos aleatorios sin pretraining; LR 1e-4 solo de sondeo, no hiperparámetro aprobado.
+- Añadido `notebooks/colab_preflight_un_paso_real.ipynb`. Verifica el preflight GPU/Drive persistido, seis casos PASS de la auditoría sintética de memoria y los 10 ejemplos train/val ya materializados por dataset. Si el runtime perdió `/content/urban_data_capacity`, se detiene y pide repetir la auditoría incremental; no descarga datos.
+- La notebook contempla cuatro procesos aislados: A2D2 semántica, UrbanSyn semántica, A2D2 instancias y UrbanSyn instancias. Cada proceso puede completar como máximo un paso del optimizador. La ejecución queda bloqueada por defecto con `EXECUTE_SINGLE_STEP=False`; el usuario debe cambiarlo manualmente a `True` en la celda de autorización para permitir los cuatro pasos de preflight.
+- Se corrigió el traslado de máscaras semánticas a CUDA mediante `.to(device='cuda', dtype=torch.long, ...)` y el esquema de lectura del informe sintético (`cases`). Se aclaró que la factory lee metadatos train/val, pero el preflight no itera validation.
+- Actualizado `docs/PROTOCOLO_ENTRENAMIENTO_MULTIDOMINIO.md` con la sección 14 que describe alcance, guardias y limitaciones del preflight.
+- Verificación de publicación: notebook JSON válido, 14 celdas, 6 celdas de código; `EXECUTE_SINGLE_STEP=False` en la celda de guardia. El script contiene el gate explícito `--execute-single-step`, una sola llamada a `optimizer.step()` y la corrección de dtype CUDA. No se ejecutó Colab ni se afirma que los cuatro pasos hayan pasado.
+- Commits relevantes: script inicial `78718dcd8dad9e893106e3e88fe6a73213fb52d4`, corrección CUDA `0a4d6712a04897f11642d88851ba38c94db08ce5`, documentación de protocolo `e98aa0a858f5c9433d9e19ddfe78bfc6540c5904`, notebook final `5ecf535c3d22283c5b31cef7b0097cf97ae440f6`, última corrección/docstring script `0aa321da6dbdd3580b0d2bfd67d594890aded4ed`.
+- HEAD final de `urban-models-and-benchmark` y PR #3: `0aa321da6dbdd3580b0d2bfd67d594890aded4ed`. PR #3 sigue abierta, `draft=true`, `merged=false`.
+- GitHub Actions sobre HEAD final: runs `45389640418` y `45389627370`, ambos `Python tests` completados con `failure`; también fallaron los runs `45389604325` y `45389594202` sobre el commit anterior. No se relanzaron y no se atribuye causa sin evidencia de los jobs.
+- No se ejecutó entrenamiento ni el preflight de un paso; no se descargaron datos, no se iteró validation/test, no se generaron checkpoints. `RUN_TRAINING=False` sigue vigente.
+- Próximo paso: abrir `notebooks/colab_preflight_un_paso_real.ipynb` en Colab, ejecutar celdas 1–5 para comprobar precondiciones y revisar el guardia. Solo si se decide autorizar esta prueba acotada, cambiar `EXECUTE_SINGLE_STEP=False` a `True` y ejecutar la celda 6. Compartir `single_step_preflight_summary.json` y logs por combinación. No iniciar el piloto de épocas; analizar memoria real, pérdidas y fallos antes de proponer cualquier piloto.
