@@ -2578,3 +2578,38 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - Se corrigió `notebooks/colab_preflight_un_paso_real.ipynb`: el código de la celda `gpu-diagnostic` ahora se almacena como líneas reales del notebook (y el texto de la celda Markdown también tiene saltos normales). La lógica diagnóstica no cambia: consulta `nvidia-smi` y PyTorch/CUDA, sin datos ni entrenamiento.
 - No se ejecutó Colab desde esta conversación. Esta corrección no prueba disponibilidad de GPU; después de recargar la notebook, el usuario debe ejecutar de nuevo la celda 2.1 y compartir su salida. No continuar a la celda 3 si CUDA no está disponible.
 - No se inició entrenamiento, no se ejecutó `optimizer.step()`, no se descargaron/materializaron datos ni se accedió a test. `EXECUTE_SINGLE_STEP=False` y `RUN_TRAINING=False` permanecen vigentes. PR #3 debe permanecer abierta y en draft.
+
+
+### Preflight de un paso real completado en Colab — 2026-11-24
+
+El usuario compartió la salida completa de las secciones 3–6 de `notebooks/colab_preflight_un_paso_real.ipynb`. La celda 5 mostró autorización explícita para ejecutar exactamente un paso por combinación, en cuatro procesos aislados. Se registran los resultados reportados por Colab; no se ejecutó esta prueba desde ChatGPT.
+
+**Entorno y datos**
+- Runtime preflight: `PASS`; PyTorch `2.14.1+cu130`, CUDA `13.0`, una Tesla T4, 15,637,086,208 bytes de VRAM (≈14.56 GiB). La comprobación GPU/Drive guardada en ese informe tiene timestamp `2026-11-23T20:31:12Z`; no confundir ese timestamp con la ejecución de los cuatro pasos del día 24.
+- Drive checkpoint I/O: `PASS`; escritura/lectura y SHA-256 coincidentes en el filesystem montado.
+- Auditoría sintética: seis casos `PASS` (semantic e instances, batch 1/2/4, 512 px); todos con cero optimizer steps y sin datasets. Esos resultados son una auditoría sintética, no entrenamiento.
+- Sección 4: Drive montado, carpeta `ProcesamientoImagenes` presente y materialización existente `PASS`; 10 muestras por split/dataset. No se descargaron datos.
+- La sección 5 mostró: `AUTORIZADO: solo un paso por combinación; 4 procesos aislados; sin epochs/validation/test/checkpoints.`
+
+**Cuatro ejecuciones reales reportadas por la sección 6**
+| Dataset | Tarea | Estado | Loss | Gradientes | Norm L2 antes de clipping | Tiempo |
+|---|---|---:|---:|---:|---:|---:|
+| A2D2 | Semántica | PASS | 3.0183186531 | 186 | 164.0818 | 9.775 s |
+| UrbanSyn | Semántica | PASS | 3.0219416618 | 186 | 80.0453 | 2.841 s |
+| A2D2 | Instancias | PASS | 9.3387947083 | 201 | 1521.3171 | 4.529 s |
+| UrbanSyn | Instancias | PASS | 9.2118835449 | 201 | 897.6709 | 3.878 s |
+
+- Cada caso utilizó Tesla T4, imagen 512×512, batch 1, AMP desactivado y pesos aleatorios sin preentrenamiento.
+- Cada caso ejecutó exactamente un `optimizer.step()`; los parámetros cambiaron. El resumen consolidado reporta `status=PASS`, `optimizer_steps=4`, `single_step_preflight_executed=true`, timestamp `2026-11-24T15:02:15.605634+00:00` y HEAD `571b15defa2362e2b8f141aeb21991de9b10c431`.
+- No se iteraron batches de validación, no se tocó test, no se escribió checkpoint, no se descargaron datasets mediante el notebook y `pilot_training_started=false`.
+- Pico de memoria asignada reportado: semántica 896,020,992 bytes por caso; instancias 908,294,144 (A2D2) y 913,029,632 (UrbanSyn). Los cuatro procesos finalizaron con return code 0.
+- El informe resumen quedó en Drive: `/content/drive/MyDrive/ProcesamientoImagenes/preflight_un_paso_real/single_step_preflight_summary.json`. Los informes individuales y logs están bajo los subdirectorios `a2d2_semantic`, `urbansyn_semantic`, `a2d2_instances` y `urbansyn_instances` del mismo directorio.
+
+**Interpretación y límites**
+- El preflight de un paso real queda aprobado para las cuatro combinaciones y confirma compatibilidad operativa básica con la Tesla T4 y los batches seleccionados.
+- Las pérdidas de una sola actualización no son métricas de calidad ni comparables como resultado de rendimiento entre datasets/tareas. No prueban convergencia, generalización, estabilidad de varias iteraciones ni calidad de segmentación.
+- No se ha iniciado entrenamiento piloto, no se han entrenado modelos de forma sostenida ni generado checkpoints experimentales. No iniciar el piloto, evaluación o benchmark sin una autorización posterior explícita y un protocolo/configuración revisados.
+- No se modificaron datasets ni assets de test. PR #3 debe continuar abierta y en draft.
+
+**Próximo paso recomendado**
+- Conservar o aportar al repositorio los JSON individuales, logs y `single_step_preflight_summary.json` como evidencia reproducible (sin subir datasets ni checkpoints). Antes de un piloto, revisar el script y la configuración de entrenamiento, inicialización/preentrenamiento, mapeo de clases, métricas y estrategia de checkpoints; definir presupuesto de tiempo/GPU y criterios de parada. No ejecutar nuevas actualizaciones hasta nueva autorización.
