@@ -3131,3 +3131,12 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - La configuración de paquetes falló en el script postinstalación de `xdg-utils`: la instalación auxiliar de Perl `File::MimeInfo` terminó con `/data/data/com.termux/files/usr/bin/sh: 0: Illegal option -d` y `make: *** No targets specified and no makefile found`.
 - Quedaron sin configurar dependencias posteriores: Qt6, OpenCV y paquetes Python OpenCV. Se observan repositorios adicionales `tur.kcubeterm.com` y `hope2333.github.io`, además de los repositorios oficiales de Termux; todavía no se ha determinado si están relacionados con el fallo.
 - Medida preventiva: detener instalaciones/actualizaciones y no eliminar paquetes. Próximo paso: inspeccionar el script postinstalación de `xdg-utils`, los archivos de fuentes APT y el estado de `dpkg` antes de reparar.
+
+
+## 2026-11-24 — Diagnóstico adicional de Termux con Fish
+
+- El usuario ejecutó correctamente el diagnóstico adaptado a Fish.
+- El script `/data/data/com.termux/files/usr/var/lib/dpkg/info/xdg-utils.postinst` contiene `cpan -Ti File::MimeInfo`, una acción personalizada que intenta instalar un módulo Perl durante la configuración de `xdg-utils`; esa operación falló previamente y dejó el paquete sin configurar.
+- `dpkg --audit` confirma que `xdg-utils` está a medio configurar y que Qt6/OpenCV y sus bindings Python están desempaquetados pero pendientes de configuración.
+- Se observan repositorios de terceros: `hope2333.github.io` y `tur.kcubeterm.com`; además del repositorio oficial Termux main y el repositorio oficial X11. Aún no se ha establecido el origen exacto de `xdg-utils` ni la relación causal con esos repositorios.
+- Próximo paso: consultar versión instalada y prioridades/origen candidato con `dpkg-query` y `apt-cache policy`; no borrar repositorios, editar scripts ni purgar paquetes hasta revisar esa información.
