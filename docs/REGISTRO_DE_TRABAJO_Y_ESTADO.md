@@ -2897,3 +2897,35 @@ Configuración: semántica batch 4; instancias batch 1 y acumulación 2; 512 px;
 Notebook Colab: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_entrenamiento_completo_gpu.ipynb
 
 Se mantiene PR #3 abierta, draft y sin merge. No se ha lanzado GitHub Actions.
+
+
+## 2026-11-24 — Migración de la notebook de entrenamiento a Kaggle
+
+El usuario decidió continuar el entrenamiento en Kaggle tras el bloqueo temporal de GPU de Colab y autorizó corregir errores durante la ejecución. Se consultó primero este registro y se inspeccionaron la documentación Kaggle, la notebook de diagnóstico y la notebook autorizada de entrenamiento.
+
+### Hechos recuperados antes de migrar
+- La notebook de entrenamiento existente era específica de Colab: montaba Google Drive y usaba rutas `/content`; no podía ejecutarse sin adaptación en Kaggle.
+- El registro anterior documenta que Kaggle había mostrado `Permission denied` durante la verificación telefónica. El usuario ahora vuelve a elegir Kaggle, pero no se ha confirmado todavía que la cuenta permita activar GPU.
+- La configuración congelada `configs/urban_experiment_v1.json` define cuatro experimentos **A2D2 + UrbanSyn**: S-A2D2, S-UrbanSyn, I-UrbanSyn e I-A2D2. No son experimentos BDD100K. El pipeline BDD100K de carriles es independiente.
+- La notebook original exige recuperar el artifact GitHub Actions 14770171764 (run 45038801547, SHA-256 `b6cbcb54dfd0598e6a9011667073028be1804fc1c112d82e516a42bdbf2ba4e5`), validar TRAIN/VAL (3.751 registros), hacer dry-run, materializar datos, ejecutar pilotos de 10 batches y solo después entrenar. No accede a TEST.
+
+### Cambio realizado
+- Se creó `notebooks/urban_v1_entrenamiento_completo_kaggle.ipynb` (24 celdas) en esta rama, commit `328564be95634df9c715dcb6b87c8751654c31dc`.
+- Se sustituyó el bootstrap de Colab/Google Drive por Kaggle Secrets (`GITHUB_TOKEN`), `/kaggle/working` para repositorio/resultados y `/kaggle/temp` para artifact, dry-run y materialización temporal.
+- Se conservó la verificación CUDA antes de descargas, pytest, comprobación de artifact/digest, auditoría TRAIN/VAL, aislamiento de TEST, pilotos obligatorios y política de checkpoints reanudables.
+- Se actualizaron `docs/KAGGLE_NOTEBOOK.md` y sus instrucciones para la notebook de entrenamiento. La notebook de diagnóstico `notebooks/kaggle_environment_check.ipynb` se mantiene como herramienta de diagnóstico.
+
+### Validación y límites
+- La nueva notebook se serializó y releyó como JSON nbformat 4; contiene 24 celdas y no conserva referencias a `google.colab`, `drive.mount` ni rutas `/content/`.
+- Se inspeccionaron celdas clave y rutas de resultados/materialización. Esto es revisión estática; **no equivale a ejecutar Python, pytest, Kaggle ni entrenamiento**.
+- Kaggle documenta GPU gratuita sujeta a disponibilidad/cola, sesiones de hasta 12 horas y hasta 20 GB de salida en `/kaggle/working`; no se garantiza una GPU concreta ni cuota semanal fija. Fuente: https://www.kaggle.com/docs/notebooks
+- No se ha confirmado que la cuenta del usuario supere la verificación telefónica, que pueda activar GPU/Internet, que el secreto funcione, que el artifact siga disponible desde Kaggle, que el espacio temporal sea suficiente ni que los tests/pilotos pasen.
+- No se ha iniciado descarga de datos, piloto, backward, optimizer step, época ni checkpoint en Kaggle. No se afirma ningún resultado de entrenamiento.
+
+### Siguiente paso
+1. El usuario debe abrir Kaggle, crear un Notebook privado, importar `notebooks/urban_v1_entrenamiento_completo_kaggle.ipynb` (archivo pequeño; no dataset), habilitar Internet y comprobar que puede seleccionar GPU.
+2. Crear el secreto `GITHUB_TOKEN` con PAT fine-grained restringido al repositorio y permisos Contents: Read-only + Actions: Read-only.
+3. Ejecutar en orden; compartir el primer traceback o el bloque final de continuidad, sin compartir el token.
+4. Si el acceso GPU vuelve a mostrar `Permission denied`, detenerse: no hay forma de que ChatGPT active la GPU ni de eludir la verificación de Kaggle.
+
+PR #3 permanece abierta, draft y sin merge. No se lanzó GitHub Actions ni se modificó TEST.
