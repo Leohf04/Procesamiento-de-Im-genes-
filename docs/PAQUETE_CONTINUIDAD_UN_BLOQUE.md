@@ -201,3 +201,16 @@ La causa de los 10 registros está localizada en el flujo de capacidad: `noteboo
 **Próxima intervención:** verificar/recuperar artifact completo; reconstruir y persistir en un directorio separado solo manifiestos e índices TRAIN/VAL completos; verificar conteos, IDs y hashes; hacer dry-run de materialización completa (sin límite de filas, sin descargar) para estimar tamaño. Mantener intacta la carpeta de las 40 muestras. No leer/materializar test, no descargar el dataset completo ni iniciar entrenamiento sin revisión y autorización.
 
 Enlace notebook de cierre: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_cierre_tres_pendientes.ipynb
+
+
+## Próxima ejecución — recuperar manifiestos completos y estimar almacenamiento (2026-11-24)
+
+Artifact comprobado en GitHub: ID `14770171764`, run `45038801547`, disponible al 24-nov-2026 (`expired=false`), expira 22-dic-2026, digest SHA-256 `b6cbcb54dfd0598e6a9011667073028be1804fc1c112d82e516a42bdbf2ba4e5`.
+
+Notebook creada: `notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb`. Enlace: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
+
+En Colab montará Drive y sincronizará la rama; recuperará/verificará el ZIP por run, expiración y SHA-256; leerá exclusivamente miembros TRAIN/VAL de manifiestos semánticos/instancias e índices, sin extraer ni leer TEST; validará conteos A2D2 1000/1000 y UrbanSyn 1000/751, IDs/estadísticas/anotaciones/assets y no solapamiento train/val; guardará manifiestos e índices completos en `MyDrive/ProcesamientoImagenes/urban_v1_full_metadata_20261124`, carpeta separada de las 40 muestras existentes; ejecutará dry-run sin cap ni filtro de instancias para estimar los 3.751 registros, mediante consultas de metadatos/HEAD y sin descargar RGB/máscaras; y guardará hashes/reportes y producirá un bloque único.
+
+La notebook se guardó en commits `6e0e350c9ceacf4c8b2b57fdfb6f4874e23f1575` y `f1bb84121a7cc47056db84e17387407b6c99e70c`. JSON nbformat 4 y 13 celdas verificados tras releer desde GitHub; no se ejecutó Python/Colab ni el dry-run desde ChatGPT.
+
+Importante: `--dry-run` solo estima bytes consultando metadatos remotos; no descarga archivos. No ejecutar una materialización real todavía. No tocar TEST, no entrenar, no escribir checkpoints, no lanzar Actions. Si el artifact expira, detenerse. PR #3 permanece abierta, draft y sin merge.
