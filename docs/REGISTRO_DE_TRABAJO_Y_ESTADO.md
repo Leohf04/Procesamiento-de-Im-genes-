@@ -2855,3 +2855,21 @@ La notebook quedó en GitHub con commits de creación y corrección de escapes: 
 Enlace Colab: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
 
 Límites mantenidos: no descargar assets, no materializar datos completos, no tocar TEST, no entrenar, no escribir checkpoints y no lanzar Actions. El dry-run puede tardar por las consultas de tamaño remoto. Si el artifact expira antes de ejecutar la notebook, detenerse y reportarlo; no regenerar ni lanzar workflows sin autorización. PR #3 sigue abierta, draft y sin merge.
+
+
+## Corrección de reejecución de celda de persistencia — 2026-11-24
+
+El usuario informó que la celda 4 de `urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb` se detuvo porque `MyDrive/ProcesamientoImagenes/urban_v1_full_metadata_20261124` ya existía. El guard anterior impedía sobrescribir cualquier carpeta, pero también impedía reanudar una ejecución parcial o repetir la celda tras haberla completado.
+
+Se corrigió la celda para que:
+- compare los ocho JSONL existentes (cuatro manifiestos y cuatro índices) con los metadatos recién reconstruidos, incluyendo contenido y orden;
+- reutilice la carpeta existente únicamente si los ocho archivos coinciden exactamente;
+- si la carpeta es parcial o contiene otros datos, la conserve intacta y cree una carpeta nueva con sufijo UTC;
+- verifique de nuevo los ocho archivos antes de seguir y registre `reused_existing_metadata`;
+- nunca borre ni sobrescriba manifiestos/índices previos.
+
+Commit notebook: `ff70758c679bd7c1785d316c72f5f47b85f39b14`. La notebook se modificó en GitHub; falta que el usuario recargue la versión actualizada y ejecute la celda. No se inspeccionó ni modificó Drive desde ChatGPT; no se puede afirmar si la carpeta existente está completa.
+
+Enlace: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
+
+Mantener `RUN_TRAINING=False`, no descargar assets, no tocar TEST y no lanzar Actions. PR #3 continúa abierta, draft y sin merge.
