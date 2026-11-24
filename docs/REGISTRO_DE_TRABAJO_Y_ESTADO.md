@@ -2625,3 +2625,32 @@ El usuario compartió la salida completa de las secciones 3–6 de `notebooks/co
 - Esta intervención fue de lectura y documentación: no se modificó código de entrenamiento, no se ejecutó Colab, no se ejecutó `optimizer.step()`, no se descargaron datos, no se abrió ni modificó test, no se inició piloto y no se lanzaron GitHub Actions. `RUN_TRAINING=False` se mantiene.
 - Auditoría al registrar: HEAD previo observado `6117ef4703f56184c6ec9dbbeef37264631a0107`; PR #3 estaba abierta, draft y sin merge. Mantener ese estado.
 - Próximo paso seguro: resolver las discrepancias de configuración y las transformaciones geométricas con pruebas unitarias, congelar configuración/hashes y auditar soporte de clases; después pedir autorización expresa antes de cualquier piloto.
+
+## 2026-11-24 — Correcciones de configuración y transformaciones; notebook de auditoría segura
+
+El usuario pidió preparar la actualización de pruebas anunciada previamente. Se consultaron primero este registro y `docs/PAQUETE_CONTINUIDAD_UN_BLOQUE.md`, además de inspeccionar el protocolo, notebook previa, factoría, adaptadores y runner en `urban-models-and-benchmark`.
+
+### Cambios guardados en GitHub
+- Se añadió `src/urban_optimizer.py`: semántica usa AdamW; instancias usa SGD; ambas tareas usan ReduceLROnPlateau con `mode="max"` y `patience=2`, según la tabla del protocolo.
+- Se actualizó `scripts/urban_experiment_factory.py` para usar la factoría común.
+- Se añadió `src/urban_geometry.py` con geometría letterbox, preservación de relación de aspecto, interpolación apropiada y conversión de cajas xyxy.
+- Se actualizó `src/data_adapters.py`: imágenes y máscaras mantienen la misma geometría; padding semántico usa ignore 255 y padding de instancias usa background 0. Las cajas de instancias se derivan de máscaras ya transformadas.
+- Se añadió `tests/test_urban_geometry_optimizer.py` con pruebas sintéticas de optimizador/scheduler, letterbox, máscara y geometría de cajas.
+- Se sustituyó el contenido de `notebooks/colab_preflight_un_paso_real.ipynb` por una auditoría segura: no entrena, no hace backward/optimizer.step, no descarga datasets, no abre test ni escribe checkpoints. Comprueba las correcciones con datos sintéticos, calcula SHA-256 de código/ontología y de manifiestos/índices TRAIN/VAL existentes, registra versiones y soporte por clase cuando los campos estén disponibles, guarda JSON en Drive y muestra un bloque único de continuidad.
+
+### Límites explícitos
+- La notebook aún debe ejecutarse por el usuario en Colab; no se ha ejecutado desde esta conversación.
+- Si faltan manifiestos/índices esperados, el reporte queda INCOMPLETE.
+- La auditoría de soporte depende de los campos presentes en los índices; no inventa conteos.
+- No existe todavía una configuración efectiva congelada por experimento ni procedencia completa de pesos de los modelos; la auditoría lo declara pendiente. No considerar este trabajo como autorización para piloto.
+- Las pruebas sintéticas y el análisis estático no sustituyen pytest en runtime, inspección visual real, pruebas end-to-end de loaders/checkpoints ni CI.
+- No se ejecutó entrenamiento, backward, optimizer.step, validación experimental, descarga de datos ni Actions. No se tocó test. `RUN_TRAINING=False`.
+
+### Commits de implementación
+- Geometría: `cad9046cf353ce36f52b31d2beb5b391bdf71616`
+- Adaptadores: `f9d868dd63f8a995d1e65819496947f04bfb07a2`
+- Factoría/optimizadores: `abe5baf7b8f389fda115b13cfb9f63c8874e2b7d`, `157fac9de6e3d87d2f31e5cc0f8db7793ed2a66e`, `ca12418f051d0b1ea9bea5baa684058bc4ccb116`
+- Notebook: `bcbb2f35b9a8a6977b6e80b49cc26a114324b578`
+- Pruebas: `55a76f1d29d3000f88db85e40e1dbb21c5ad2e59`
+
+Próximo paso: ejecutar la notebook de auditoría segura en Colab y pegar únicamente el bloque delimitado. Después revisar el JSON, resolver los faltantes de configuración efectiva/procedencia de pesos y completar pruebas pendientes antes de solicitar autorización separada para el piloto.
