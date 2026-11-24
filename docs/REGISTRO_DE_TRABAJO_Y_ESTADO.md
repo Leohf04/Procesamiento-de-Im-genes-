@@ -3149,3 +3149,10 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - `termux-info`: build `googleplay.2026.10.09`, arquitectura `aarch64`, Android 12, dispositivo OnePlus DE2118. Repositorios suscritos: Termux main y TUR; la configuración también contiene Termux:X11 y una fuente adicional `hope2333`.
 - El postinst de `xdg-utils` ejecuta `cpan -Ti File::MimeInfo`; CPAN falló con `/data/data/com.termux/files/usr/bin/sh: 0: Illegal option -d`. Hipótesis por comprobar: resolución/configuración del intérprete `sh`; todavía no está confirmado que Fish sea el causante.
 - Próximo paso: inspeccionar enlaces y versiones de `sh`, `bash`, `dash`, `fish` y CPAN sin modificar el sistema. No actualizar, purgar ni editar scripts/repositorios hasta tener esa salida.
+
+
+## 2026-11-24 — Verificación de sh y shells
+
+- El usuario ejecutó diagnóstico desde Fish: `sh` resuelve a `/data/data/com.termux/files/usr/bin/sh`, enlace simbólico a `dash`; `sh -c 'echo SH_FUNCIONA'` funciona correctamente.
+- Bash 5.3.9, Fish 4.8.0 y CPAN están presentes. No hay evidencia de que Fish sea la causa directa del fallo `Illegal option -d`.
+- Próximo paso: inspeccionar de forma no invasiva el lanzador CPAN, variables de entorno relevantes y metadatos del paquete antes de cualquier reparación. No ejecutar CPAN ni reintentar la configuración todavía.
