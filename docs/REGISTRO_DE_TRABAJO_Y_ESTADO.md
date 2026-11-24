@@ -2688,3 +2688,12 @@ No se ejecutó la celda en Colab; el usuario debe volver a ejecutar únicamente 
 - Commit de la corrección: `8e5e53cbf1f02bcb0edbfab6b040e1d521a7014c`. Notebook releída desde GitHub: JSON válido, 9 celdas y campos de estado presentes. La notebook corregida aún no ha sido ejecutada en Colab.
 - No se ejecutó entrenamiento, optimizer.step, backward, descarga de datasets, lectura de test ni GitHub Actions. `RUN_TRAINING=False` permanece.
 - Próximo paso: volver a ejecutar únicamente la celda 1 para traer el commit nuevo; después ejecutar la celda 2 (pruebas sintéticas) y revisar su salida antes de continuar. No ejecutar las demás celdas todavía.
+
+
+## 2026-11-24 — Resultado de pruebas sintéticas en Colab
+
+- El usuario ejecutó la celda de pruebas sintéticas de la notebook después de sincronizar la corrección: las nueve comprobaciones reportaron `true` y el resumen fue `PASS: 9 / 9`.
+- Se verificaron los tipos de optimizador y scheduler para semántica/instancias, geometría letterbox, tamaño y padding de imagen, padding semántico, coherencia de máscara/caja de instancia y ausencia de gradientes/actualización del modelo toy.
+- Pillow emitió un `DeprecationWarning` por el argumento `mode='RGB'` en `Image.fromarray`. No afectó el resultado ni provocó fallo; es un aviso de API obsoleta, no evidencia de error funcional.
+- Estas pruebas son sintéticas y no prueban loaders con datos reales, entrenamiento, calidad ni generalización. No se ejecutaron optimizer steps, backward, epochs, descargas ni lectura de test. `RUN_TRAINING=False`.
+- Próximo paso seguro: ejecutar únicamente la celda de la sección 3, que calcula hashes de código/ontología y archivos TRAIN/VAL presentes, resume soporte por clase y guarda el reporte JSON en Drive. Compartir su salida completa; no ejecutar todavía la celda final del bloque de continuidad.
