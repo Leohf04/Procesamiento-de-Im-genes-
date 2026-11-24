@@ -84,3 +84,27 @@ def test_iou_absent_ground_truth_class_is_undefined_even_with_false_positives():
     assert report["iou_per_class"][1] is None
     assert report["miou"]==pytest.approx(4/7)
     assert report["accuracy_per_class"][1] is None
+
+
+def test_runner_gradient_accumulation_steps_optimizer_at_group_boundaries(tmp_path):
+    class CountingSGD(torch.optim.SGD):
+        def __init__(self, params, **kwargs):
+            super().__init__(params, **kwargs)
+            self.step_calls = 0
+        def step(self, closure=None):
+            self.step_calls += 1
+            return super().step(closure)
+
+    tr, va = make_loaders()
+    model = Tiny()
+    optimizer = CountingSGD(model.parameters(), lr=.01)
+    result = run_experiment(
+        model=model, train_loader=tr, validation_loader=va, task="semantic",
+        optimizer=optimizer, output_dir=tmp_path,
+        config={"experiment_id":"accum","dataset":"synthetic","max_epochs":1,
+                "patience":1,"num_classes":2,"gradient_accumulation_steps":2},
+        device="cpu",
+    )
+    assert result["status"] == "completed"
+    # Four training batches grouped in pairs -> two optimizer updates.
+    assert optimizer.step_calls == 2
