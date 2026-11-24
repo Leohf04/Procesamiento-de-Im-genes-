@@ -2661,3 +2661,21 @@ Próximo paso: ejecutar la notebook de auditoría segura en Colab y pegar única
 - La notebook se guardó en `notebooks/colab_preflight_un_paso_real.ipynb`; JSON validado al releerlo desde GitHub.
 - La PR #3 se verificó abierta, draft y sin merge. Su head debe coincidir con el último commit de esta intervención.
 - No se ejecutaron pytest, Colab, entrenamiento, optimizer.step, descarga de datasets, lectura de test ni Actions. La validación ejecutada aquí fue inspección estática de archivos y estructura JSON.
+
+
+## 2026-11-24 — Corrección de error de sincronización Git en Colab
+
+El usuario reportó que la celda 1 mostraba que Drive ya estaba montado y fallaba con `CalledProcessError` en `git fetch origin urban-models-and-benchmark` (código 128). El mensaje de Drive es informativo, no causa del fallo. El traceback compartido no incluía stderr de Git, por lo que no se atribuye el código 128 a una causa remota específica.
+
+Se corrigió la celda 1 de `notebooks/colab_preflight_un_paso_real.ipynb`:
+- Detecta un Drive ya montado y omite `drive.mount()`.
+- Verifica que `/content/Procesamiento-de-Im-genes-` sea realmente un repositorio Git.
+- Si la ruta existe pero no es un repo, evita borrarla y clona en una ruta alternativa segura.
+- Reescribe `GIT_ASKPASS` con saltos de línea reales y respuestas mediante `printf`.
+- Usa el token únicamente en el entorno de los procesos Git, sin incluirlo en URLs ni imprimirlo.
+- Captura stdout/stderr y entrega diagnóstico útil si fetch/clone/pull falla.
+- Comprueba sincronización, rama y HEAD antes de continuar.
+
+Commit notebook: `ff4706f8cbe1cbde7768425c18a0efa363932173`.
+
+No se ejecutó la celda en Colab; el usuario debe volver a ejecutar únicamente la celda 1. Si vuelve a fallar, copiar el mensaje completo que ahora incluye el detalle stderr de Git, ocultando cualquier dato sensible. No se ejecutó entrenamiento, descargas, lectura de test ni Actions. `RUN_TRAINING=False`.
