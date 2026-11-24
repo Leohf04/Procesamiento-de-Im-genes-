@@ -3140,3 +3140,12 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - `dpkg --audit` confirma que `xdg-utils` está a medio configurar y que Qt6/OpenCV y sus bindings Python están desempaquetados pero pendientes de configuración.
 - Se observan repositorios de terceros: `hope2333.github.io` y `tur.kcubeterm.com`; además del repositorio oficial Termux main y el repositorio oficial X11. Aún no se ha establecido el origen exacto de `xdg-utils` ni la relación causal con esos repositorios.
 - Próximo paso: consultar versión instalada y prioridades/origen candidato con `dpkg-query` y `apt-cache policy`; no borrar repositorios, editar scripts ni purgar paquetes hasta revisar esa información.
+
+
+## 2026-11-24 — Origen de paquetes y entorno Termux
+
+- `xdg-utils 1.2.1-1` tiene como único origen candidato mostrado por `apt-cache policy` el repositorio Termux:X11 (`packages-cf.termux.dev/apt/termux-x11`, componente `x11/main`).
+- `opencv 5.1.0`, `opencv-python 5.1.0` y `python-opencv-python 95` también proceden de Termux:X11.
+- `termux-info`: build `googleplay.2026.10.09`, arquitectura `aarch64`, Android 12, dispositivo OnePlus DE2118. Repositorios suscritos: Termux main y TUR; la configuración también contiene Termux:X11 y una fuente adicional `hope2333`.
+- El postinst de `xdg-utils` ejecuta `cpan -Ti File::MimeInfo`; CPAN falló con `/data/data/com.termux/files/usr/bin/sh: 0: Illegal option -d`. Hipótesis por comprobar: resolución/configuración del intérprete `sh`; todavía no está confirmado que Fish sea el causante.
+- Próximo paso: inspeccionar enlaces y versiones de `sh`, `bash`, `dash`, `fish` y CPAN sin modificar el sistema. No actualizar, purgar ni editar scripts/repositorios hasta tener esa salida.
