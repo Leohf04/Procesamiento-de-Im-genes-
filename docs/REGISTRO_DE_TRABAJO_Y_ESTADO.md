@@ -3123,3 +3123,11 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - Próximo paso guiado: actualizar los índices y paquetes base con `pkg update && pkg upgrade`, aceptando la confirmación si aparece.
 - Aún no se han instalado Python, Git, Pillow ni bibliotecas de aprendizaje profundo; tampoco se han descargado datasets.
 - Se mantiene el enfoque de instalación gradual y ligera, verificando la salida de cada paso antes de continuar.
+
+
+## 2026-11-24 — Error al actualizar Termux
+
+- El usuario ejecutó `pkg install && pkg upgrade` (el comando previsto era `pkg update && pkg upgrade`). La actualización de índices se completó y detectó 153 paquetes actualizables.
+- La configuración de paquetes falló en el script postinstalación de `xdg-utils`: la instalación auxiliar de Perl `File::MimeInfo` terminó con `/data/data/com.termux/files/usr/bin/sh: 0: Illegal option -d` y `make: *** No targets specified and no makefile found`.
+- Quedaron sin configurar dependencias posteriores: Qt6, OpenCV y paquetes Python OpenCV. Se observan repositorios adicionales `tur.kcubeterm.com` y `hope2333.github.io`, además de los repositorios oficiales de Termux; todavía no se ha determinado si están relacionados con el fallo.
+- Medida preventiva: detener instalaciones/actualizaciones y no eliminar paquetes. Próximo paso: inspeccionar el script postinstalación de `xdg-utils`, los archivos de fuentes APT y el estado de `dpkg` antes de reparar.
