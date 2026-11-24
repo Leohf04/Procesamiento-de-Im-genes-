@@ -166,3 +166,21 @@ Este documento **no habilita entrenamiento**. En el momento de su creación:
 - la PR #3 debe permanecer abierta, draft y sin fusionar.
 
 **Siguiente acción tras revisar este protocolo:** implementar el runner reproducible, evaluadores, guardado/reanudación y configuración ejecutable; después cerrar las puertas 1–8 y solicitar autorización específica para el piloto de 10 batches. No iniciar entrenamiento completo automáticamente.
+
+
+## 12. Implementación técnica de optimizador y geometría — 2026-11-24
+
+La implementación vigente en `urban-models-and-benchmark` se alinea con la tabla de configuración de la sección 4:
+- Semántica: `torch.optim.AdamW`, LR definido por la configuración efectiva, weight decay por defecto 1e-4.
+- Instancias: `torch.optim.SGD`, momentum por defecto 0.9, weight decay por defecto 5e-4.
+- Ambas tareas: `ReduceLROnPlateau(mode="max", patience=2)`, que recibe la métrica primaria de validación según el runner.
+
+La construcción está centralizada en `src/urban_optimizer.py` y es utilizada por `scripts/urban_experiment_factory.py`.
+
+Los adaptadores `src/data_adapters.py` ahora usan `src/urban_geometry.py` para letterbox centrado:
+- Imágenes: interpolación bilineal y padding RGB negro.
+- Máscaras semánticas: vecino más cercano y padding ignore 255.
+- Máscaras de instancias/panoptic: vecino más cercano y padding background 0.
+- Las cajas xyxy pueden transformarse con la misma geometría mediante `LetterboxGeometry.boxes_xyxy`. En los adaptadores actuales las cajas se recalculan desde las máscaras ya transformadas, evitando desalineación.
+
+La notebook de auditoría y las pruebas sintéticas verifican estas reglas sin ejecutar pasos de optimización. Esto no sustituye una inspección visual de muestras reales ni valida rendimiento/calidad del modelo.
