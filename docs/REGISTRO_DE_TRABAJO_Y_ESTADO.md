@@ -2842,3 +2842,16 @@ El usuario ejecutó `notebooks/urban_v1_cierre_tres_pendientes.ipynb` y comparti
 **Siguiente paso seguro:** recuperar/verificar el artifact completo si sigue accesible; reconstruir solo TRAIN/VAL (no leer ni materializar TEST), persistir manifiestos e índices completos en un directorio separado de Drive y comprobar conteos/IDs/hashes. Después ejecutar únicamente `--dry-run` del materializador sin límite de muestras para estimar bytes de los 3.751 registros; no descargar los assets completos hasta revisar la estimación y obtener autorización. No sobrescribir el directorio de las 40 muestras. No iniciar entrenamiento.
 
 La ejecución reportada no demuestra que los 3.751 registros tengan assets descargados localmente; tampoco demuestra que falten. Se debe distinguir metadatos/manifiestos completos de materialización física. PR #3 permanece abierta, draft y sin merge.
+
+
+## Preparación de recuperación completa y dry-run de almacenamiento — 2026-11-24
+
+Se comprobó el artifact GitHub Actions ID `14770171764`, run `45038801547`: sigue disponible (`expired=false`), creado 2026-11-22 y con expiración indicada 2026-12-22. GitHub publica digest SHA-256 `b6cbcb54dfd0598e6a9011667073028be1804fc1c112d82e516a42bdbf2ba4e5`. No se descargó el ZIP desde esta conversación ni se ejecutó Actions.
+
+Se creó `notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb` para que el usuario lo ejecute en Colab. La notebook recupera el artifact y valida run, caducidad y digest; abre exclusivamente manifiestos semánticos/instancias e índices de A2D2/UrbanSyn TRAIN/VAL (no abre ni extrae miembros TEST); verifica conteos 1000/1000 A2D2 y 1000/751 UrbanSyn, IDs únicos/alineados, estadísticas, anotaciones OK, assets requeridos, revisiones UrbanSyn y ausencia de solapamiento TRAIN/VAL; reconstruye cuatro manifiestos y cuatro índices completos en una carpeta nueva `MyDrive/ProcesamientoImagenes/urban_v1_full_metadata_20261124`, sin sobrescribir las 40 muestras de `urban_data_capacity`; y ejecuta `scripts/materialize_urban_experiment_data.py --dry-run` sin límite de filas ni filtro de instancias para estimar los 3.751 registros. El script consulta tamaños remotos mediante metadatos/HEAD pero no descarga RGB/máscaras. Guarda hashes/reportes y genera un bloque único de continuidad.
+
+La notebook quedó en GitHub con commits de creación y corrección de escapes: `6e0e350c9ceacf4c8b2b57fdfb6f4874e23f1575` y `f1bb84121a7cc47056db84e17387407b6c99e70c`. Se releyó desde GitHub y se verificó JSON nbformat 4, 13 celdas y corrección de los escapes de saltos de línea. No se ha ejecutado Colab ni se ha validado el Python contra el artifact; el resultado del dry-run está pendiente del usuario.
+
+Enlace Colab: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
+
+Límites mantenidos: no descargar assets, no materializar datos completos, no tocar TEST, no entrenar, no escribir checkpoints y no lanzar Actions. El dry-run puede tardar por las consultas de tamaño remoto. Si el artifact expira antes de ejecutar la notebook, detenerse y reportarlo; no regenerar ni lanzar workflows sin autorización. PR #3 sigue abierta, draft y sin merge.
