@@ -85,3 +85,10 @@ Para continuar: abre la notebook desde Colab, ejecútala completa con los archiv
 https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/colab_preflight_un_paso_real.ipynb
 
 La notebook diferencia el resultado de las pruebas mecánicas (`PASS`) de la preparación de experimentos (`BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`). Aunque los hashes se recojan correctamente, no existe aún una configuración efectiva congelada ni una procedencia completa de pesos.
+
+
+### Incidencia Colab: celda 1 y Git fetch — 2026-11-24
+
+Se corrigió la celda inicial de la notebook para omitir el montaje repetido de Drive, validar la carpeta Git, generar correctamente el script GIT_ASKPASS, evitar sobrescribir carpetas no Git y mostrar stderr si la sincronización falla. Commit: `ff4706f8cbe1cbde7768425c18a0efa363932173`. El error original fue código 128, pero no incluía stderr; no se confirmó si el origen fue autenticación, carpeta local o conectividad.
+
+Vuelve a ejecutar únicamente la celda 1 de la notebook actualizada. Si falla, conserva el diagnóstico completo de Git que ahora imprime la celda y compártelo sin credenciales. No iniciar entrenamiento.
