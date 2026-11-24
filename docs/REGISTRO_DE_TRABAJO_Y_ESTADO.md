@@ -2785,3 +2785,10 @@ Durante la inspección previa al cierre se detectó que dos parámetros de la ta
 - La notebook verifica estáticamente la presencia de acumulación/scheduler en el código, crea configuraciones listas para la factoría inyectando las rutas runtime y recoge hashes SHA-256 de factoría/runner/optimizador.
 
 **Importante:** los tests se añadieron/actualizaron en GitHub, pero no se ejecutaron desde ChatGPT. No se afirma PASS de pytest ni de Colab. La notebook sigue sin ejecutar entrenamiento ni optimizer steps. El piloto de recursos continúa pendiente de autorización expresa.
+
+
+### Validación estática final de artefactos — 2026-11-24
+
+Se corrigió la celda de configuración de la notebook para verificar explícitamente que las cuatro configuraciones contienen los campos consumidos por factoría/runner, inyectar rutas runtime de Drive y comprobar acumulación de gradientes y factor del scheduler. El bloque final recoge hashes SHA-256 de factoría, runner y optimizador. Se validó que el archivo es JSON nbformat 4 con 13 celdas y que la última celda contiene los delimitadores de continuidad. La configuración JSON también se parseó y contiene cuatro especificaciones completas.
+
+Esto es validación estática del contenido del repositorio, no ejecución de Python/pytest/Colab. No se ha confirmado ejecución de tests ni de la notebook.
