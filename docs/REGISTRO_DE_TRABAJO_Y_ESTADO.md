@@ -2697,3 +2697,18 @@ No se ejecutó la celda en Colab; el usuario debe volver a ejecutar únicamente 
 - Pillow emitió un `DeprecationWarning` por el argumento `mode='RGB'` en `Image.fromarray`. No afectó el resultado ni provocó fallo; es un aviso de API obsoleta, no evidencia de error funcional.
 - Estas pruebas son sintéticas y no prueban loaders con datos reales, entrenamiento, calidad ni generalización. No se ejecutaron optimizer steps, backward, epochs, descargas ni lectura de test. `RUN_TRAINING=False`.
 - Próximo paso seguro: ejecutar únicamente la celda de la sección 3, que calcula hashes de código/ontología y archivos TRAIN/VAL presentes, resume soporte por clase y guarda el reporte JSON en Drive. Compartir su salida completa; no ejecutar todavía la celda final del bloque de continuidad.
+
+
+## 2026-11-24 — Auditoría segura de datos y reproducibilidad: PASS
+
+El usuario ejecutó en Colab la celda de auditoría de la sección 3 de `notebooks/colab_preflight_un_paso_real.ipynb` y reportó:
+- Archivo JSON generado: `/content/drive/MyDrive/ProcesamientoImagenes/auditoria_correcciones_segura/urban_corrections_audit.json`.
+- Estado: `PASS`.
+- Archivos de datos con hash: 8.
+- Archivos faltantes: 0.
+
+Interpretación: los ocho archivos contemplados por la auditoría pudieron verificarse mediante hash y no se detectaron faltantes entre los archivos esperados de TRAIN/VAL. Este resultado, junto con las pruebas sintéticas 9/9, valida las comprobaciones mecánicas ejecutadas en la notebook; no equivale a congelar una configuración experimental ni acredita procedencia de pesos, convergencia, generalización o calidad.
+
+No se ha recibido todavía el contenido completo del JSON ni el bloque final de continuidad; por tanto, no se atribuyen valores concretos a hashes individuales, soporte por clase o versiones de entorno. No se ha ejecutado la celda final todavía según el estado conocido. Próximo paso seguro: ejecutar únicamente la última celda, que imprime el bloque único de continuidad a partir del reporte guardado, y compartirlo para revisar el estado consolidado.
+
+No se inició entrenamiento, no se ejecutó backward/optimizer.step/epochs, no se descargaron datos, no se tocó test, no se escribieron checkpoints y no se lanzaron GitHub Actions. `RUN_TRAINING=False` se mantiene. PR #3 debe seguir abierta y draft, sin merge.
