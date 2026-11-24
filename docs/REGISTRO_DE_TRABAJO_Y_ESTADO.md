@@ -997,8 +997,7 @@ El usuario autorizó comenzar las validaciones. Se mantuvieron las restricciones
   - recuento de instancias por cada una de las ocho clases.
   Por defecto bloquea el preflight si falta alguna clase en train; la ausencia en val se reporta, pero no bloquea por sí sola.
 - Se añadieron pruebas sintéticas `tests/test_bdd100k_instance_preflight.py` para conteo de instancia, rechazo de máscaras no RGBA y emparejamiento incompleto.- Se actualizó `scripts/train_maskrcnn_cityscapes.py` para validar también el orden/nombre de clases del checkpoint al reanudar y corregir el mensaje de dimensiones de clase (9 salidas: fondo + 8 clases). La reanudación continúa siendo por época; no promete restaurar aleatoriedad de lotes a mitad de época.
-- Se actualizó el notebook Colab para mostrar la auditoría oficial y exigir un informe `ready_for_training=true` antes de permitir `MODEL="instance"` con `RUN_TRAINING=True`. La muestra GitHub parcial no pasa por esta ruta.
-- Se documentó el procedimiento en `docs/PROTOCOLO_EXPERIMENTAL.md`. Evaluación BDD100K oficial se ejecuta después del entrenamiento sobre val, con el protocolo interno de AP claramente identificado; no equivale a COCOeval.
+- Se actualizó el notebook Colab para mostrar la auditoría oficial y exigir un informe `ready_for_training=true` antes de permitir `MODEL="instance"` con `RUN_TRAINING=True`. La muestra GitHub parcial no pasa por esta ruta.- Se documentó el procedimiento en `docs/PROTOCOLO_EXPERIMENTAL.md`. Evaluación BDD100K oficial se ejecuta después del entrenamiento sobre val, con el protocolo interno de AP claramente identificado; no equivale a COCOeval.
 - CI general disparado por estos commits: runs `44963069208`, `44963057605`, `44963053256` y otros asociados a commits intermedios. En la última consulta seguían en ejecución; **no se declara aún que esta modificación haya pasado CI**. Consultar el run más reciente y su conclusión.
 - No se inició entrenamiento ni se generaron checkpoints. No se descargaron datos al teléfono ni se intentó acceder sin autorización a las etiquetas oficiales. El acceso a las bitmasks oficiales RGBA sigue siendo el bloqueo real para iniciar el entrenamiento de instancias.
 - Próximo paso: confirmar CI; si pasa, realizar preflight con datos oficiales desde almacenamiento remoto autorizado. Si el usuario aún no dispone del paquete oficial, no entrenar con la muestra de cuatro clases: continuar con una tarea BDD100K que sí tenga train/val accesibles (por ejemplo semántica) o resolver acceso autorizado a instancias.
@@ -1997,7 +1996,6 @@ Se inspeccionaron el script `scripts/smoke_test_urban_training_integration.py`, 
 Se modificó la celda 9 del notebook para ejecutar el script con salida sin búfer, capturar y mostrar stdout/stderr completos incluso cuando el proceso falle, y persistir ambos logs en Drive:
 - `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_loader_integration.stdout.log`
 - `MyDrive/ProcesamientoImagenes/balanceo_cap200/urban_loader_integration.stderr.log`
-
 En la siguiente ejecución, el traceback completo debe aparecer en la salida de la celda; si vuelve a fallar, compartir ambos logs o pegar el contenido de stderr. No se alteró el script de integración ni se declaró PASS. La integración con muestras reales continúa pendiente.
 
 Se revisó PR #3: sigue abierta; el estado draft/no fusionada se mantiene como requisito. En Actions, el run Python `45224667061` terminó en failure, pero la consulta de jobs no expuso pasos/logs (steps=null), así que no permite inferir si falló por código o por runner. No se lanzó ningún rerun.
@@ -2929,3 +2927,67 @@ El usuario decidió continuar el entrenamiento en Kaggle tras el bloqueo tempora
 4. Si el acceso GPU vuelve a mostrar `Permission denied`, detenerse: no hay forma de que ChatGPT active la GPU ni de eludir la verificación de Kaggle.
 
 PR #3 permanece abierta, draft y sin merge. No se lanzó GitHub Actions ni se modificó TEST.
+
+## 2026-11-24 — Investigación comparativa de GPU gratuita para entrenamiento Urban-v1
+
+El usuario solicitó una investigación web profunda para identificar infraestructura gratuita donde ejecutar entrenamiento real de los cuatro experimentos A2D2/UrbanSyn (DeepLabV3+ semántica y Mask R-CNN instancias), con PyTorch/CUDA, acceso al repositorio privado y ejecución por etapas/checkpoints. Se prioriza no incurrir en gastos ni pedir transferencias de datasets desde el teléfono.
+
+### Resultados verificados en fuentes públicas oficiales
+
+**Kaggle Notebooks — mejor opción gratuita recurrente si se resuelve el bloqueo de verificación**
+- La documentación oficial ofrece una NVIDIA Tesla P100 gratuita; puede haber cola/indisponibilidad. La documentación actual de notebooks especifica sesiones de hasta 12 horas y 20 GB de salida persistente en `/kaggle/working`; el espacio scratch fuera de esa carpeta no persiste al terminar la sesión.
+- La página oficial de consejos de GPU publica una cuota de hasta 30 horas GPU por semana y sesiones de hasta 9 horas, lo que difiere de la ficha técnica actual de notebooks (12 horas). Por prudencia, planificar checkpoints y tratar 9 horas como límite operativo conservador; verificar el límite efectivo que muestre la cuenta.
+- P100 ofrece 16 GB VRAM. La ejecución real de batch semántico 4 y Mask R-CNN batch 1/accumulation 2 debe decidirse mediante los pilotos obligatorios, no asumirse por especificación.
+- La cuenta del usuario ya reportó anteriormente “Permission denied” en verificación telefónica. Por tanto, Kaggle es técnicamente la mejor opción pero no se considera disponible hasta que el usuario confirme que el selector permite activar GPU. No insistir en eludir la verificación.
+- Fuentes oficiales: https://www.kaggle.com/docs/notebooks ; https://www.kaggle.com/page/GPU-tips-and-tricks
+
+**Lightning AI Studios — viable para prueba con crédito inicial, no 80 horas garantizadas sin tarjeta**
+- La documentación de Studio indica que toda cuenta recibe 5 créditos gratuitos (1 crédito = USD 1); añadir una tarjeta otorga otros 25 créditos. La página de precios anuncia hasta 30 créditos y hasta ~80 horas GPU en máquinas interruptibles, pero ese máximo depende de la máquina/tarifa y de obtener el bloque adicional de créditos; no debe presentarse como 80 horas universales sin tarjeta.
+- El Studio CPU básico es gratuito. El plan Free permite un Studio activo con reinicios cada 4 horas; las GPU consumen créditos. La tabla oficial muestra GPUs T4/L4 y opciones de mayor VRAM, pero las tarifas varían; A100/H100/H200 tienen límites de sesión de 4 horas en Free según la tabla comparativa.
+- Para este proyecto, 5 créditos sin tarjeta pueden servir para comprobar CUDA, ejecutar tests y pilotos parciales, pero no se puede prometer que alcancen para completar los cuatro entrenamientos. No añadir tarjeta ni habilitar pagos sin autorización expresa.
+- Fuentes oficiales: https://support.lightning.ai/pricing/ ; https://lightning.ai/docs/platform/build/ai-studio/
+
+**Google Colab Free — no es solución fiable en el estado actual**
+- Google confirma que las GPUs gratuitas están fuertemente restringidas y que los límites, GPU disponible, duración máxima y tiempos de inactividad fluctúan; no garantiza recursos.
+- El usuario ya recibió bloqueo por límites de uso, así que no se debe planificar el entrenamiento completo sobre Colab Free.
+- Fuente oficial: https://research.google.com/colaboratory/faq.html
+
+**Hugging Face ZeroGPU — descartar para entrenamiento**
+- La cuota oficial de cuenta gratuita es de 5 minutos de GPU al día, con asignación dinámica en Spaces y límites de ejecución por función. Está pensado para inferencia/demos, no para entrenar cuatro modelos de 20 épocas.
+- Fuente oficial: https://huggingface.co/docs/hub/main/spaces-zerogpu
+
+**Paperspace Gradient Free — técnicamente débil y con problema de privacidad**
+- La documentación de DigitalOcean confirma Free GPU M4000, autoapagado máximo de 6 horas, apagado por inactividad, un Notebook gratuito simultáneo y notebooks públicos en el plan Free. El M4000 dispone de 8 GB VRAM; es menos apropiado para batch 4 de segmentación y Mask R-CNN, y no debe usarse con un repositorio/datos privados si la sesión es pública.
+- Fuente oficial: https://docs.digitalocean.com/products/paperspace/pricing/ ; https://docs.digitalocean.com/products/paperspace/machines/details/features/
+
+**Amazon SageMaker Studio Lab — no disponible para nuevas cuentas**
+- AWS indica que Studio Lab ya no acepta nuevos clientes; solo los usuarios existentes pueden continuar. No recomendar crear una cuenta nueva.
+- Fuente oficial: https://docs.aws.amazon.com/sagemaker/latest/dg/studio-lab-availability-change.html
+
+**Saturn Cloud — descartar como GPU gratuita de entrenamiento**
+- Aunque una página de captación anuncia horas gratuitas, la página actual de Hosted explica que Free sirve para familiarizarse con la plataforma y que el uso de recursos de cómputo GPU se desbloquea con Pro; las instancias GPU T4 se muestran con tarifa por hora. No confundir cuenta gratuita con GPU gratuita para entrenamiento.
+- Fuente oficial: https://saturncloud.io/plans/hosted/
+
+**Modal Starter — crédito recurrente, pero no opción sin método de pago**
+- El plan Starter anuncia USD 30/mes de crédito de cómputo y permite entrenamiento GPU; el consumo GPU/CPU/memoria cuenta contra el crédito. Sin embargo, la documentación indica que GPU se habilita tras añadir un método de pago y que el uso fuera del crédito se factura pay-as-you-go. No recomendar para la restricción estricta de cero tarjeta/cero riesgo de cargos.
+- Fuente oficial: https://modal.com/pricing
+
+**Google Cloud Free Trial — no habilita GPUs durante la prueba gratuita**
+- Aunque ofrece USD 300/90 días, la documentación oficial indica que no se pueden añadir GPUs a VMs durante el periodo de cuenta de prueba no facturable; las GPUs tampoco forman parte del Free Tier. Descartado como solución gratuita directa.
+- Fuente oficial: https://docs.cloud.google.com/free/docs/free-cloud-features
+
+### Recomendación resultante
+
+1. **Primera opción práctica: Kaggle**, únicamente si el usuario puede activar GPU. Ya existe en el repositorio la notebook adaptada `notebooks/urban_v1_entrenamiento_completo_kaggle.ipynb`; no requiere reescribir el flujo desde cero. Persistir resultados en `/kaggle/working` y respaldar checkpoints/logs al finalizar cada sesión. El bloqueo de verificación telefónica previo es el obstáculo pendiente.
+2. **Segunda opción: Lightning AI**, para aprovechar los 5 créditos iniciales sin tarjeta como prueba técnica controlada. Antes de ejecutar, comprobar saldo, tarifa exacta de la GPU y que no haya facturación habilitada. No asumir que 5 créditos completarán el entrenamiento completo; podría requerirse una plataforma recurrente.
+3. No dedicar tiempo a ZeroGPU, Studio Lab nuevo, Saturn, Paperspace M4000 ni Modal para el entrenamiento completo bajo la condición de cero gasto, por los límites documentados arriba.
+
+### Plan de validación sin gastos
+- No crear máquinas GPU ni activar facturación todavía.
+- Confirmar visualmente en Lightning AI el saldo gratuito real, tipo de GPU, tarifa, límites de sesión y si la cuenta permite usar GPU sin tarjeta.
+- Si solo hay 5 créditos, utilizarlos primero para validar CUDA, clonar repo privado mediante secreto de mínimo privilegio, instalar dependencias, correr pytest y ejecutar los pilotos definidos; detener el trabajo antes de agotar créditos. No iniciar épocas completas hasta tener un plan de continuidad suficiente.
+- Si Kaggle permite GPU en el futuro, priorizar la notebook ya migrada y ejecutar el preflight/pilotos antes de entrenamiento.
+- Mantener intactos los datos, configuración y checkpoints; no tocar TEST. No iniciar un entrenamiento real ni generar checkpoints como resultado de esta investigación.
+
+### Estado
+Investigación web completada. No se creó cuenta, no se añadió método de pago, no se habilitó GPU, no se descargaron datos ni se ejecutó entrenamiento. PR #3 continúa abierta, draft y sin merge.
