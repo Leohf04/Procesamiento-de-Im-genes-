@@ -13,6 +13,34 @@ from src.urban_experiment_runner import seed_everything
 def _jsonl(path):
     with Path(path).open(encoding="utf-8") as f: return [json.loads(x) for x in f if x.strip()]
 
+def build_optimizer_and_scheduler(model, task, config):
+    """Create the optimizer/scheduler pair specified by the urban-v1 protocol.
+
+    Semantic: AdamW. Instances: SGD with momentum. Both monitor the primary
+    validation metric via ReduceLROnPlateau(mode='max', patience=2).
+    """
+    if task not in {"semantic", "instances"}:
+        raise ValueError("task must be semantic or instances")
+    lr = float(config["learning_rate"])
+    if lr <= 0:
+        raise ValueError("learning_rate must be positive")
+    if task == "semantic":
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=lr,
+            weight_decay=float(config.get("weight_decay", 1e-4)),
+        )
+    else:
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=lr,
+            momentum=float(config.get("momentum", 0.9)),
+            weight_decay=float(config.get("weight_decay", 5e-4)),
+        )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="max", patience=2
+    )
+    return optimizer, scheduler
+
+
 def create_experiment(config):
     ds=config["dataset"]; task=config["task"]
     if ds not in {"a2d2","urbansyn"} or task not in {"semantic","instances"}:
@@ -78,9 +106,7 @@ def create_experiment(config):
         mf=model.roi_heads.mask_predictor.conv5_mask.in_channels
         model.roi_heads.mask_predictor=MaskRCNNPredictor(mf,256,len(instance_ids)+1)
         num_classes=len(instance_ids)+1
-    lr=float(config["learning_rate"]); wd=float(config.get("weight_decay",1e-4 if task=="semantic" else 5e-4))
-    optimizer=torch.optim.SGD(model.parameters(),lr=lr,momentum=float(config.get("momentum",0.9)),weight_decay=wd)
-    scheduler=torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode="max",patience=1)
+    optimizer, scheduler = build_optimizer_and_scheduler(model, task, config)
     evaluator=None
     if task=="instances":
         evaluator=lambda m,l,d:evaluate_coco_instance_segmentation(m,l,d,{v:k for k,v in instance_ids.items()})
