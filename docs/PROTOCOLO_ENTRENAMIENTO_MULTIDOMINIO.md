@@ -244,3 +244,16 @@ Script: scripts/audit_model_memory.py.
 - Los resultados se guardan en Drive en ProcesamientoImagenes/auditoria_memoria_gpu/. El batch para un futuro piloto no se selecciona solo por cabe: debe dejar margen para variación de objetos/propuestas y overhead del runtime/DataLoader.
 
 La auditoría de memoria es requisito previo a fijar batch y AMP; no autoriza por sí sola materialización completa ni piloto. RUN_TRAINING=False permanece.
+
+## 14. Preflight de un paso real con datos — 2026-11-24
+
+Se preparó una comprobación GPU acotada antes del piloto:
+
+- `scripts/urban_single_step_preflight.py` ejecuta una sola combinación por proceso y exige `--execute-single-step`. Comprueba CUDA, reutiliza exclusivamente datos ya materializados, construye la factory de un dominio/tarea y solicita un único batch de train con `batch_size=1`, `512×512`, `num_workers=0` y AMP desactivado.
+- Para semántica calcula CrossEntropy con pesos de clase train-only; para instancias usa los componentes de loss de Mask R-CNN. Comprueba loss y gradientes finitos, realiza exactamente un `optimizer.step()` y verifica que un parámetro cambió. Registra VRAM libre/total, pico allocated/reserved, tiempo y memoria de estado del optimizador.
+- No itera validation, no accede a test, no descarga/materializa datos, no guarda checkpoints y no invoca el runner de épocas. Los modelos se inicializan aleatoriamente, sin pretraining; LR 1e-4 es solo una tasa de sondeo, no una configuración aprobada.
+- `notebooks/colab_preflight_un_paso_real.ipynb` comprueba el preflight GPU/Drive, las seis pruebas sintéticas de memoria y la materialización incremental existente. La ejecución está bloqueada por defecto (`EXECUTE_SINGLE_STEP=False`); si se habilita manualmente, ejecuta cuatro procesos aislados (A2D2/UrbanSyn × semántica/instancias), un paso por combinación, y persiste informes/logs en Drive.
+- Si el runtime se reinició y no existe `/content/urban_data_capacity`, la notebook se detiene sin descargar; primero debe repetirse la auditoría incremental de capacidad.
+- Un PASS demostraría únicamente que un paso con el batch real seleccionado puede completar forward/loss/backward/actualización con memoria medida. No demuestra convergencia, calidad ni estabilidad de una época, y no autoriza el piloto ni el uso de validation/test.
+- El agente publicó el script y la notebook; no ejecutó Colab ni inició optimización. Pendiente: revisar el preflight en Colab y compartir `single_step_preflight_summary.json` y logs.
+- `RUN_TRAINING=False`; PR #3 permanece abierta, draft y sin fusionar.
