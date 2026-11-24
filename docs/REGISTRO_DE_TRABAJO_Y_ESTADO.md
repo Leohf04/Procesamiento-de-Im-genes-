@@ -2745,3 +2745,31 @@ Interpretación: PASS valida las comprobaciones implementadas y la presencia/int
 Próximos pasos seguros: congelar documentalmente y con hash la configuración efectiva Urban-v1 (tareas, clases, mapeos, tamaños/transformaciones, optimizadores/schedulers, hiperparámetros, seeds, versiones y política de inicialización); documentar procedencia/licencia/identidad exacta de los pesos o declarar inicialización aleatoria; auditar soporte sobre manifiestos completos TRAIN/VAL e inspeccionar visualmente muestras acotadas solo de TRAIN/VAL. Después diseñar un piloto separado y solicitar autorización expresa. No entrenar ahora.
 
 No se ejecutaron entrenamiento, backward, optimizer.step, epochs, validación experimental, descargas, lectura de test ni GitHub Actions. PR #3 debe permanecer abierta, draft y sin merge.
+
+
+## 2026-11-24 — Notebook único para cerrar los tres pendientes Urban-v1
+
+El usuario solicitó reunir en un único Notebook de Colab los tres pendientes y generar al final un solo bloque con toda la información de continuidad.
+
+### Artefactos creados en `urban-models-and-benchmark`
+- `configs/urban_experiment_v1.json`: congela en un archivo versionado los cuatro experimentos (S-A2D2, S-UrbanSyn, I-UrbanSyn, I-A2D2), hiperparámetros de la tabla del protocolo, semilla 2026, geometría letterbox, métricas de selección y política de ejecución segura.
+- `notebooks/urban_v1_cierre_tres_pendientes.ipynb`: Notebook único de 13 celdas para sincronizar repo, hashear configuración/ontología, comprobar procedencia de pesos, auditar manifiestos e índices completos TRAIN/VAL, resumir soporte por clase, comprobar assets/IDs/fuga, generar hoja visual determinista y guardar informe JSON + bloque final único.
+
+### Decisiones explícitas congeladas
+- Inicialización aleatoria, sin pesos preentrenados y sin checkpoint: la factoría declara `pretrained_backbone=False` para DeepLabV3+ y `weights=None, weights_backbone=None` para Mask R-CNN. No se inventa un artefacto de pesos inexistente.
+- Configuración tomada de `docs/PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md`: 512×512; semántica batch 4, AdamW LR 1e-4, 20 épocas; instancias batch 1, acumulación 2, SGD LR 2.5e-3, momentum 0.9, 20 épocas; scheduler ReduceLROnPlateau mode=max, factor 0.5, patience 2; early stopping 5; clipping 1.0; seed 2026.
+- Conteos de manifiestos esperados por protocolo: A2D2 1000 train/1000 val; UrbanSyn 1000 train/751 val. La notebook marca discrepancia como error; las muestras de preflight de 10 filas no se aceptan como cobertura completa.
+- A2D2 instances continúa siendo aproximación por componentes conectados; UrbanSyn es baseline principal de instancias.
+
+### Límites y estado
+- `RUN_TRAINING=False`; cero optimizer steps/backward/epochs/checkpoints/descargas; no se lee ni modifica `test`; no se lanza CI; PR #3 permanece abierta, draft y sin merge.
+- La T4 anterior solo comprobó un paso con batch 1; no valida batch 4 semántico ni acumulación 2 para instancias. El Notebook no prueba esos recursos ni entrena: el piloto de 10 batches requiere autorización explícita.
+- La hoja visual contiene hasta 3 muestras deterministas por dataset/split (TRAIN/VAL únicamente). La revisión visual humana queda pendiente de confirmación del usuario.
+- El Notebook y su JSON no han sido ejecutados por ChatGPT. El cierre de la auditoría de datos depende de que el usuario ejecute Colab con los manifiestos/índices completos ya disponibles en Drive.
+- Los checks de assets contemplan alias de rutas habituales; si los archivos no están en las rutas esperadas, el reporte mostrará faltantes y no declarará PASS.
+
+### Enlace Colab
+https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_cierre_tres_pendientes.ipynb
+
+### Próxima acción
+El usuario debe abrir el enlace, ejecutar el Notebook completo en orden, revisar la hoja de contacto visual y pegar aquí únicamente el contenido entre `BLOQUE_CONTINUIDAD_INICIO` y `BLOQUE_CONTINUIDAD_FIN`. No iniciar entrenamiento.
