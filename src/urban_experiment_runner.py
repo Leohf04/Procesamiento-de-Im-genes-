@@ -144,6 +144,15 @@ def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_i
                 optimizer.step()
             optimizer.zero_grad(set_to_none=True)
         total+=float(loss.detach().cpu())
+    if total_batches is None and batches % gradient_accumulation_steps:
+        if scaler is not None and scaler.is_enabled():
+            scaler.unscale_(optimizer)
+        if max_grad_norm: torch.nn.utils.clip_grad_norm_(model.parameters(),max_grad_norm)
+        if scaler is not None and scaler.is_enabled():
+            scaler.step(optimizer); scaler.update()
+        else:
+            optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
     if not batches: raise RuntimeError("Training loader yielded zero batches")
     average=total/batches
     if task=="instances":
