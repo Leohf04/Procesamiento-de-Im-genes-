@@ -3164,3 +3164,12 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - La salida de `apt-cache show xdg-utils` identifica el paquete como mantenido por `@termux`, versión `1.2.1-1`, cuyo postinst intenta instalar `File::MimeInfo` mediante CPAN.
 - Se encontró un reporte público en el repositorio oficial `termux/termux-app` con el mismo síntoma de CPAN (`Sideloading Perl ...`, `/bin/sh: 0: Illegal option -d`, `make ... no makefile`) en una instalación Google Play. Un mantenedor indicó que los problemas de la build Google Play deben reportarse en `termux-play-store/termux-issues`, ya que es una rama experimental separada. Esto refuerza que puede ser un problema de esa build/entorno y no de Fish.
 - No se aplicó ninguna reparación ni se ejecutaron más instalaciones. Próximo paso recomendado: no insistir con CPAN ni manipular manualmente scripts de dpkg; decidir entre reportar el problema a los mantenedores de Google Play o, tras respaldo verificado, migrar a una build estable de Termux. La migración requiere desinstalar la app actual y puede borrar sus datos; no hacerla sin copia de seguridad y confirmación del usuario.
+
+
+## 2026-11-24 — Plan de migración de Termux Google Play a fuente estable
+
+- El usuario confirmó que instaló Termux desde Google Play.
+- Se acordó iniciar una migración a una distribución estable, sin desinstalar la instalación actual hasta completar y verificar una copia de seguridad.
+- Se consultó la documentación oficial de Termux: los APK de distintas fuentes tienen firmas distintas; al cambiar de fuente deben desinstalarse Termux y todos sus complementos, por lo que primero hay que respaldar los datos. Fuentes: https://github.com/termux/termux-app y https://github.com/termux/termux-app/blob/master/README.md
+- La copia debe contemplar tanto `$HOME` como `$PREFIX`; el comando oficial `termux-backup` solo respalda `$PREFIX`, no el directorio personal. No se ha ejecutado aún ningún comando de copia ni se ha desinstalado nada.
+- Próximo paso: inventariar complementos/apps Termux instalados y confirmar espacio disponible y ubicación externa segura; después guiar al usuario, paso a paso, para crear y verificar el archivo de respaldo antes de instalar la versión estable.
