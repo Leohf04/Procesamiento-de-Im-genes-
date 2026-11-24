@@ -1,0 +1,125 @@
+{
+  "schema_version": "urban-experiment-config-v1",
+  "experiment_protocol": "urban-exp-v1",
+  "ontology": "configs/urban_ontology_v1.json",
+  "ontology_version": "urban-v1",
+  "seed": 2026,
+  "input": {
+    "image_size": [
+      512,
+      512
+    ],
+    "geometry": "centered_letterbox",
+    "image_interpolation": "bilinear",
+    "mask_interpolation": "nearest",
+    "semantic_padding": 255,
+    "instance_padding": 0
+  },
+  "initialization": {
+    "policy": "random_initialization_no_pretrained_weights",
+    "semantic_model": "DeepLabV3Plus(pretrained_backbone=false)",
+    "instance_model": "MaskRCNN_ResNet50_FPN(weights=null,weights_backbone=null)",
+    "pretrained_weights_used": false,
+    "checkpoint_loaded": false,
+    "provenance": "Confirmed by scripts/urban_experiment_factory.py and four one-step preflight reports; no pretrained weights or trained checkpoint were used."
+  },
+  "experiments": [
+    {
+      "id": "S-A2D2",
+      "dataset": "a2d2",
+      "task": "semantic",
+      "architecture": "DeepLabV3Plus",
+      "num_classes": 20,
+      "batch_size": 4,
+      "gradient_accumulation": 1,
+      "epochs_max": 20,
+      "optimizer": "AdamW",
+      "learning_rate": 0.0001,
+      "weight_decay": 0.0001,
+      "scheduler": "ReduceLROnPlateau",
+      "scheduler_mode": "max",
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 2,
+      "early_stopping_patience": 5,
+      "gradient_clip_norm": 1
+    },
+    {
+      "id": "S-UrbanSyn",
+      "dataset": "urbansyn",
+      "task": "semantic",
+      "architecture": "DeepLabV3Plus",
+      "num_classes": 20,
+      "batch_size": 4,
+      "gradient_accumulation": 1,
+      "epochs_max": 20,
+      "optimizer": "AdamW",
+      "learning_rate": 0.0001,
+      "weight_decay": 0.0001,
+      "scheduler": "ReduceLROnPlateau",
+      "scheduler_mode": "max",
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 2,
+      "early_stopping_patience": 5,
+      "gradient_clip_norm": 1
+    },
+    {
+      "id": "I-UrbanSyn",
+      "dataset": "urbansyn",
+      "task": "instances",
+      "architecture": "MaskRCNN_ResNet50_FPN",
+      "num_classes_including_background": 9,
+      "batch_size": 1,
+      "gradient_accumulation": 2,
+      "epochs_max": 20,
+      "optimizer": "SGD",
+      "learning_rate": 0.0025,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "scheduler": "ReduceLROnPlateau",
+      "scheduler_mode": "max",
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 2,
+      "early_stopping_patience": 5,
+      "gradient_clip_norm": 1
+    },
+    {
+      "id": "I-A2D2",
+      "dataset": "a2d2",
+      "task": "instances",
+      "architecture": "MaskRCNN_ResNet50_FPN",
+      "num_classes_including_background": 9,
+      "batch_size": 1,
+      "gradient_accumulation": 2,
+      "epochs_max": 20,
+      "optimizer": "SGD",
+      "learning_rate": 0.0025,
+      "momentum": 0.9,
+      "weight_decay": 0.0005,
+      "scheduler": "ReduceLROnPlateau",
+      "scheduler_mode": "max",
+      "scheduler_factor": 0.5,
+      "scheduler_patience": 2,
+      "early_stopping_patience": 5,
+      "gradient_clip_norm": 1
+    }
+  ],
+  "selection_metrics": {
+    "semantic": "validation_mIoU",
+    "instances": "validation_mask_AP"
+  },
+  "run_policy": {
+    "RUN_TRAINING": false,
+    "allow_optimizer_step": false,
+    "allow_backward": false,
+    "allow_checkpoint_write": false,
+    "allow_dataset_download": false,
+    "allow_test_access": false,
+    "allow_ci": false
+  },
+  "notes": [
+    "Valores tomados de docs/PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md; todavía no son una autorización para entrenar.",
+    "El protocolo indica piloto de 10 batches para comprobar memoria/tiempo antes del entrenamiento; requiere autorización expresa.",
+    "La T4 previa solo verificó un paso con batch 1; no valida batch 4 ni acumulación 2.",
+    "A2D2 instance masks son componentes conectados reconstruidos; UrbanSyn es baseline principal de instancias."
+  ]
+}
