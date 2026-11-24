@@ -2773,3 +2773,15 @@ https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob
 
 ### Próxima acción
 El usuario debe abrir el enlace, ejecutar el Notebook completo en orden, revisar la hoja de contacto visual y pegar aquí únicamente el contenido entre `BLOQUE_CONTINUIDAD_INICIO` y `BLOQUE_CONTINUIDAD_FIN`. No iniciar entrenamiento.
+
+
+### Alineación adicional de la configuración con el runner — 2026-11-24
+
+Durante la inspección previa al cierre se detectó que dos parámetros de la tabla del protocolo no estaban aplicados realmente por el código: el scheduler no recibía `factor=0.5` y el runner no implementaba acumulación de gradientes para instancias. No se dejó esa discrepancia oculta:
+- `src/urban_optimizer.py` ahora consume `scheduler_factor` y `scheduler_patience` desde la configuración (defaults 0.5 y 2).
+- `src/urban_experiment_runner.py` implementa `gradient_accumulation_steps`, divide la loss por el tamaño efectivo del grupo, recorta gradientes y actualiza el optimizador al cerrar cada grupo; también maneja el último grupo parcial.
+- `configs/urban_experiment_v1.json` usa los nombres de parámetros consumidos por factoría/runner: `image_size`, `max_epochs`, `patience`, `max_grad_norm`, `gradient_accumulation_steps`, scheduler factor/patience, etc.
+- `tests/test_urban_experiment_runner.py` añade una prueba sintética de 4 batches agrupados de dos en dos (2 actualizaciones); `tests/test_urban_geometry_optimizer.py` comprueba factor 0.5.
+- La notebook verifica estáticamente la presencia de acumulación/scheduler en el código, crea configuraciones listas para la factoría inyectando las rutas runtime y recoge hashes SHA-256 de factoría/runner/optimizador.
+
+**Importante:** los tests se añadieron/actualizaron en GitHub, pero no se ejecutaron desde ChatGPT. No se afirma PASS de pytest ni de Colab. La notebook sigue sin ejecutar entrenamiento ni optimizer steps. El piloto de recursos continúa pendiente de autorización expresa.
