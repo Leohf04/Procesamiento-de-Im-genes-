@@ -2679,3 +2679,12 @@ Se corrigió la celda 1 de `notebooks/colab_preflight_un_paso_real.ipynb`:
 Commit notebook: `ff4706f8cbe1cbde7768425c18a0efa363932173`.
 
 No se ejecutó la celda en Colab; el usuario debe volver a ejecutar únicamente la celda 1. Si vuelve a fallar, copiar el mensaje completo que ahora incluye el detalle stderr de Git, ocultando cualquier dato sensible. No se ejecutó entrenamiento, descargas, lectura de test ni Actions. `RUN_TRAINING=False`.
+
+
+## 2026-11-24 — Sincronización Colab confirmada y corrección preventiva de notebook
+
+- El usuario ejecutó la celda 1 de `notebooks/colab_preflight_un_paso_real.ipynb`: Drive ya montado; sincronización correcta; rama `urban-models-and-benchmark`; HEAD sincronizado `93d0c905ba7eef26c53292d586888d03382ec3d4`; `RUN_TRAINING=False`.
+- Al inspeccionar la notebook antes de autorizar la siguiente celda, se detectó que el código de la celda de auditoría contenía secuencias `\\n` literales entre entradas del diccionario Python, lo que provocaría un error de sintaxis. Se corrigieron a saltos de línea reales.
+- Commit de la corrección: `8e5e53cbf1f02bcb0edbfab6b040e1d521a7014c`. Notebook releída desde GitHub: JSON válido, 9 celdas y campos de estado presentes. La notebook corregida aún no ha sido ejecutada en Colab.
+- No se ejecutó entrenamiento, optimizer.step, backward, descarga de datasets, lectura de test ni GitHub Actions. `RUN_TRAINING=False` permanece.
+- Próximo paso: volver a ejecutar únicamente la celda 1 para traer el commit nuevo; después ejecutar la celda 2 (pruebas sintéticas) y revisar su salida antes de continuar. No ejecutar las demás celdas todavía.
