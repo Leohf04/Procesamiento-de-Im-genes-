@@ -2467,3 +2467,16 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - Comprobación estática: el módulo `src/models/deeplabv3plus.py` y el paquete `src/__init__.py` existen en la rama. Aún falta que el usuario repita la celda 3 para validar importación y medición real en la Tesla T4; no se afirma que el script ya haya pasado en Colab.
 - No se modificó el notebook ni los parámetros de la auditoría. No se cargan datasets, no se toca test, no se llama optimizer.step(); esto es una prueba sintética de memoria, no entrenamiento. RUN_TRAINING=False.
 - Antes de continuar, auditar HEAD/PR #3/Actions y comprobar la nueva versión publicada. PR #3 debe seguir abierta, draft y sin fusionar.
+
+
+### Auditoría de memoria GPU por arquitectura completada en Colab — 2026-11-24
+
+- El usuario ejecutó la auditoría completa en Google Colab sobre GPU Tesla T4; las seis combinaciones terminaron en PASS: DeepLabV3+ semántica e instancia/Mask R-CNN, batch 1, 2 y 4, resolución 512×512. No hubo OOM ni fallos reportados.
+- DeepLabV3+ semántica: pico allocated 0.834/1.503/2.853 GiB y reserved 1.025/1.893/3.578 GiB para batch 1/2/4; pico incremental sobre modelo 0.682/1.350/2.700 GiB.
+- Mask R-CNN instancias: pico allocated 0.844/1.422/2.585 GiB y reserved 0.939/1.563/2.834 GiB para batch 1/2/4; pico incremental sobre modelo 0.676/1.253/2.417 GiB.
+- Tiempos por caso: semántica 2.582/0.726/0.863 s; instancias 1.340/1.097/1.242 s. Una llamada backward por caso; cero optimizer steps.
+- El JSON quedó en Google Drive: `MyDrive/ProcesamientoImagenes/auditoria_memoria_gpu/gpu_memory_audit_summary.json`.
+- El usuario confirmó explícitamente: `TRAINING_STARTED=False`, `DATASETS_LOADED=False`, `TEST_SPLIT_TOUCHED=False`, `OPTIMIZER_STEPS=0`. La auditoría usa tensores sintéticos y no representa entrenamiento completo, no evalúa memoria de optimizador tras inicialización/step ni pipeline real de datos, validación, checkpoints o fragmentación acumulada.
+- Interpretación: en esta prueba la combinación más exigente fue semántica batch 4, con 3.578 GiB reservados (2.853 GiB allocated). Los seis casos caben en la T4, pero no se debe tomar batch 4 como configuración de entrenamiento garantizada. Para la primera prueba de entrenamiento real se recomienda comenzar conservadoramente con batch 1; evaluar batch 2 solo después de medir un paso real con datos y optimizador. No aumentar a batch 4 sin esa comprobación.
+- Auditoría GitHub previa a registrar: HEAD de `urban-models-and-benchmark` y head de PR #3 coinciden en `ef6e0425954bd29af6e2a8e3d366ad6a59f3dacb`; PR #3 sigue abierta, draft y sin fusionar. Actions asociadas a ese HEAD siguen mostrando el run 45386028662 (Python tests) en failure; no se relanzó y no se atribuye causa.
+- No se inició entrenamiento ni se descargaron datasets. `RUN_TRAINING=False` permanece vigente. Siguiente paso: preparar una validación controlada del primer paso de entrenamiento real, inicialmente batch 1, manteniendo separados dominio/tarea y sin tocar test; no iniciar el entrenamiento piloto hasta revisar ese preflight y recibir autorización.
