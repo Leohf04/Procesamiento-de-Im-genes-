@@ -3156,3 +3156,11 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - El usuario ejecutó diagnóstico desde Fish: `sh` resuelve a `/data/data/com.termux/files/usr/bin/sh`, enlace simbólico a `dash`; `sh -c 'echo SH_FUNCIONA'` funciona correctamente.
 - Bash 5.3.9, Fish 4.8.0 y CPAN están presentes. No hay evidencia de que Fish sea la causa directa del fallo `Illegal option -d`.
 - Próximo paso: inspeccionar de forma no invasiva el lanzador CPAN, variables de entorno relevantes y metadatos del paquete antes de cualquier reparación. No ejecutar CPAN ni reintentar la configuración todavía.
+
+
+## 2026-11-24 — Confirmación de posible incidencia de la build Google Play
+
+- El usuario confirmó que `sh` (dash), Bash, Fish y Make funcionan de forma básica; `SHELL` está definido como Bash.
+- La salida de `apt-cache show xdg-utils` identifica el paquete como mantenido por `@termux`, versión `1.2.1-1`, cuyo postinst intenta instalar `File::MimeInfo` mediante CPAN.
+- Se encontró un reporte público en el repositorio oficial `termux/termux-app` con el mismo síntoma de CPAN (`Sideloading Perl ...`, `/bin/sh: 0: Illegal option -d`, `make ... no makefile`) en una instalación Google Play. Un mantenedor indicó que los problemas de la build Google Play deben reportarse en `termux-play-store/termux-issues`, ya que es una rama experimental separada. Esto refuerza que puede ser un problema de esa build/entorno y no de Fish.
+- No se aplicó ninguna reparación ni se ejecutaron más instalaciones. Próximo paso recomendado: no insistir con CPAN ni manipular manualmente scripts de dpkg; decidir entre reportar el problema a los mantenedores de Google Play o, tras respaldo verificado, migrar a una build estable de Termux. La migración requiere desinstalar la app actual y puede borrar sus datos; no hacerla sin copia de seguridad y confirmación del usuario.
