@@ -129,3 +129,18 @@ El bloque final de Colab reportó `status=PASS`, los nueve checks sintéticos en
 **Bloqueo explícito:** `experiment_readiness=BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`, `effective_experiment_config_frozen=false`, `model_weight_provenance_frozen=false`. PASS no demuestra representatividad, calidad de anotación por inspección visual, loaders end-to-end, convergencia ni generalización. No iniciar entrenamiento.
 
 Siguientes pasos seguros: congelar configuración efectiva y hash; documentar procedencia/licencia/identidad de pesos o declarar inicialización aleatoria; auditar soporte en manifiestos completos TRAIN/VAL e inspeccionar muestras solo de TRAIN/VAL. Después preparar un piloto separado y solicitar autorización expresa. Test permanece intacto y PR #3 abierta/draft/sin merge.
+
+
+## Notebook único para cerrar los tres pendientes — 2026-11-24
+
+Se añadieron estos archivos en `urban-models-and-benchmark`:
+- `configs/urban_experiment_v1.json`: configuración efectiva versionada para los cuatro experimentos Urban-v1, derivada del protocolo.
+- `notebooks/urban_v1_cierre_tres_pendientes.ipynb`: auditoría integral segura, inspección visual TRAIN/VAL y salida final única.
+
+**Decisiones:** inicialización aleatoria, sin pesos preentrenados/checkpoint; seed 2026; resolución 512; semántica batch 4/AdamW LR 1e-4; instancias batch 1/acumulación 2/SGD LR 2.5e-3; 20 épocas máximas; scheduler mode=max/factor 0.5/patience 2; early stopping 5; clipping 1.0. Valores tomados del protocolo, no autorización de entrenamiento.
+
+La notebook verifica los conteos completos esperados (A2D2 1000/1000; UrbanSyn 1000/751), IDs/orden, estados, assets, fuga TRAIN/VAL y soporte de clases; crea hoja visual de hasta 3 muestras por split. No accede a test. `RUN_TRAINING=False` y no realiza descargas, optimizer steps, backward, epochs ni checkpoints. El batch semántico 4 y acumulación 2 de instancias requieren un piloto separado autorizado; la prueba T4 previa fue batch 1.
+
+**No se ha ejecutado Colab desde ChatGPT.** El usuario debe ejecutar el Notebook completo, revisar la hoja visual y pegar solo el bloque final delimitado.
+
+Notebook: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_cierre_tres_pendientes.ipynb
