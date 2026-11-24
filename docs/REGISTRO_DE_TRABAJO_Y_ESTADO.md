@@ -2712,3 +2712,16 @@ Interpretación: los ocho archivos contemplados por la auditoría pudieron verif
 No se ha recibido todavía el contenido completo del JSON ni el bloque final de continuidad; por tanto, no se atribuyen valores concretos a hashes individuales, soporte por clase o versiones de entorno. No se ha ejecutado la celda final todavía según el estado conocido. Próximo paso seguro: ejecutar únicamente la última celda, que imprime el bloque único de continuidad a partir del reporte guardado, y compartirlo para revisar el estado consolidado.
 
 No se inició entrenamiento, no se ejecutó backward/optimizer.step/epochs, no se descargaron datos, no se tocó test, no se escribieron checkpoints y no se lanzaron GitHub Actions. `RUN_TRAINING=False` se mantiene. PR #3 debe seguir abierta y draft, sin merge.
+
+
+## 2026-11-24 — Auditoría segura de datos y reproducibilidad: PASS
+
+El usuario ejecutó en Colab la celda de auditoría de la sección 3 de `notebooks/colab_preflight_un_paso_real.ipynb` y reportó:
+- Archivo generado: `/content/drive/MyDrive/ProcesamientoImagenes/auditoria_correcciones_segura/urban_corrections_audit.json`.
+- Estado: `PASS`.
+- Archivos de datos con hash: 8.
+- Archivos faltantes: 0.
+
+Interpretación: la auditoría encontró presentes todos los archivos esperados que comprobó y pudo calcular ocho hashes. Este resultado no equivale a validación visual de muestras, prueba end-to-end de loaders, congelación de configuración experimental ni verificación de procedencia de pesos. La notebook mantiene `experiment_readiness=BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`; no autoriza entrenamiento.
+
+No se ejecutó entrenamiento, optimizer.step, backward, epochs, validación experimental, descarga de datos, lectura de test ni GitHub Actions en esta intervención. `RUN_TRAINING=False` permanece. Próximo paso: ejecutar únicamente la última celda de la notebook para producir el bloque único de continuidad; revisar ese bloque antes de decidir las siguientes comprobaciones seguras.
