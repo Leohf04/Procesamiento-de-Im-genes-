@@ -3076,3 +3076,24 @@ No hay actualmente un proveedor de GPU gratuita de entrenamiento prolongado cuya
 
 ### Estado
 Filtro de plataformas completado con la información disponible. No se ha habilitado GPU, creado cuenta, agregado método de pago ni ejecutado entrenamiento. Pendiente conocer universidad/facultad y si dispone de laboratorio GPU o profesor asesor.
+
+## 2026-11-24 — Restricción de ejecución: solo teléfono Android
+
+El usuario confirmó que no tiene acceso a computadora y dispone únicamente de su teléfono. Preguntó si se pueden optimizar los códigos para trabajar con recursos limitados.
+
+### Decisión técnica y límites
+- Sí se puede preparar un perfil ligero para inspección de datos, validaciones pequeñas, pruebas unitarias compatibles, visualización de métricas y eventualmente inferencia optimizada.
+- No se puede prometer entrenamiento completo y científicamente comparable de los cuatro modelos (DeepLabV3+ y Mask R-CNN en A2D2/UrbanSyn) directamente en Android. La notebook actual exige CUDA y se detiene si no hay GPU NVIDIA; Android no proporciona CUDA.
+- Entrenar en CPU móvil con PyTorch/torchvision sería extremadamente lento, limitado por RAM, temperatura y almacenamiento. Además, operaciones de torchvision usadas por Mask R-CNN pueden no estar disponibles o ser difíciles de instalar en Android.
+- ONNX Runtime móvil podría servir para inferencia si los modelos se exportan correctamente, pero no sustituye el entrenamiento.
+- No reducir resolución, muestras, épocas, clases ni cambiar optimizadores del protocolo principal sin aprobación; cualquier perfil reducido debe identificarse como piloto exploratorio y no mezclarse con resultados oficiales.
+- No pedir descarga de datasets completos al teléfono. Usar muestras sintéticas/de prueba pequeñas o acceso remoto solo si vuelve a existir un entorno autorizado.
+
+### Estado de implementación
+- En esta intervención se revisaron el registro, `notebooks/urban_v1_entrenamiento_completo_kaggle.ipynb`, `configs/urban_experiment_v1.json` y `docs/PROTOCOLO_EXPERIMENTAL.md`.
+- La notebook de entrenamiento está diseñada para Kaggle, exige CUDA, recupera metadatos/datos en el entorno remoto y persiste resultados en `/kaggle/working`; no es ejecutable tal cual en Android.
+- La configuración principal mantiene imágenes 512×512, cuatro experimentos y hasta 20 épocas. No se modificó.
+- No se modificó código, configuración, datasets ni checkpoints; no se ejecutó entrenamiento ni se generaron resultados.
+
+### Próximo paso
+Solicitar el modelo exacto del teléfono y su RAM/espacio libre para determinar qué pruebas locales son realistas. Después, diseñar un perfil Android separado y no destructivo (diagnóstico, tests ligeros e inferencia si es compatible), manteniendo intacto el protocolo experimental y dejando explícito que el entrenamiento completo queda bloqueado hasta disponer de cómputo adecuado.
