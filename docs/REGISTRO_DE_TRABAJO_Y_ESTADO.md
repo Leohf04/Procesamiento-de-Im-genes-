@@ -3039,3 +3039,40 @@ El usuario pidió filtrar las alternativas gratuitas de entrenamiento teniendo e
 
 ### Estado / dato pendiente
 No se puede cerrar la lista de plataformas elegibles hasta confirmar dónde reside/estudia físicamente el usuario y si es estudiante de pregrado o posgrado, además de si tiene correo institucional. No se han creado cuentas, agregado tarjetas, habilitado GPU, transferido datos ni iniciado entrenamiento.
+
+
+## 2026-11-24 — Decisión de elegibilidad definitiva: estudiante de pregrado residente en Cuba
+
+El usuario confirmó que reside actualmente en Cuba y cursa estudios de pregrado. Se filtraron alternativas según residencia real, condiciones contractuales y elegibilidad académica; no se infirió elegibilidad por nacionalidad únicamente.
+
+### Conclusión operativa
+No hay actualmente un proveedor de GPU gratuita de entrenamiento prolongado cuya elegibilidad y acceso estén confirmados para este usuario desde Cuba. No se debe seguir con Lightning AI ni Paperspace, ni intentar eludir restricciones geográficas.
+
+### Proveedores
+- **Lightning AI: DESCARTAR.** Sus términos exigen declarar que el usuario no está ubicado en país sujeto a embargo estadounidense o designado como patrocinador del terrorismo. Cuba está en la lista estadounidense. Fuente: https://lightning.ai/legal/terms-and-conditions/
+- **DigitalOcean/Paperspace: DESCARTAR.** Los términos de DigitalOcean incluyen Cuba entre las jurisdicciones en las que el usuario no puede estar ubicado. Fuente: https://www.digitalocean.com/legal/terms-of-service-agreement-october-2025
+- **Google Colab Free: MANTENER COMO PRIMERA OPCIÓN TÉCNICA CONDICIONAL.** Su FAQ pública describe GPU gratuita para educación y aprendizaje automático y límites dinámicos; no se encontró una prohibición general explícita por residencia cubana en la FAQ/TOS consultados. Esto no constituye confirmación contractual individual ni garantiza GPU. El usuario ya agotó temporalmente la cuota. Fuente: https://research.google.com/colaboratory/faq.html
+- **Kaggle Notebooks: MANTENER COMO SEGUNDA OPCIÓN CONDICIONAL.** La documentación oficial ofrece Tesla P100 gratuita sujeta a disponibilidad: https://www.kaggle.com/docs/notebooks. La exclusión de residentes cubanos hallada en sus términos corresponde expresamente a competencias y no debe extrapolarse a notebooks. Kaggle Staff confirma que GPU requiere verificación telefónica; el usuario ya recibió Permission denied al verificar +53. Consultar soporte oficial por método alternativo, sin falsear país, número o identidad. Fuente: https://www.kaggle.com/terms y https://www.kaggle.com/discussions/product-feedback/751699
+- **Hugging Face ZeroGPU: DESCARTAR PARA ENTRENAMIENTO.** Cuenta gratuita: 5 minutos GPU diarios; insuficiente para cuatro modelos de hasta 20 épocas. Fuente: https://huggingface.co/docs/hub/main/spaces-zerogpu
+- **Modal: DESCARTAR BAJO CONDICIÓN CERO TARJETA/CERO RIESGO.** Requiere método de pago para GPU y puede facturar uso.
+- **Amazon SageMaker Studio Lab: DESCARTAR PARA NUEVOS USUARIOS.** No admite nuevas cuentas (hallazgo de investigación anterior).
+
+### NSF ACCESS — no contar como elegible por ahora
+- El usuario es estudiante de pregrado, reside en Cuba y no ha informado afiliación académica estadounidense.
+- La política ACCESS actual exige afiliación organizacional y correo institucional coincidente. Estudiantes de pregrado no pueden liderar asignaciones; pueden trabajar bajo asesor elegible. Usuarios basados fuera de EE.UU. no pueden solicitar ni liderar proyectos; pueden colaborar con PI estadounidense con justificación y aprobación. Además, los usuarios internacionales no deben aparecer ni estar afiliados a instituciones en las listas federales especificadas, incluida State Sponsors of Terrorism; Cuba figura en la lista del Departamento de Estado.
+- Por tanto, si el usuario está afiliado a una universidad cubana, no se debe asumir que podrá ser añadido. No invertir esfuerzo en una solicitud hasta obtener confirmación escrita de ACCESS/Resource Provider sobre el caso concreto.
+- Fuentes: https://allocations.access-ci.org/allocations-policy ; https://2021-2025.state.gov/state-sponsors-of-terrorism/
+
+### Matiz normativo OFAC
+31 CFR §515.578 autoriza ciertas categorías de servicios de Internet hacia Cuba, pero la autorización de cloud-based services está condicionada a apoyar servicios de intercambio de comunicaciones por Internet; no es una autorización general para cualquier cómputo de entrenamiento ML. No dar asesoría legal ni concluir que toda GPU cloud es automáticamente permitida/prohibida. El proveedor debe confirmar su propia elegibilidad y alcance. Fuentes: https://ofac.treasury.gov/faqs/785 ; https://www.govinfo.gov/content/pkg/CFR-2025-title31-vol3/xhtml/CFR-2025-title31-vol3-sec515-578.html
+
+### Próximos pasos acordados
+1. Mantener Colab como opción principal y reintentar GPU cuando se restablezca el acceso, sin múltiples cuentas ni mecanismos de evasión.
+2. Contactar soporte Kaggle para preguntar si existe verificación oficial alternativa para número +53; no falsear datos.
+3. Investigar recursos de cómputo propios de la universidad/facultad del usuario, laboratorios, grupos de investigación, profesores y convenios académicos. Es la vía académica más prometedora para obtener GPU local o acceso institucional.
+4. No recomendar VPN, cuentas prestadas, identidad/número falsos, tarjetas de terceros ni plataformas cuyos términos excluyen expresamente a usuarios ubicados en Cuba.
+5. No subir datasets/código privado a proveedores hasta confirmar elegibilidad.
+6. No iniciar entrenamiento ni cambiar configuraciones; conservar intactas auditorías y checkpoints.
+
+### Estado
+Filtro de plataformas completado con la información disponible. No se ha habilitado GPU, creado cuenta, agregado método de pago ni ejecutado entrenamiento. Pendiente conocer universidad/facultad y si dispone de laboratorio GPU o profesor asesor.
