@@ -95,7 +95,9 @@ def test_runner_gradient_accumulation_steps_optimizer_at_group_boundaries(tmp_pa
             self.step_calls += 1
             return super().step(closure)
 
-    tr, va = make_loaders()
+    ds = TensorDataset(torch.randn(4,1,4,4), torch.randint(0,2,(4,4,4)))
+    tr = DataLoader(ds, batch_size=1)
+    va = DataLoader(ds, batch_size=2)
     model = Tiny()
     optimizer = CountingSGD(model.parameters(), lr=.01)
     result = run_experiment(
