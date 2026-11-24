@@ -158,3 +158,6 @@ Las pruebas no se han ejecutado por ChatGPT; no afirmar pytest PASS. La ejecuci�
 Se corrigió la celda de configuración de la notebook para verificar explícitamente que las cuatro configuraciones contienen los campos consumidos por factoría/runner, inyectar rutas runtime de Drive y comprobar acumulación de gradientes y factor del scheduler. El bloque final recoge hashes SHA-256 de factoría, runner y optimizador. Se validó que el archivo es JSON nbformat 4 con 13 celdas y que la última celda contiene los delimitadores de continuidad. La configuración JSON también se parseó y contiene cuatro especificaciones completas.
 
 Esto es validación estática del contenido del repositorio, no ejecución de Python/pytest/Colab. No se ha confirmado ejecución de tests ni de la notebook.
+
+
+La última revisión de la notebook endureció la auditoría: ahora un orden distinto entre IDs de manifiesto e índice se marca como error, y se exigen las claves de assets que consumen los adaptadores actuales (A2D2: `image`, `semantic`, `instance`; UrbanSyn: `rgb`, `semantic`, `panoptic`). También verifica que existan los archivos referenciados. La inspección final permanece limitada a TRAIN/VAL.
