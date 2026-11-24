@@ -185,3 +185,19 @@ Para continuar, el usuario debe volver a abrir/recargar el Notebook desde el enl
 Esta corrección no descarga datos ni inventa/expande manifiestos. Los 10 registros siguen siendo solo muestras de preflight; no son aptos como dataset completo. Deben prepararse manifiestos e índices completos TRAIN/VAL de acuerdo con el protocolo. `RUN_TRAINING=False`; no backward, optimizer steps, epochs, checkpoints, descargas ni acceso a test. PR #3 permanece abierta, draft y sin merge.
 
 **Acción Colab:** recargar la notebook desde el enlace GitHub-Colab, ejecutar desde el principio y pegar un único bloque de continuidad. El nuevo bloque determinará si las rutas antiguas se resuelven en Drive o si faltan realmente los assets. No iniciar entrenamiento.
+
+
+## Continuidad actual — auditoría Urban-v1 con remapeo de assets (2026-11-24)
+
+Último resultado de Colab:
+- Config/ontología hashes: `faa68c39f042c1aa8313123501fa25c280212d9f261236eb99fb4d6fd01f7e7f` / `a65a3c6735c146b59fc361e29e595adc2f6b00d3e3d10d10923feaf56786ab64`.
+- Cuatro configuraciones completas declaradas; inicialización aleatoria; sin checkpoint; `RUN_TRAINING=False`.
+- Assets de las 40 muestras: 120 campos encontrados tras remapeo, 100 archivos físicos únicos, cero ausentes. Hoja visual creada; 12 imágenes inspeccionadas por la notebook; falta revisión humana.
+- Manifiestos/índices configurados: 10 filas en cada uno de los cuatro splits, no cumplen el protocolo (A2D2 1000/1000; UrbanSyn 1000/751). IDs alineados/únicos, annotation status OK, sin campos obligatorios ausentes ni solapamiento train/val en la muestra.
+- No backward, no entrenamiento, no checkpoint y no acceso a test.
+
+La causa de los 10 registros está localizada en el flujo de capacidad: `notebooks/colab_auditoria_capacidad_incremental.ipynb` sección 4 reconstruye manifiestos completos desde el artifact GitHub Actions `14770171764` (run `45038801547`, plan `per_class_cap=null`) en `/content/cap200_input/manifests` y extrae los índices completos; sección 8 selecciona deliberadamente solo 10 filas por split y persiste ese subconjunto en Drive. El bloque de cierre está auditando ese subconjunto, no necesariamente el universo de metadatos disponible. La disponibilidad actual del artifact no se ha verificado y puede expirar.
+
+**Próxima intervención:** verificar/recuperar artifact completo; reconstruir y persistir en un directorio separado solo manifiestos e índices TRAIN/VAL completos; verificar conteos, IDs y hashes; hacer dry-run de materialización completa (sin límite de filas, sin descargar) para estimar tamaño. Mantener intacta la carpeta de las 40 muestras. No leer/materializar test, no descargar el dataset completo ni iniciar entrenamiento sin revisión y autorización.
+
+Enlace notebook de cierre: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_cierre_tres_pendientes.ipynb
