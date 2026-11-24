@@ -151,3 +151,10 @@ Notebook: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-g
 Antes de congelar los valores del protocolo, se corrigió una discrepancia de implementación: `src/urban_optimizer.py` consume ahora `scheduler_factor=0.5` y `scheduler_patience=2`; `src/urban_experiment_runner.py` implementa `gradient_accumulation_steps` y maneja grupos parciales. La configuración versionada usa los nombres consumidos por factoría/runner. Se añadieron pruebas sintéticas para acumulación y factor del scheduler. La notebook comprueba la presencia de esas implementaciones y hashea los archivos de código.
 
 Las pruebas no se han ejecutado por ChatGPT; no afirmar pytest PASS. La ejecución de Colab sigue pendiente. `RUN_TRAINING=False`, sin test ni descargas; cualquier piloto requiere autorización expresa.
+
+
+### Validación estática final de artefactos — 2026-11-24
+
+Se corrigió la celda de configuración de la notebook para verificar explícitamente que las cuatro configuraciones contienen los campos consumidos por factoría/runner, inyectar rutas runtime de Drive y comprobar acumulación de gradientes y factor del scheduler. El bloque final recoge hashes SHA-256 de factoría, runner y optimizador. Se validó que el archivo es JSON nbformat 4 con 13 celdas y que la última celda contiene los delimitadores de continuidad. La configuración JSON también se parseó y contiene cuatro especificaciones completas.
+
+Esto es validación estática del contenido del repositorio, no ejecución de Python/pytest/Colab. No se ha confirmado ejecución de tests ni de la notebook.
