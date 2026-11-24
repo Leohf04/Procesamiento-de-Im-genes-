@@ -2561,3 +2561,12 @@ Los resultados de memoria aún no se han ejecutado. Esta medición sintética ap
 - No volver a ejecutar auditoría sintética de memoria por ahora: sus seis casos ya están aprobados en el informe histórico y repetirlos no resolvería la ausencia de CUDA en el runtime activo. No cambiar `EXECUTE_SINGLE_STEP=False`, no ejecutar optimizer step, no iniciar entrenamiento ni tocar test.
 - Auditoría GitHub al registrar: HEAD `urban-models-and-benchmark` = `fa5493f6ea193ef252a2de02eb7882e8e26436af`; PR #3 continúa `open`, `draft=true`, `merged=false`. Los tres runs más recientes de ese SHA (45414347529, 45414336229, 45414336222) están completed/failure; no se relanzaron y no se atribuye causa sin logs del job.
 - Esta intervención no ejecutó Colab ni modificó código; solo se añadió este diagnóstico al registro. `RUN_TRAINING=False` permanece vigente.
+
+
+### Diagnóstico GPU integrado directamente en la notebook Colab — 2026-11-24
+
+- A petición del usuario, se actualizó `notebooks/colab_preflight_un_paso_real.ipynb` para incorporar una sección independiente **2.1. Diagnóstico del acelerador GPU en esta sesión**, situada inmediatamente antes del preflight que valida informes persistidos.
+- La nueva celda ejecuta `nvidia-smi`, imprime timestamp UTC, versión de PyTorch, versión CUDA con la que fue compilado, `torch.cuda.is_available()`, número de GPU detectadas y, si existe, nombre y VRAM total de la GPU activa. Si no hay CUDA, imprime instrucciones para seleccionar GPU en Colab y reconectar.
+- La celda es solo diagnóstica: no carga datasets, no ejecuta modelos, no hace forward/backward ni pasos del optimizador. La celda 3 conserva su guardia y seguirá deteniendo el flujo si CUDA no está disponible.
+- Commit de notebook: `4807208ef44891a50b194cc511844225c14494e5`. El usuario debe volver a abrir/recargar la notebook desde la rama para ver la nueva sección y ejecutar la celda diagnóstica antes de la celda 3.
+- No se ejecutó Colab desde esta conversación. No se inició entrenamiento, no se ejecutó optimizer.step(), no se descargaron ni materializaron datos y no se tocó test. `EXECUTE_SINGLE_STEP=False` y `RUN_TRAINING=False` permanecen vigentes.
