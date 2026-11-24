@@ -21,6 +21,9 @@ def build_optimizer_and_scheduler(model, task, config):
             weight_decay=float(config.get("weight_decay", 5e-4)),
         )
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="max", patience=2
+        optimizer,
+        mode="max",
+        factor=float(config.get("scheduler_factor", 0.5)),
+        patience=int(config.get("scheduler_patience", 2)),
     )
     return optimizer, scheduler
