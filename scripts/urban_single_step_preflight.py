@@ -2,7 +2,7 @@
 """Run exactly one real-data optimizer update for one urban dataset/task.
 
 This is a bounded preflight, NOT the multi-epoch experiment runner. It reads
-only the selected TRAIN split, performs one backward + optimizer.step(), does
+one selected TRAIN batch, performs one backward + optimizer.step(). does
 not iterate validation, never opens test, and writes no model checkpoint.
 """
 from __future__ import annotations
