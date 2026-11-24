@@ -7,39 +7,12 @@ from src.data_adapters import (A2D2SemanticDataset,A2D2InstanceDataset,
     UrbanSynSemanticDataset,UrbanSynInstanceDataset,detection_collate_fn,load_a2d2_class_list)
 from src.urban_ontology import load_urban_ontology,semantic_name_to_id,instance_name_to_id,source_semantic_map,source_instance_map
 from src.urban_training import build_urban_train_loader
+from src.urban_optimizer import build_optimizer_and_scheduler
 from src.urban_coco_evaluator import evaluate_coco_instance_segmentation
 from src.urban_experiment_runner import seed_everything
 
 def _jsonl(path):
     with Path(path).open(encoding="utf-8") as f: return [json.loads(x) for x in f if x.strip()]
-
-def build_optimizer_and_scheduler(model, task, config):
-    """Create the optimizer/scheduler pair specified by the urban-v1 protocol.
-
-    Semantic: AdamW. Instances: SGD with momentum. Both monitor the primary
-    validation metric via ReduceLROnPlateau(mode='max', patience=2).
-    """
-    if task not in {"semantic", "instances"}:
-        raise ValueError("task must be semantic or instances")
-    lr = float(config["learning_rate"])
-    if lr <= 0:
-        raise ValueError("learning_rate must be positive")
-    if task == "semantic":
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=lr,
-            weight_decay=float(config.get("weight_decay", 1e-4)),
-        )
-    else:
-        optimizer = torch.optim.SGD(
-            model.parameters(), lr=lr,
-            momentum=float(config.get("momentum", 0.9)),
-            weight_decay=float(config.get("weight_decay", 5e-4)),
-        )
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="max", patience=2
-    )
-    return optimizer, scheduler
-
 
 def create_experiment(config):
     ds=config["dataset"]; task=config["task"]
