@@ -83,7 +83,7 @@ def run_one(dataset: str, task: str, data_dir: Path, index_dir: Path,
     if task == "semantic":
         images, masks = batch
         images = images.cuda(non_blocking=True)
-        masks = masks.cuda(non_blocking=True, dtype=torch.long)
+        masks = masks.to(device="cuda", dtype=torch.long, non_blocking=True)
         logits = model(images)["out"]
         if logits.ndim != 4 or logits.shape[0] != 1 or logits.shape[1] != 20:
             raise RuntimeError(f"Unexpected semantic logits shape: {tuple(logits.shape)}")
