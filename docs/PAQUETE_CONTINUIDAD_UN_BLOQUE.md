@@ -77,3 +77,11 @@ La discrepancia de optimizador/scheduler y el resize directo fueron corregidos e
 **No se ha ejecutado la notebook ni entrenamiento.** La configuración efectiva congelada y procedencia de pesos siguen pendientes; las pruebas no demuestran calidad ni generalización.
 
 Para continuar: abre la notebook desde Colab, ejecútala completa con los archivos de TRAIN/VAL ya presentes en Drive y pega solo el bloque entre `BLOQUE_CONTINUIDAD_INICIO` y `BLOQUE_CONTINUIDAD_FIN`.
+
+
+### Enlace directo a la notebook actualizada
+
+`notebooks/colab_preflight_un_paso_real.ipynb` (ahora contiene la auditoría segura de correcciones, no el antiguo preflight de cuatro optimizer steps):
+https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/colab_preflight_un_paso_real.ipynb
+
+La notebook diferencia el resultado de las pruebas mecánicas (`PASS`) de la preparación de experimentos (`BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`). Aunque los hashes se recojan correctamente, no existe aún una configuración efectiva congelada ni una procedencia completa de pesos.
