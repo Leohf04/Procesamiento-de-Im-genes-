@@ -3097,3 +3097,12 @@ El usuario confirmó que no tiene acceso a computadora y dispone únicamente de 
 
 ### Próximo paso
 Solicitar el modelo exacto del teléfono y su RAM/espacio libre para determinar qué pruebas locales son realistas. Después, diseñar un perfil Android separado y no destructivo (diagnóstico, tests ligeros e inferencia si es compatible), manteniendo intacto el protocolo experimental y dejando explícito que el entrenamiento completo queda bloqueado hasta disponer de cómputo adecuado.
+
+## 2026-11-24 — Identificación del dispositivo Android
+
+El usuario proporcionó captura de “Acerca del dispositivo” e identificó el teléfono como **OnePlus Nord N200 5G**, modelo **DE2118**.
+- Captura: Qualcomm Snapdragon octa-core, 4.00 GB RAM, Android 12, OxygenOS; versión de software DE2118_11_C.37.
+- La ficha oficial de OnePlus para Nord N200 especifica Snapdragon 480 5G, GPU Adreno 619, 4 GB LPDDR4x y almacenamiento UFS 2.1 de 64 GB. Fuente: https://www.oneplus.com/us/n200-5g/specs
+- Evaluación: el dispositivo permite tareas ligeras de desarrollo, validación de muestras pequeñas y posible inferencia optimizada; no es una plataforma realista para entrenar los cuatro experimentos DeepLabV3+/Mask R-CNN completos. No dispone de CUDA NVIDIA y solo tiene 4 GB de RAM.
+- No se ha instalado software, modificado código/configuración, descargado datasets ni ejecutado entrenamiento.
+- Próximo paso: diseñar un entorno Android de bajo consumo y no destructivo, empezando por comprobar almacenamiento libre y compatibilidad de herramientas; mantener separado cualquier piloto móvil del protocolo experimental oficial.
