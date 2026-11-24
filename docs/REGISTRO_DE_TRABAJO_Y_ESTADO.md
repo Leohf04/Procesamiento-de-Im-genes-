@@ -2826,3 +2826,19 @@ La corrección es diagnóstica: no descarga archivos, no fabrica filas, no ampl�
 Commit de notebook: `81cbd6486f6f302106ee71a245a877d054ec6b1d`.
 
 Siguiente paso seguro: abrir la notebook actualizada en Colab, ejecutar desde el principio y compartir el bloque único. Según los diagnósticos reales, decidir si los assets ya están en Drive con rutas antiguas o si falta materializarlos. Si los manifiestos siguen en 10 filas, localizar/regenerar los manifiestos completos TRAIN/VAL y construir índices completos antes de la auditoría final. No iniciar entrenamiento; `RUN_TRAINING=False`.
+
+
+## Resultado de cierre Urban-v1: assets localizados, manifiestos de preflight limitados — 2026-11-24
+
+El usuario ejecutó `notebooks/urban_v1_cierre_tres_pendientes.ipynb` y compartió el resultado:
+- Config SHA-256 `faa68c39f042c1aa8313123501fa25c280212d9f261236eb99fb4d6fd01f7e7f`; ontología SHA-256 `a65a3c6735c146b59fc361e29e595adc2f6b00d3e3d10d10923feaf56786ab64`. Las cuatro configuraciones S-A2D2, S-UrbanSyn, I-UrbanSyn e I-A2D2 se declararon completas; inicialización aleatoria, sin checkpoint, entrenamiento desactivado. Hashes reportados de factoría/runner/optimizador quedaron en el bloque del usuario.
+- Resolución de assets: 120/120 campos encontrados tras remapear rutas antiguas a Drive; cero ausentes; 100 archivos físicos únicos. Esto confirma que los assets de las 40 muestras ya materializadas están accesibles mediante las rutas corregidas, no que el universo completo esté materializado.
+- Los cuatro manifiestos e índices configurados contienen 10 filas cada uno. Protocolo: A2D2 train/val 1000/1000; UrbanSyn train/val 1000/751. Los IDs son únicos, coinciden en orden/conjunto, annotation_status no-OK=0, campos requeridos ausentes=0 y solapamiento train/val=0 en esas muestras. Cada split falla únicamente por discrepancia de conteo de filas.
+- Hoja visual generada en Drive; 12 imágenes inspeccionadas por la notebook, con imagen y etiqueta localizadas en los 4 splits. La revisión visual humana sigue pendiente; no equivale a validar el conjunto completo.
+- `RUN_TRAINING=False`, `backward_calls=0`, sin checkpoints ni acceso a test.
+
+**Hallazgo de procedencia de manifiestos:** la notebook `notebooks/colab_auditoria_capacidad_incremental.ipynb` reconstruye en su sección 4 manifiestos completos desde el artifact de GitHub Actions `14770171764` (run `45038801547`), con `per_class_cap=null`, y sus índices de anotaciones. Pero la sección 8 materializa intencionalmente solo 10 muestras por split y persiste ese subconjunto en `MyDrive/ProcesamientoImagenes/urban_data_capacity`. Por eso la notebook de cierre ve 10 filas: no demuestra que el artifact carezca de las filas restantes. La reconstrucción completa queda en el runtime temporal `/content/cap200_input/manifests` y el índice extraído del artifact, no se ha confirmado su persistencia en Drive. El artifact puede expirar; no asumir que sigue disponible sin comprobarlo.
+
+**Siguiente paso seguro:** recuperar/verificar el artifact completo si sigue accesible; reconstruir solo TRAIN/VAL (no leer ni materializar TEST), persistir manifiestos e índices completos en un directorio separado de Drive y comprobar conteos/IDs/hashes. Después ejecutar únicamente `--dry-run` del materializador sin límite de muestras para estimar bytes de los 3.751 registros; no descargar los assets completos hasta revisar la estimación y obtener autorización. No sobrescribir el directorio de las 40 muestras. No iniciar entrenamiento.
+
+La ejecución reportada no demuestra que los 3.751 registros tengan assets descargados localmente; tampoco demuestra que falten. Se debe distinguir metadatos/manifiestos completos de materialización física. PR #3 permanece abierta, draft y sin merge.
