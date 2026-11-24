@@ -3,7 +3,7 @@
 **Actualizado:** 2026-11-24  
 **Repositorio:** `Leohf04/Procesamiento-de-Im-genes-`  
 **Rama:** `urban-models-and-benchmark`  
-**HEAD de referencia antes de este documento:** `6117ef4703f56184c6ec9dbbeef37264631a0107`  
+**HEAD de referencia previo a la auditoría segura:** posterior a los commits listados en el registro (consultar HEAD de la rama al continuar).  
 **Registro principal:** [REGISTRO_DE_TRABAJO_Y_ESTADO.md](REGISTRO_DE_TRABAJO_Y_ESTADO.md)  
 **Revisión técnica:** [REVISION_PREVIA_AL_PILOTO.md](REVISION_PREVIA_AL_PILOTO.md)  
 **Protocolo propuesto:** [PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md](PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md)
@@ -64,3 +64,16 @@ La revisión de los archivos de la rama encontró discrepancias que deben resolv
 7. **Cobertura:** las 10 muestras por split/dataset solo sirven para preflight; no prueban cobertura ni representatividad para entrenamiento.
 
 No se modificó código de entrenamiento en esta intervención. No se ejecutó Colab, no se ejecutó optimizer.step(), no se descargaron datos, no se tocó test y no se inició piloto.
+
+
+## Actualización técnica — 2026-11-24
+
+La discrepancia de optimizador/scheduler y el resize directo fueron corregidos en código:
+- Semántica: AdamW; instancias: SGD; ReduceLROnPlateau `mode=max, patience=2`.
+- Transformaciones letterbox con padding semántico 255 e instancias 0, y cajas xyxy coherentes.
+- Notebook de auditoría segura: `notebooks/colab_preflight_un_paso_real.ipynb`.
+- Pruebas sintéticas automatizadas: `tests/test_urban_geometry_optimizer.py`.
+
+**No se ha ejecutado la notebook ni entrenamiento.** La configuración efectiva congelada y procedencia de pesos siguen pendientes; las pruebas no demuestran calidad ni generalización.
+
+Para continuar: abre la notebook desde Colab, ejecútala completa con los archivos de TRAIN/VAL ya presentes en Drive y pega solo el bloque entre `BLOQUE_CONTINUIDAD_INICIO` y `BLOQUE_CONTINUIDAD_FIN`.
