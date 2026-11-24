@@ -2991,3 +2991,51 @@ El usuario solicitó una investigación web profunda para identificar infraestru
 
 ### Estado
 Investigación web completada. No se creó cuenta, no se añadió método de pago, no se habilitó GPU, no se descargaron datos ni se ejecutó entrenamiento. PR #3 continúa abierta, draft y sin merge.
+
+
+## 2026-11-24 — Filtro de elegibilidad por nacionalidad/residencia cubana para GPU gratuita
+
+El usuario pidió filtrar las alternativas gratuitas de entrenamiento teniendo en cuenta que es estudiante cubano. Se verificaron fuentes oficiales y se distinguió nacionalidad de residencia física, afiliación institucional y elegibilidad del proveedor.
+
+### Hallazgos verificados
+
+**Lightning AI**
+- Sus términos de servicio contienen una declaración de que el cliente no está ubicado en un país sujeto a embargo estadounidense. Si el usuario está físicamente en Cuba, no debe usarse ni intentarse eludir la restricción. La nacionalidad cubana por sí sola no equivale a estar ubicado en Cuba; el proveedor aplica sus propios controles y debe confirmar elegibilidad si hay duda.
+- Fuente: https://studio.lightning.ai/legal/terms-and-conditions/
+
+**DigitalOcean / Paperspace**
+- Los términos de DigitalOcean (aplicables a sus servicios) declaran que el usuario no puede estar ubicado en Cuba, Irán, Corea del Norte, Siria o Crimea. Paperspace Gradient pertenece al ecosistema DigitalOcean, por lo que no recomendarlo para alguien ubicado en Cuba.
+- Fuente: https://www.digitalocean.com/legal/terms-of-service-agreement-june-2025
+
+**Kaggle**
+- La cláusula pública que excluye a residentes de Cuba localizada en los términos de Kaggle está expresamente dentro de la sección de competencias/contests. No debe extrapolarse automáticamente a todos los notebooks o al uso general de la plataforma.
+- Sin embargo, este usuario ya intentó la verificación telefónica con un número cubano (+53) y recibió “Permission denied”. Por tanto, Kaggle no es una alternativa operativa confirmada para esta cuenta. No sugerir falsear país, número ni identidad.
+- Fuentes: https://www.kaggle.com/terms ; https://www.kaggle.com/docs/notebooks
+
+**Google Colab**
+- La FAQ oficial describe el servicio gratuito como orientado al aprendizaje automático, ciencia de datos y educación, pero confirma que las GPU no están garantizadas y los límites son dinámicos. No se encontró en los términos de Colab consultados una prohibición general explícita por nacionalidad cubana; eso no constituye una garantía legal o de acceso desde Cuba.
+- El usuario ya agotó el límite de GPU de Colab. Mantenerlo como alternativa futura, no como entorno de entrenamiento inmediato.
+- Fuentes: https://research.google.com/colaboratory/faq.html ; https://research.google.com/colaboratory/tos_v6.html
+
+**Hugging Face**
+- Sus términos exigen cumplimiento de controles de exportación y sanciones estadounidenses y de otras jurisdicciones, sin que el texto consultado establezca una exclusión simple por nacionalidad cubana. ZeroGPU gratuito tiene cuota insuficiente (5 minutos/día), por lo que no sirve para entrenar los cuatro experimentos.
+- Fuente: https://huggingface.co/terms-of-service
+
+**NSF ACCESS — oportunidad académica relevante si el usuario estudia/está basado en EE. UU.**
+- ACCESS proporciona recursos de cómputo y GPU sin coste, por asignación aprobada, y ofrece recursos HPC GPU (por ejemplo Anvil, Delta, Bridges-2, Jetstream2 según disponibilidad).
+- La página Classroom declara elegibilidad para estudiantes basados en EE. UU. que necesiten cómputo para clases. La política de asignaciones establece que estudiantes de pregrado no pueden liderar una asignación de investigación, pero pueden usar recursos bajo la guía de un instructor/asesor elegible; estudiantes graduados basados en EE. UU. pueden liderar proyectos Explore/Discover con carta/guía del asesor. Se requiere afiliación institucional y correo organizacional coincidente.
+- La política contempla usuarios internacionales como colaboradores bajo una asignación de un PI elegible, con justificación y aprobación; esto no garantiza elegibilidad de alguien ubicado en Cuba y debe consultarse con ACCESS/PI.
+- Recursos oficiales: https://allocations.access-ci.org/classroom ; https://allocations.access-ci.org/allocations-policy ; https://access-ci.org/get-started/for-graduate-students/ ; https://support.access-ci.org/documentation/resources/anvil-gpu
+
+**OFAC / nacionalidad cubana fuera de Cuba**
+- OFAC FAQ 791 indica que los nacionales cubanos fuera de Cuba pueden seguir sujetos a bloqueo, con licencia general para quienes establecieron residencia permanente fuera de Cuba y cumplen 31 CFR 515.505; también autoriza a personas sujetas a jurisdicción estadounidense a proporcionar bienes/servicios a individuos cubanos ubicados fuera de Cuba, siempre que no exista exportación comercial de bienes/servicios hacia o desde Cuba. Esto no debe interpretarse como asesoría legal ni como garantía de que un proveedor acepte al usuario.
+- Fuentes: https://ofac.treasury.gov/faqs/791 ; https://www.govinfo.gov/content/pkg/CFR-2025-title31-vol3/xhtml/CFR-2025-title31-vol3-subtitleB.html
+
+### Clasificación práctica provisional
+
+- Si el usuario reside en Cuba: descartar Lightning AI y DigitalOcean/Paperspace por sus términos basados en ubicación. Kaggle no está confirmado para su cuenta por el bloqueo de verificación +53; no intentar eludirlo. Colab/Hugging Face requieren confirmación de acceso y límites; ZeroGPU no sirve para entrenamiento. Investigar primero acceso académico supervisado (ACCESS si hay institución/PI elegible) y preguntar al proveedor por elegibilidad antes de subir datos o ejecutar.
+- Si el usuario reside fuera de Cuba: no excluir por nacionalidad automáticamente. Verificar situación/ubicación y condiciones del proveedor; ACCESS puede ser especialmente atractivo si está afiliado a institución estadounidense. La elegibilidad final depende de estatus, afiliación y aprobación.
+- No usar VPN, datos falsos, cuentas prestadas ni medios de pago de terceros para evadir restricciones.
+
+### Estado / dato pendiente
+No se puede cerrar la lista de plataformas elegibles hasta confirmar dónde reside/estudia físicamente el usuario y si es estudiante de pregrado o posgrado, además de si tiene correo institucional. No se han creado cuentas, agregado tarjetas, habilitado GPU, transferido datos ni iniciado entrenamiento.
