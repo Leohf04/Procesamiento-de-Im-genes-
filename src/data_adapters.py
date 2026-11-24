@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Mapping
 
 import numpy as np
+from src.urban_geometry import letterbox_image, letterbox_mask
 
 IGNORE_INDEX = 255
 DEFAULT_CANONICAL_CLASSES = {
@@ -220,13 +221,13 @@ def _load_rgb_tensor(image_path, size=None, normalize=True):
     return torch.from_numpy(array.transpose(2, 0, 1).copy())
 
 
-def _load_mask_array(mask_path, size=None):
+def _load_mask_array(mask_path, size=None, fill_value=255):
     from PIL import Image
     with Image.open(mask_path) as handle:
-        mask = handle.copy()
-        if size is not None:
-            mask = mask.resize((int(size[1]), int(size[0])), Image.Resampling.NEAREST)
-        return np.asarray(mask)
+        mask = np.asarray(handle.copy())
+    if size is not None:
+        mask, _ = letterbox_mask(mask, size, fill_value=fill_value)
+    return mask
 
 
 class _ManifestDataset:
@@ -277,7 +278,7 @@ class A2D2InstanceDataset(_ManifestDataset):
     def __getitem__(self, index):
         record = self.records[index]
         image = _load_rgb_tensor(record["image"], self.size, normalize=False)
-        mask = _load_mask_array(record["instance"], self.size)
+        mask = _load_mask_array(record["instance"], self.size, fill_value=0)
         decoded = decode_a2d2_instances(mask, self.color_to_name, self.canonical_classes,
                                         self.min_component_area)
         return image, to_torchvision_target(decoded, image_id=int(record.get("image_id", index)))
@@ -311,7 +312,7 @@ class UrbanSynInstanceDataset(_ManifestDataset):
     def __getitem__(self, index):
         record = self.records[index]
         image = _load_rgb_tensor(record["image"], self.size, normalize=False)
-        panoptic = _load_mask_array(record["panoptic"], self.size)
+        panoptic = _load_mask_array(record["panoptic"], self.size, fill_value=0)
         decoded = decode_urbansyn_panoptic(panoptic, self.source_to_canonical,
                                            self.min_instance_area)
         return image, to_torchvision_target(decoded, image_id=int(record.get("image_id", index)))
