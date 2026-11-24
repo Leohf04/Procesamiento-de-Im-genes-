@@ -174,3 +174,14 @@ Validación realizada: JSON nbformat 4 parseado, 13 celdas presentes, cero secue
 Commit de corrección del Notebook: `eec3d748482b8846f1a9791c496212139ff57580`.
 
 Para continuar, el usuario debe volver a abrir/recargar el Notebook desde el enlace GitHub-Colab para cargar esta versión corregida; la copia que ya estaba abierta en Colab no se actualiza automáticamente. Después puede ejecutar el Notebook desde el principio. El bloque único final sigue siendo la última celda.
+
+
+## Incidencia de auditoría Urban-v1 — rutas históricas y cobertura incompleta (2026-11-24)
+
+Último bloque del usuario: `status=INCOMPLETE`; cuatro splits con 10 manifiesto/índice filas cada uno; protocolo exige A2D2 1000 train/1000 val y UrbanSyn 1000 train/751 val. IDs únicos, conjuntos y orden coinciden; estados de anotación OK; sin solapamiento train/val. Assets fueron marcados ausentes con rutas históricas `/content/urban_data_capacity/...`, mientras la ubicación persistente configurada es `/content/drive/MyDrive/ProcesamientoImagenes/urban_data_capacity/`. El resultado anterior no distingue entre ruta mal resuelta y archivo no materializado.
+
+**Corrección en HEAD:** notebook `notebooks/urban_v1_cierre_tres_pendientes.ipynb`, commit `81cbd6486f6f302106ee71a245a877d054ec6b1d`. El resolvedor ahora comprueba ruta original y su equivalente en Drive, informa método/candidatos, separa remapeo exitoso de archivo no localizado y alimenta la hoja visual. El bloque de continuidad incluye `asset_resolution_summary` y `manifest_source_diagnostics`.
+
+Esta corrección no descarga datos ni inventa/expande manifiestos. Los 10 registros siguen siendo solo muestras de preflight; no son aptos como dataset completo. Deben prepararse manifiestos e índices completos TRAIN/VAL de acuerdo con el protocolo. `RUN_TRAINING=False`; no backward, optimizer steps, epochs, checkpoints, descargas ni acceso a test. PR #3 permanece abierta, draft y sin merge.
+
+**Acción Colab:** recargar la notebook desde el enlace GitHub-Colab, ejecutar desde el principio y pegar un único bloque de continuidad. El nuevo bloque determinará si las rutas antiguas se resuelven en Drive o si faltan realmente los assets. No iniciar entrenamiento.
