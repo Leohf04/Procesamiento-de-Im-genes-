@@ -20,6 +20,7 @@ def test_protocol_optimizer_and_scheduler_are_created_without_step():
         assert isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau)
         assert scheduler.mode == "max"
         assert scheduler.patience == 2
+        assert scheduler.factor == 0.5
     assert all(parameter.grad is None for parameter in model.parameters())
 
 
