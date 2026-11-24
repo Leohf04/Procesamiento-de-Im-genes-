@@ -97,3 +97,8 @@ Vuelve a ejecutar únicamente la celda 1 de la notebook actualizada. Si falla, c
 ### Incidencia resuelta preventivamente — 2026-11-24
 
 La celda 1 de Colab se ejecutó correctamente: Drive ya estaba montado, repositorio sincronizado en `urban-models-and-benchmark`, HEAD `93d0c905ba7eef26c53292d586888d03382ec3d4`, `RUN_TRAINING=False`. Antes de avanzar se detectó y corrigió un error de sintaxis en la celda de auditoría (secuencias de salto de línea literales dentro del diccionario). Commit correctivo: `8e5e53cbf1f02bcb0edbfab6b040e1d521a7014c`. La notebook fue releída y su JSON validado, pero aún no se ejecutó en Colab tras el cambio. Para continuar: ejecutar solo la celda 1 para sincronizar este commit; después ejecutar la celda 2 y compartir su salida. Mantener el resto sin ejecutar hasta revisar el resultado. No hubo entrenamiento, descargas, lectura de test ni Actions.
+
+
+### Resultado Colab — pruebas sintéticas PASS 9/9 (2026-11-24)
+
+La celda de pruebas sintéticas reportó todas las comprobaciones en `true` y `PASS: 9 / 9`. El aviso Pillow `DeprecationWarning` por el parámetro `mode` de `Image.fromarray` no es un fallo y no invalida el PASS. Las pruebas no usan datos reales ni actualizan pesos. Siguiente paso: ejecutar solo la celda de auditoría de la sección 3 (hashes y soporte TRAIN/VAL), compartir su salida; dejar la celda final para después de revisar el reporte. Sin entrenamiento, descargas ni lectura de test.
