@@ -102,3 +102,16 @@ La celda 1 de Colab se ejecutó correctamente: Drive ya estaba montado, reposito
 ### Resultado Colab — pruebas sintéticas PASS 9/9 (2026-11-24)
 
 La celda de pruebas sintéticas reportó todas las comprobaciones en `true` y `PASS: 9 / 9`. El aviso Pillow `DeprecationWarning` por el parámetro `mode` de `Image.fromarray` no es un fallo y no invalida el PASS. Las pruebas no usan datos reales ni actualizan pesos. Siguiente paso: ejecutar solo la celda de auditoría de la sección 3 (hashes y soporte TRAIN/VAL), compartir su salida; dejar la celda final para después de revisar el reporte. Sin entrenamiento, descargas ni lectura de test.
+
+
+### Auditoría segura de datos — 2026-11-24
+
+Último resultado informado por el usuario desde Colab:
+- Estado de `urban_corrections_audit.json`: `PASS`.
+- Ocho archivos de datos calculados con hash; cero faltantes.
+- Reporte guardado en `/content/drive/MyDrive/ProcesamientoImagenes/auditoria_correcciones_segura/urban_corrections_audit.json`.
+- Pruebas sintéticas anteriores: PASS 9/9.
+
+Esto confirma la auditoría de los ocho archivos esperados y la ausencia de faltantes detectados, pero no significa que la configuración efectiva ni la procedencia de pesos estén congeladas. Tampoco es evidencia de entrenamiento o calidad. No inferir hashes individuales, soporte por clase ni versiones a partir del resumen breve.
+
+Siguiente paso: ejecutar únicamente la última celda de la notebook para imprimir el bloque único de continuidad y pegarlo aquí. No iniciar entrenamiento ni ejecutar otras celdas experimentales. Mantener `RUN_TRAINING=False), no tocar test, no descargar datos, no crear checkpoints y no fusionar PR #3 (debe seguir abierta y draft).
