@@ -96,10 +96,16 @@ def load_checkpoint(path, model, optimizer, scheduler=None, scaler=None,
 
 
 def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_index,
-                 scaler, amp, max_grad_norm):
+                 scaler, amp, max_grad_norm, gradient_accumulation_steps=1):
+    if gradient_accumulation_steps < 1:
+        raise ValueError("gradient_accumulation_steps must be >= 1")
     model.train(); total=0.; batches=0; component_totals={}
+    optimizer.zero_grad(set_to_none=True)
+    try:
+        total_batches=len(loader)
+    except TypeError:
+        total_batches=None
     for batch in loader:
-        optimizer.zero_grad(set_to_none=True)
         if task=="semantic":
             images,masks=batch; images=images.to(device); masks=masks.to(device,dtype=torch.long)
             with torch.autocast(device_type=device.type,enabled=amp):
@@ -117,15 +123,27 @@ def _train_epoch(model, loader, optimizer, task, device, class_weights, ignore_i
                 loss=sum(losses.values())
                 for name,value in losses.items(): component_totals[name]=component_totals.get(name,0.)+float(value.detach().cpu())
         if loss.ndim!=0 or not bool(torch.isfinite(loss)): raise FloatingPointError("Non-finite training loss")
+        batches+=1
+        group_start=((batches-1)//gradient_accumulation_steps)*gradient_accumulation_steps
+        group_size=(min(gradient_accumulation_steps,total_batches-group_start)
+                    if total_batches is not None else gradient_accumulation_steps)
+        scaled_loss=loss/group_size
         if scaler is not None and scaler.is_enabled():
-            scaler.scale(loss).backward(); scaler.unscale_(optimizer)
-            if max_grad_norm: torch.nn.utils.clip_grad_norm_(model.parameters(),max_grad_norm)
-            scaler.step(optimizer); scaler.update()
+            scaler.scale(scaled_loss).backward()
         else:
-            loss.backward()
+            scaled_loss.backward()
+        should_step=(batches % gradient_accumulation_steps == 0 or
+                     (total_batches is not None and batches == total_batches))
+        if should_step:
+            if scaler is not None and scaler.is_enabled():
+                scaler.unscale_(optimizer)
             if max_grad_norm: torch.nn.utils.clip_grad_norm_(model.parameters(),max_grad_norm)
-            optimizer.step()
-        total+=float(loss.detach().cpu()); batches+=1
+            if scaler is not None and scaler.is_enabled():
+                scaler.step(optimizer); scaler.update()
+            else:
+                optimizer.step()
+            optimizer.zero_grad(set_to_none=True)
+        total+=float(loss.detach().cpu())
     if not batches: raise RuntimeError("Training loader yielded zero batches")
     average=total/batches
     if task=="instances":
@@ -174,7 +192,8 @@ def run_experiment(*, model, train_loader, validation_loader, task: str, optimiz
     for epoch in range(start,max_epochs):
         if time.monotonic()-started>=max_seconds: break
         train_loss,n=_train_epoch(model,train_loader,optimizer,task,device,class_weights,
-            int(config.get("ignore_index",255)),scaler,amp,config.get("max_grad_norm"))
+            int(config.get("ignore_index",255)),scaler,amp,config.get("max_grad_norm"),
+            int(config.get("gradient_accumulation_steps",1)))
         steps+=n
         if task=="semantic":
             val=evaluate_semantic(model,validation_loader,int(config["num_classes"]),device,int(config.get("ignore_index",255)))
