@@ -92,3 +92,8 @@ La notebook diferencia el resultado de las pruebas mecánicas (`PASS`) de la pre
 Se corrigió la celda inicial de la notebook para omitir el montaje repetido de Drive, validar la carpeta Git, generar correctamente el script GIT_ASKPASS, evitar sobrescribir carpetas no Git y mostrar stderr si la sincronización falla. Commit: `ff4706f8cbe1cbde7768425c18a0efa363932173`. El error original fue código 128, pero no incluía stderr; no se confirmó si el origen fue autenticación, carpeta local o conectividad.
 
 Vuelve a ejecutar únicamente la celda 1 de la notebook actualizada. Si falla, conserva el diagnóstico completo de Git que ahora imprime la celda y compártelo sin credenciales. No iniciar entrenamiento.
+
+
+### Incidencia resuelta preventivamente — 2026-11-24
+
+La celda 1 de Colab se ejecutó correctamente: Drive ya estaba montado, repositorio sincronizado en `urban-models-and-benchmark`, HEAD `93d0c905ba7eef26c53292d586888d03382ec3d4`, `RUN_TRAINING=False`. Antes de avanzar se detectó y corrigió un error de sintaxis en la celda de auditoría (secuencias de salto de línea literales dentro del diccionario). Commit correctivo: `8e5e53cbf1f02bcb0edbfab6b040e1d521a7014c`. La notebook fue releída y su JSON validado, pero aún no se ejecutó en Colab tras el cambio. Para continuar: ejecutar solo la celda 1 para sincronizar este commit; después ejecutar la celda 2 y compartir su salida. Mantener el resto sin ejecutar hasta revisar el resultado. No hubo entrenamiento, descargas, lectura de test ni Actions.
