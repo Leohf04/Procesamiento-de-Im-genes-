@@ -3115,3 +3115,11 @@ El usuario proporcionó captura de “Acerca del dispositivo” e identificó el
 - La documentación oficial de Termux recomienda obtenerlo desde F-Droid o GitHub oficial y advierte que Android 12+ puede terminar procesos por límites de procesos/CPU. Instalación debe proceder solo desde una fuente oficial y sin mezclar firmas de distribución. Fuente: https://github.com/termux/termux-app
 - El APK/entorno base indicado por los mantenedores ocupa aproximadamente 120–180 MB, según distribución/arquitectura; paquetes adicionales requerirán espacio extra. No se ha instalado todavía.
 - Próximo paso: guiar al usuario para instalar Termux desde una fuente oficial, abrirlo y ejecutar actualizaciones básicas. Después comprobar arquitectura/entorno y añadir Python, Git y Pillow de forma gradual. Mantener intactos los experimentos principales; no entrenar los cuatro modelos en el teléfono.
+
+
+## 2026-11-24 — Instalación de Termux en Android
+
+- El usuario confirmó que ya tiene Termux instalado en su OnePlus Nord N200 5G.
+- Próximo paso guiado: actualizar los índices y paquetes base con `pkg update && pkg upgrade`, aceptando la confirmación si aparece.
+- Aún no se han instalado Python, Git, Pillow ni bibliotecas de aprendizaje profundo; tampoco se han descargado datasets.
+- Se mantiene el enfoque de instalación gradual y ligera, verificando la salida de cada paso antes de continuar.
