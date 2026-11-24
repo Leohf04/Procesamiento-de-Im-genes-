@@ -31,8 +31,6 @@
       "architecture": "DeepLabV3Plus",
       "num_classes": 20,
       "batch_size": 4,
-      "gradient_accumulation": 1,
-      "epochs_max": 20,
       "optimizer": "AdamW",
       "learning_rate": 0.0001,
       "weight_decay": 0.0001,
@@ -40,8 +38,17 @@
       "scheduler_mode": "max",
       "scheduler_factor": 0.5,
       "scheduler_patience": 2,
-      "early_stopping_patience": 5,
-      "gradient_clip_norm": 1
+      "image_size": 512,
+      "num_workers": 0,
+      "validation_batch_size": 1,
+      "gradient_accumulation_steps": 1,
+      "experiment_id": "S-A2D2",
+      "max_epochs": 20,
+      "patience": 5,
+      "max_grad_norm": 1,
+      "amp": false,
+      "ignore_index": 255,
+      "max_seconds": 5400
     },
     {
       "id": "S-UrbanSyn",
@@ -50,8 +57,6 @@
       "architecture": "DeepLabV3Plus",
       "num_classes": 20,
       "batch_size": 4,
-      "gradient_accumulation": 1,
-      "epochs_max": 20,
       "optimizer": "AdamW",
       "learning_rate": 0.0001,
       "weight_decay": 0.0001,
@@ -59,8 +64,17 @@
       "scheduler_mode": "max",
       "scheduler_factor": 0.5,
       "scheduler_patience": 2,
-      "early_stopping_patience": 5,
-      "gradient_clip_norm": 1
+      "image_size": 512,
+      "num_workers": 0,
+      "validation_batch_size": 1,
+      "gradient_accumulation_steps": 1,
+      "experiment_id": "S-UrbanSyn",
+      "max_epochs": 20,
+      "patience": 5,
+      "max_grad_norm": 1,
+      "amp": false,
+      "ignore_index": 255,
+      "max_seconds": 5400
     },
     {
       "id": "I-UrbanSyn",
@@ -69,8 +83,6 @@
       "architecture": "MaskRCNN_ResNet50_FPN",
       "num_classes_including_background": 9,
       "batch_size": 1,
-      "gradient_accumulation": 2,
-      "epochs_max": 20,
       "optimizer": "SGD",
       "learning_rate": 0.0025,
       "momentum": 0.9,
@@ -79,8 +91,17 @@
       "scheduler_mode": "max",
       "scheduler_factor": 0.5,
       "scheduler_patience": 2,
-      "early_stopping_patience": 5,
-      "gradient_clip_norm": 1
+      "image_size": 512,
+      "num_workers": 0,
+      "validation_batch_size": 1,
+      "gradient_accumulation_steps": 2,
+      "experiment_id": "I-UrbanSyn",
+      "max_epochs": 20,
+      "patience": 5,
+      "max_grad_norm": 1,
+      "amp": false,
+      "ignore_index": 255,
+      "max_seconds": 5400
     },
     {
       "id": "I-A2D2",
@@ -89,8 +110,6 @@
       "architecture": "MaskRCNN_ResNet50_FPN",
       "num_classes_including_background": 9,
       "batch_size": 1,
-      "gradient_accumulation": 2,
-      "epochs_max": 20,
       "optimizer": "SGD",
       "learning_rate": 0.0025,
       "momentum": 0.9,
@@ -99,8 +118,17 @@
       "scheduler_mode": "max",
       "scheduler_factor": 0.5,
       "scheduler_patience": 2,
-      "early_stopping_patience": 5,
-      "gradient_clip_norm": 1
+      "image_size": 512,
+      "num_workers": 0,
+      "validation_batch_size": 1,
+      "gradient_accumulation_steps": 2,
+      "experiment_id": "I-A2D2",
+      "max_epochs": 20,
+      "patience": 5,
+      "max_grad_norm": 1,
+      "amp": false,
+      "ignore_index": 255,
+      "max_seconds": 5400
     }
   ],
   "selection_metrics": {
@@ -120,6 +148,8 @@
     "Valores tomados de docs/PROTOCOLO_ENTRENAMIENTO_EXPERIMENTAL.md; todavía no son una autorización para entrenar.",
     "El protocolo indica piloto de 10 batches para comprobar memoria/tiempo antes del entrenamiento; requiere autorización expresa.",
     "La T4 previa solo verificó un paso con batch 1; no valida batch 4 ni acumulación 2.",
-    "A2D2 instance masks son componentes conectados reconstruidos; UrbanSyn es baseline principal de instancias."
+    "A2D2 instance masks son componentes conectados reconstruidos; UrbanSyn es baseline principal de instancias.",
+    "El runner implementa gradient_accumulation_steps; la configuración usa este nombre para que el número de optimizer.step sea batches agrupados.",
+    "La factoría/runner consumen los parámetros image_size, max_epochs, patience, max_grad_norm, scheduler_factor y scheduler_patience; data_dir y annotation_index_dir se inyectan desde el entorno Colab."
   ]
 }
