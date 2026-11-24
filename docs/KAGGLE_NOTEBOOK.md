@@ -55,18 +55,48 @@ Guarda los resultados en `/kaggle/working/urban-results`. Al finalizar:
 
 No subas checkpoints grandes a GitHub. Los resultados pueden incluir pesos entrenados, JSON de métricas, curvas y manifiestos.
 
-## 5. Primer arranque
+## 5. Entrenamiento Urban-v1 en Kaggle
 
-1. Abre `notebooks/kaggle_environment_check.ipynb` en Kaggle.
-2. Habilita el secreto `GITHUB_TOKEN`.
-3. Configura Internet On y GPU disponible.
-4. Ejecuta todas las celdas.
-5. Comprueba que la clonación termina, PyTorch detecta CUDA y se muestran los inputs disponibles.
-6. Comparte aquí solo el resultado de diagnóstico (sin tokens). Con esa salida ajustaremos la ruta del dataset y activaremos el pipeline correspondiente.
+La notebook de entrenamiento ya adaptada es:
 
-## Referencias
+- `notebooks/urban_v1_entrenamiento_completo_kaggle.ipynb`
+- URL del archivo: https://github.com/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_entrenamiento_completo_kaggle.ipynb
 
-- Kaggle Notebooks: https://www.kaggle.com/docs/notebooks
-- Kaggle Datasets: https://www.kaggle.com/docs/datasets
-- Kaggle API: https://www.kaggle.com/docs/api
-- GitHub fine-grained tokens: https://github.com/settings/personal-access-tokens
+Como el repositorio es privado, descarga ese archivo pequeño `.ipynb` desde GitHub e impórtalo en un Notebook nuevo de Kaggle (File → Import Notebook, o la opción equivalente disponible). Esto no implica descargar datasets al teléfono. Los datasets se obtienen directamente desde el runtime remoto.
+
+### Configuración obligatoria
+
+1. Notebook privado.
+2. Settings → Session options: Python, Accelerator = GPU disponible, Internet = On.
+3. Add-ons → Secrets: secreto `GITHUB_TOKEN`, habilitado para este Notebook. Fine-grained PAT limitado a este repositorio, con Contents: Read-only y Actions: Read-only.
+4. No pegues el token en celdas ni compartas salidas que puedan contenerlo.
+5. Ejecuta las celdas en orden. La celda de GPU detiene el proceso antes de descargar datos si CUDA no está disponible.
+
+### Qué hace la notebook
+
+- Sincroniza la rama `urban-models-and-benchmark`.
+- Ejecuta `pytest -q` y bloquea el flujo si falla.
+- Recupera el artifact de metadatos de GitHub Actions y verifica digest/expiración.
+- Reconstruye los manifiestos e índices completos TRAIN/VAL.
+- Ejecuta dry-run de los 3.751 registros y comprueba espacio.
+- Materializa los datos en `/kaggle/temp`, nunca en el teléfono.
+- Audita assets e IDs; ejecuta el piloto de 10 batches para cada experimento.
+- Solo si los cuatro pilotos pasan, ejecuta S-A2D2, S-UrbanSyn, I-UrbanSyn e I-A2D2.
+- Guarda checkpoints, métricas y resumen bajo `/kaggle/working/urban-results`.
+- No abre ni evalúa TEST.
+
+**Alcance de datos:** esta configuración corresponde a A2D2 + UrbanSyn, según `configs/urban_experiment_v1.json`. No debe describirse como entrenamiento BDD100K. El pipeline BDD100K de carriles es independiente y no sustituye las tareas semánticas/instancias de estos cuatro experimentos.
+
+### Límites y persistencia de Kaggle
+
+La documentación de Kaggle indica sesiones de notebook de hasta 12 horas y hasta 20 GB de salida guardable en `/kaggle/working`; la GPU gratuita puede estar limitada o en cola. No se garantiza un tipo de GPU concreto ni una cuota semanal fija. Antes de entrenar, confirma en Settings que tu cuenta permite seleccionar GPU.
+
+Al terminar correctamente, utiliza **Save Version** y conserva la salida del Notebook. La notebook limita cada experimento a 5.400 segundos por sesión y escribe checkpoints en la carpeta de resultados. Si una sesión se interrumpe antes de guardar una versión, no des por hecho que los checkpoints quedaron persistidos: revisa la pestaña Output y guarda una versión cuando sea posible.
+
+### Primer arranque seguro
+
+Primero confirma que puedes crear/abrir el Notebook, activar Internet y seleccionar GPU. Después ejecuta las celdas iniciales de sincronización y diagnóstico. Si aparece cualquier error, comparte el traceback completo sin incluir el token. No continúes saltándote una celda fallida.
+
+## 6. Notebook de diagnóstico mínimo
+
+`notebooks/kaggle_environment_check.ipynb` permanece disponible para diagnosticar acceso privado al repositorio, PyTorch/CUDA e inputs montados sin descargar datasets ni iniciar entrenamiento. Si la notebook de entrenamiento falla durante el arranque, puede utilizarse para aislar el problema de cuenta, secreto o GPU.
