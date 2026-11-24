@@ -2725,3 +2725,23 @@ El usuario ejecutó en Colab la celda de auditoría de la sección 3 de `noteboo
 Interpretación: la auditoría encontró presentes todos los archivos esperados que comprobó y pudo calcular ocho hashes. Este resultado no equivale a validación visual de muestras, prueba end-to-end de loaders, congelación de configuración experimental ni verificación de procedencia de pesos. La notebook mantiene `experiment_readiness=BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`; no autoriza entrenamiento.
 
 No se ejecutó entrenamiento, optimizer.step, backward, epochs, validación experimental, descarga de datos, lectura de test ni GitHub Actions en esta intervención. `RUN_TRAINING=False` permanece. Próximo paso: ejecutar únicamente la última celda de la notebook para producir el bloque único de continuidad; revisar ese bloque antes de decidir las siguientes comprobaciones seguras.
+
+
+## 2026-11-24 — Bloque final de continuidad de auditoría segura recibido
+
+El usuario ejecutó la última celda de `notebooks/colab_preflight_un_paso_real.ipynb` y compartió el bloque completo. Datos reportados:
+- `status=PASS`; `RUN_TRAINING=false`; `optimizer_steps=0`; `test_split_touched=false`; `missing_expected_files=[]`.
+- `experiment_readiness=BLOCKED_PENDING_CONFIG_AND_WEIGHT_PROVENANCE`; `effective_experiment_config_frozen=false`; `model_weight_provenance_frozen=false`.
+- HEAD de Colab al auditar: `5ac2e82581c88a0a4bbaecf48d43756dd8839ff8`.
+- Índices: 10 filas en cada uno de `a2d2_train`, `a2d2_val`, `urbansyn_train`, `urbansyn_val`; son muestras de preflight, no datos representativos para entrenamiento.
+- Los cuatro splits reportan `annotation_status_not_ok=0`.
+- Hashes SHA-256 de fuentes: ontología `a65a3c6735c146b59fc361e29e595adc2f6b00d3e3d10d10923feaf56786ab64`; protocolo `00fecbc66763b9d12ccf0426ce6a22bbb87320c6390d431ee92a5eff703cf99b`; factoría `a137b07b98f4d0a8db38ce5472bdc252aa736c584a5f6af24d51e218d2b369d9`; adaptadores `0f6b44b4174b5bb7dd1630438fc9e6ad71f0e7250f97db1e5fbc8a9c8a1bf4ea`; geometría `fc2977dd6cbc11b4e362405365fc148b24f79beecdd6301fe9678bbc428a2adf`; optimizador `d497d0a13aa08ab7eb3e25741f1f01c73baa38766aea64947042113201a00202`. También se calcularon hashes de los cuatro manifests y cuatro índices TRAIN/VAL; los valores exactos están en el bloque compartido en esta conversación.
+- JSON persistido en Drive: `/content/drive/MyDrive/ProcesamientoImagenes/auditoria_correcciones_segura/urban_corrections_audit.json`.
+
+Soporte observado en las 10 filas por split (no representa frecuencias del dataset completo): A2D2 train instancias bicycle 5, car 86, person 7, truck 32; A2D2 val car 54 y truck 45 (bicycle/person no aparecen en esta muestra val). UrbanSyn train bicycle 3, bus 5, car 61, motorcycle 11, person 137, rider 12, truck 4; val bicycle 18, bus 5, car 62, motorcycle 10, person 129, rider 15, truck 6. Los cuatro splits tienen cero anotaciones con estado distinto de OK. Los conteos semánticos por clase también están en el bloque original; no interpretarlos como balance definitivo.
+
+Interpretación: PASS valida las comprobaciones implementadas y la presencia/integridad por hash de los archivos esperados. Diez filas por split no son suficientes para entrenar ni inferir cobertura representativa. La falta de bicycle/person en las instancias de A2D2 val de esta muestra es una alerta que debe comprobarse sobre los manifiestos completos, no una afirmación de ausencia en el dataset. Persisten pendientes configuración efectiva congelada y procedencia verificable de pesos.
+
+Próximos pasos seguros: congelar documentalmente y con hash la configuración efectiva Urban-v1 (tareas, clases, mapeos, tamaños/transformaciones, optimizadores/schedulers, hiperparámetros, seeds, versiones y política de inicialización); documentar procedencia/licencia/identidad exacta de los pesos o declarar inicialización aleatoria; auditar soporte sobre manifiestos completos TRAIN/VAL e inspeccionar visualmente muestras acotadas solo de TRAIN/VAL. Después diseñar un piloto separado y solicitar autorización expresa. No entrenar ahora.
+
+No se ejecutaron entrenamiento, backward, optimizer.step, epochs, validación experimental, descargas, lectura de test ni GitHub Actions. PR #3 debe permanecer abierta, draft y sin merge.
