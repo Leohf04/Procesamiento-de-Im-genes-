@@ -214,3 +214,14 @@ En Colab montará Drive y sincronizará la rama; recuperará/verificará el ZIP 
 La notebook se guardó en commits `6e0e350c9ceacf4c8b2b57fdfb6f4874e23f1575` y `f1bb84121a7cc47056db84e17387407b6c99e70c`. JSON nbformat 4 y 13 celdas verificados tras releer desde GitHub; no se ejecutó Python/Colab ni el dry-run desde ChatGPT.
 
 Importante: `--dry-run` solo estima bytes consultando metadatos remotos; no descarga archivos. No ejecutar una materialización real todavía. No tocar TEST, no entrenar, no escribir checkpoints, no lanzar Actions. Si el artifact expira, detenerse. PR #3 permanece abierta, draft y sin merge.
+
+
+## Error de celda 4 y corrección idempotente (2026-11-24)
+
+El directorio `urban_v1_full_metadata_20261124` ya existía en Drive, por lo que la celda 4 original se detenía para proteger los datos. No sabemos desde ChatGPT si esa carpeta contiene una ejecución completa o parcial.
+
+La celda fue corregida en commit `ff70758c679bd7c1785d316c72f5f47b85f39b14`: ahora compara contenido/orden de los cuatro manifiestos y cuatro índices esperados. Si todos coinciden exactamente, reutiliza la carpeta. Si falta alguno o el contenido difiere, conserva íntegramente la carpeta existente y crea otra con sufijo UTC. Comprueba los ocho archivos tras la operación y registra si reutilizó los metadatos. No borra ni sobrescribe datos existentes.
+
+Recarga la notebook desde GitHub-Colab y vuelve a ejecutar desde la celda 4 (si reiniciaste el runtime, ejecuta desde el principio). Enlace: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
+
+No ejecutar materialización real ni entrenamiento; no tocar TEST. El dry-run permanece sin descargas. PR #3 abierta, draft y sin merge.
