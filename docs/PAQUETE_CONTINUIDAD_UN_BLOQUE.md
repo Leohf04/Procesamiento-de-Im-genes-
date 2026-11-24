@@ -115,3 +115,8 @@ La celda de pruebas sintéticas reportó todas las comprobaciones en `true` y `P
 Esto confirma la auditoría de los ocho archivos esperados y la ausencia de faltantes detectados, pero no significa que la configuración efectiva ni la procedencia de pesos estén congeladas. Tampoco es evidencia de entrenamiento o calidad. No inferir hashes individuales, soporte por clase ni versiones a partir del resumen breve.
 
 Siguiente paso: ejecutar únicamente la última celda de la notebook para imprimir el bloque único de continuidad y pegarlo aquí. No iniciar entrenamiento ni ejecutar otras celdas experimentales. Mantener `RUN_TRAINING=False), no tocar test, no descargar datos, no crear checkpoints y no fusionar PR #3 (debe seguir abierta y draft).
+
+
+### Auditoría segura de datos — resultado Colab PASS (2026-11-24)
+
+El usuario reportó que la celda de auditoría de la sección 3 guardó `urban_corrections_audit.json` en `ProcesamientoImagenes/auditoria_correcciones_segura/` en Drive, con `status=PASS`, ocho archivos de datos con hash y cero faltantes. Esto confirma presencia de los archivos esperados revisados por la celda; no demuestra validación visual, funcionamiento end-to-end de loaders, configuración experimental congelada ni procedencia de pesos. El estado de preparación sigue bloqueado por configuración y procedencia de pesos. No se entrenó, no se actualizó ningún peso, no se descargaron datos ni se tocó test; `RUN_TRAINING=False`. Siguiente paso: ejecutar solo la última celda para generar el bloque único de continuidad y compartirlo para revisión.
