@@ -225,3 +225,6 @@ La celda fue corregida en commit `ff70758c679bd7c1785d316c72f5f47b85f39b14`: aho
 Recarga la notebook desde GitHub-Colab y vuelve a ejecutar desde la celda 4 (si reiniciaste el runtime, ejecuta desde el principio). Enlace: https://colab.research.google.com/github/Leohf04/Procesamiento-de-Im-genes-/blob/urban-models-and-benchmark/notebooks/urban_v1_recuperar_metadatos_y_dry_run_completo.ipynb
 
 No ejecutar materialización real ni entrenamiento; no tocar TEST. El dry-run permanece sin descargas. PR #3 abierta, draft y sin merge.
+
+
+Ajuste final de la misma corrección: commit `ed656be7baa77f646716eed50dae98c2f3d7e327` deja explícita la escritura del reporte con `chr(10)` para evitar ambigüedades de escapes en la celda. La versión final fue releída desde GitHub; la celda registra `reused_existing_metadata` y valida los ocho JSONL antes de continuar.
